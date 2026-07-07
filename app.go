@@ -13,6 +13,7 @@ import (
 	"goclashz/core/utils"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -764,6 +765,126 @@ func (a *App) ClearCardBg(key string) error {
 		_ = os.Remove(f)
 	}
 	return nil
+}
+
+// --- Галерея личных фонов (сохранённые пользователем картинки для повторного применения) ---
+
+// GalleryItem — сохранённая картинка галереи.
+type GalleryItem struct {
+	ID      string `json:"id"`
+	DataURL string `json:"dataUrl"`
+}
+
+func galleryDir() string { return filepath.Join(utils.GetDataDir(), "gallery") }
+
+// GetGallery возвращает все сохранённые фоны (id + data-URI), отсортированные по времени (новые сверху).
+func (a *App) GetGallery() []GalleryItem {
+	matches, _ := filepath.Glob(filepath.Join(galleryDir(), "*.*"))
+	// новые файлы (больший unixnano в имени) — вперёд
+	sort.Slice(matches, func(i, j int) bool { return matches[i] > matches[j] })
+	out := make([]GalleryItem, 0, len(matches))
+	for _, f := range matches {
+		base := filepath.Base(f)
+		id := strings.TrimSuffix(base, filepath.Ext(base))
+		if url := fileToDataURL(f); url != "" {
+			out = append(out, GalleryItem{ID: id, DataURL: url})
+		}
+	}
+	return out
+}
+
+func (a *App) saveBytesToGallery(data []byte, ext string) error {
+	if len(data) == 0 {
+		return fmt.Errorf("пустой файл")
+	}
+	if ext == "" {
+		ext = ".png"
+	}
+	dir := galleryDir()
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+	dest := filepath.Join(dir, fmt.Sprintf("%d%s", time.Now().UnixNano(), strings.ToLower(ext)))
+	return utils.WriteFileAtomic(dest, data, 0644)
+}
+
+// AddToGallery открывает диалог выбора картинки и добавляет её в галерею; возвращает обновлённую галерею.
+func (a *App) AddToGallery() ([]GalleryItem, error) {
+	path, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Добавить фон в галерею",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "Изображения (*.png; *.jpg; *.jpeg; *.webp; *.gif)", Pattern: "*.png;*.jpg;*.jpeg;*.webp;*.gif"},
+		},
+	})
+	if err != nil || path == "" {
+		return a.GetGallery(), err
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return a.GetGallery(), err
+	}
+	if len(data) > 6*1024*1024 {
+		return a.GetGallery(), fmt.Errorf("файл больше 6 МБ — выберите картинку поменьше")
+	}
+	if err := a.saveBytesToGallery(data, filepath.Ext(path)); err != nil {
+		return a.GetGallery(), err
+	}
+	return a.GetGallery(), nil
+}
+
+// SaveCardToGallery сохраняет текущую картинку карточки в галерею; возвращает обновлённую галерею.
+func (a *App) SaveCardToGallery(key string) ([]GalleryItem, error) {
+	matches, _ := filepath.Glob(cardBgGlob(key))
+	if len(matches) == 0 {
+		return a.GetGallery(), fmt.Errorf("у карточки нет своей картинки")
+	}
+	data, err := os.ReadFile(matches[0])
+	if err != nil {
+		return a.GetGallery(), err
+	}
+	if err := a.saveBytesToGallery(data, filepath.Ext(matches[0])); err != nil {
+		return a.GetGallery(), err
+	}
+	return a.GetGallery(), nil
+}
+
+// ApplyGalleryToCard применяет фон из галереи (по id) к карточке; возвращает data-URI.
+func (a *App) ApplyGalleryToCard(cardKey, galleryID string) (string, error) {
+	cardKey = sanitizeCardKey(cardKey)
+	galleryID = sanitizeCardKey(galleryID) // id — это unixnano, только цифры
+	if cardKey == "" || galleryID == "" {
+		return "", fmt.Errorf("некорректные параметры")
+	}
+	src, _ := filepath.Glob(filepath.Join(galleryDir(), galleryID+".*"))
+	if len(src) == 0 {
+		return "", fmt.Errorf("фон не найден в галерее")
+	}
+	data, err := os.ReadFile(src[0])
+	if err != nil {
+		return "", err
+	}
+	// удаляем прежний фон карточки и кладём новый
+	if old, _ := filepath.Glob(cardBgGlob(cardKey)); old != nil {
+		for _, f := range old {
+			_ = os.Remove(f)
+		}
+	}
+	ext := strings.ToLower(filepath.Ext(src[0]))
+	dest := filepath.Join(utils.GetDataDir(), "cardbg_"+cardKey+ext)
+	if err := utils.WriteFileAtomic(dest, data, 0644); err != nil {
+		return "", err
+	}
+	return "data:" + mimeForExt(ext) + ";base64," + base64.StdEncoding.EncodeToString(data), nil
+}
+
+// DeleteFromGallery удаляет фон из галереи по id; возвращает обновлённую галерею.
+func (a *App) DeleteFromGallery(galleryID string) []GalleryItem {
+	galleryID = sanitizeCardKey(galleryID)
+	matches, _ := filepath.Glob(filepath.Join(galleryDir(), galleryID+".*"))
+	for _, f := range matches {
+		_ = os.Remove(f)
+	}
+	return a.GetGallery()
 }
 
 func (a *App) RepairDataDirPermission() error {

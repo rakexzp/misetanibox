@@ -222,3 +222,8 @@ export function SetSmartRoute(arg1:boolean):Promise<void>;
 export function SetCardBg(arg1:string):Promise<string>;
 export function GetCardBgs():Promise<{[key: string]: string}>;
 export function ClearCardBg(arg1:string):Promise<void>;
+export function GetGallery():Promise<Array<main.GalleryItem>>;
+export function AddToGallery():Promise<Array<main.GalleryItem>>;
+export function SaveCardToGallery(arg1:string):Promise<Array<main.GalleryItem>>;
+export function ApplyGalleryToCard(arg1:string,arg2:string):Promise<string>;
+export function DeleteFromGallery(arg1:string):Promise<Array<main.GalleryItem>>;

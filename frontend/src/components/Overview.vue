@@ -102,6 +102,19 @@
             ></button>
           </div>
 
+          <div class="bg-presets-label">
+            Мои фоны
+            <button v-if="globalState.cardBgs[editingCard]" class="bg-save-link" @click="saveCardToGallery(editingCard)">＋ сохранить текущий</button>
+          </div>
+          <div class="bg-gallery">
+            <button class="bg-gallery-add" @click="addToGallery" title="Добавить картинку в галерею">＋</button>
+            <div v-for="g in gallery" :key="g.id" class="bg-gallery-item" @click="applyGallery(editingCard, g.id)">
+              <img :src="g.dataUrl" alt="" />
+              <button class="bg-gallery-del" @click.stop="deleteGallery(g.id)" title="Удалить из галереи">✕</button>
+            </div>
+            <div v-if="!gallery.length" class="bg-gallery-empty">Пусто — добавь свои картинки через ＋</div>
+          </div>
+
           <template v-if="globalState.cardBgs[editingCard]">
             <label class="bg-row"><span>По горизонтали</span>
               <input type="range" min="0" max="100" v-model.number="optsFor(editingCard).x" @input="saveCardBgOpts" />
@@ -160,9 +173,34 @@ const optsFor = (key: string): CardBgOpts => {
   return cardBgOpts[key];
 };
 
+// личная галерея фонов (сохранённые пользователем картинки)
+const gallery = ref<{ id: string; dataUrl: string }[]>([]);
+const loadGallery = async () => {
+  try { gallery.value = (await (API as any).GetGallery()) || []; } catch { gallery.value = []; }
+};
+const addToGallery = async () => {
+  try { gallery.value = (await (API as any).AddToGallery()) || gallery.value; }
+  catch (e) { await showAlert('Не удалось добавить: ' + e, 'Ошибка', true); }
+};
+const saveCardToGallery = async (key: string) => {
+  try {
+    gallery.value = (await (API as any).SaveCardToGallery(key)) || gallery.value;
+    await showAlert('Фон сохранён в «Мои фоны».', 'Готово');
+  } catch (e) { await showAlert('Не удалось сохранить: ' + e, 'Ошибка', true); }
+};
+const applyGallery = async (key: string, id: string) => {
+  try {
+    const url = await (API as any).ApplyGalleryToCard(key, id);
+    if (url) { delete cardPresets[key]; saveCardPresets(); setCardBg(key, url); optsFor(key); }
+  } catch (e) { await showAlert('Не удалось применить: ' + e, 'Ошибка', true); }
+};
+const deleteGallery = async (id: string) => {
+  try { gallery.value = (await (API as any).DeleteFromGallery(id)) || []; } catch { /* ignore */ }
+};
+
 const editingCard = ref<string | null>(null);
 const editorPos = ref({ x: 0, y: 0 });
-const openCardEditor = (key: string) => { optsFor(key); editorPos.value = { x: 0, y: 0 }; editingCard.value = key; };
+const openCardEditor = (key: string) => { optsFor(key); editorPos.value = { x: 0, y: 0 }; loadGallery(); editingCard.value = key; };
 
 // перетаскивание окна редактора за заголовок
 const startEditorDrag = (e: MouseEvent) => {
@@ -496,6 +534,24 @@ const runModeWorker = async (targetMode: string) => {
 }
 .bg-preset:hover { transform: scale(1.08); }
 .bg-preset.active { border-color: var(--text-main); box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent); }
+
+.bg-presets-label { display: flex; align-items: center; justify-content: space-between; }
+.bg-save-link { border: none; background: transparent; color: var(--accent); font-weight: 600; font-size: 0.76rem; cursor: pointer; padding: 0; }
+.bg-gallery { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.bg-gallery-add {
+  aspect-ratio: 1; border-radius: 8px; border: 1.5px dashed var(--surface-hover); cursor: pointer;
+  background: transparent; color: var(--text-muted); font-size: 1.1rem; display: flex; align-items: center; justify-content: center;
+}
+.bg-gallery-add:hover { border-color: var(--accent); color: var(--accent); }
+.bg-gallery-item { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; cursor: pointer; border: 2px solid transparent; }
+.bg-gallery-item:hover { border-color: var(--accent); }
+.bg-gallery-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bg-gallery-del {
+  position: absolute; top: 2px; right: 2px; width: 16px; height: 16px; border-radius: 4px; border: none; cursor: pointer;
+  background: rgba(0,0,0,0.55); color: #fff; font-size: 10px; line-height: 1; display: none; align-items: center; justify-content: center;
+}
+.bg-gallery-item:hover .bg-gallery-del { display: flex; }
+.bg-gallery-empty { grid-column: span 4; font-size: 0.74rem; color: var(--text-muted); display: flex; align-items: center; }
 .hero-panel { padding: 28px 24px; background: var(--surface); border-radius: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: center; box-shadow: 0 4px 20px rgba(0,0,0,0.03); }
 .status-core { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; }
 .restart-trigger { position: absolute; left: 10px; width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 50%; transition: 0.3s; }

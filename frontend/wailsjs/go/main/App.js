@@ -449,3 +449,23 @@ export function GetCardBgs() {
 export function ClearCardBg(arg1) {
   return window['go']['main']['App']['ClearCardBg'](arg1);
 }
+
+export function GetGallery() {
+  return window['go']['main']['App']['GetGallery']();
+}
+
+export function AddToGallery() {
+  return window['go']['main']['App']['AddToGallery']();
+}
+
+export function SaveCardToGallery(arg1) {
+  return window['go']['main']['App']['SaveCardToGallery'](arg1);
+}
+
+export function ApplyGalleryToCard(arg1, arg2) {
+  return window['go']['main']['App']['ApplyGalleryToCard'](arg1, arg2);
+}
+
+export function DeleteFromGallery(arg1) {
+  return window['go']['main']['App']['DeleteFromGallery'](arg1);
+}
