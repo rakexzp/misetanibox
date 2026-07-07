@@ -559,6 +559,11 @@ func (c *Controller) ensureCoreRunningWithDesiredState(ctx context.Context, desi
 		if err := c.EnsureHelperReady("tun-start"); err != nil {
 			return err
 		}
+		// Linux: ядро создаёт TUN-устройство само → нужен CAP_NET_ADMIN на бинаре ядра
+		// (на Windows — no-op, там TUN поднимает helper-служба).
+		if err := sys.EnsureTunPrivilege(); err != nil {
+			return err
+		}
 	}
 
 	behavior := c.Behavior.Get()
