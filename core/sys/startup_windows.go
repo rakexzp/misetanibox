@@ -22,7 +22,7 @@ const (
 
 var clsidTaskScheduler = ole.NewGUID("{0F87369F-A4E5-4CFC-BD3E-73E6154572DD}")
 
-const tsTaskName = "GoclashZ Startup"
+const tsTaskName = "Misetanibox Startup"
 
 type StartupMode string
 
@@ -60,10 +60,10 @@ func initCOM() (func(), error) {
 			}
 		}
 		errStr := err.Error()
-		if strings.Contains(errStr, "函数不正确") || strings.Contains(errStr, "Incorrect function") {
+		if strings.Contains(errStr, "函数不正确") || strings.Contains(errStr, "Incorrect function") || strings.Contains(errStr, "Неверная функция") {
 			return func() {}, nil
 		}
-		return nil, fmt.Errorf("COM 初始化失败: %w", err)
+		return nil, fmt.Errorf("не удалось инициализировать COM: %w", err)
 	}
 	return ole.CoUninitialize, nil
 }
@@ -72,18 +72,18 @@ func initCOM() (func(), error) {
 func newTaskScheduler() (*ole.IDispatch, error) {
 	unk, err := ole.CreateInstance(clsidTaskScheduler, nil)
 	if err != nil {
-		return nil, fmt.Errorf("创建 TaskScheduler 实例失败: %w", err)
+		return nil, fmt.Errorf("не удалось создать экземпляр TaskScheduler: %w", err)
 	}
 
 	disp, err := unk.QueryInterface(ole.IID_IDispatch)
 	unk.Release()
 	if err != nil {
-		return nil, fmt.Errorf("获取 IDispatch 接口失败: %w", err)
+		return nil, fmt.Errorf("не удалось получить интерфейс IDispatch: %w", err)
 	}
 
 	if _, err := disp.CallMethod("Connect"); err != nil {
 		disp.Release()
-		return nil, fmt.Errorf("连接 Task Scheduler 服务失败: %w", err)
+		return nil, fmt.Errorf("не удалось подключиться к службе Task Scheduler: %w", err)
 	}
 
 	return disp, nil
@@ -126,7 +126,7 @@ func splitCommandLine(args string) []string {
 		return nil
 	}
 
-	cmdline := `GoclashZ.exe ` + args
+	cmdline := `Misetanibox.exe ` + args
 	argv, err := windows.UTF16PtrFromString(cmdline)
 	if err != nil {
 		return nil
@@ -280,7 +280,7 @@ func CheckStartupTask() (StartupTaskInfo, error) {
 
 		// 旧的 elevated 任务 (RunLevel=1) 视为不健康，需要修复为普通任务
 		if info.RunLevel == 1 {
-			info.LastError = "旧的管理员自启任务已不再支持，请重新设置开机自启"
+			info.LastError = "старая задача автозапуска с правами администратора больше не поддерживается, настройте автозапуск заново"
 			info.Enabled = false
 		} else if pathMismatch || argsMismatch {
 			info.Enabled = false
@@ -298,10 +298,10 @@ func CheckStartupTask() (StartupTaskInfo, error) {
 func CreateStartupTask(exePath string) error {
 	absPath, err := filepath.Abs(exePath)
 	if err != nil {
-		return fmt.Errorf("无法获取绝对路径: %w", err)
+		return fmt.Errorf("не удалось получить абсолютный путь: %w", err)
 	}
 	if _, err := os.Stat(absPath); err != nil {
-		return fmt.Errorf("可执行文件不存在: %s", absPath)
+		return fmt.Errorf("исполняемый файл не найден: %s", absPath)
 	}
 	workDir := filepath.Dir(absPath)
 
@@ -319,14 +319,14 @@ func CreateStartupTask(exePath string) error {
 
 	defV, err := sched.CallMethod("NewTask", 0)
 	if err != nil {
-		return fmt.Errorf("创建任务定义失败: %w", err)
+		return fmt.Errorf("не удалось создать определение задачи: %w", err)
 	}
 	def := defV.ToIDispatch()
 	defer def.Release()
 
 	settingsV, err := def.GetProperty("Settings")
 	if err != nil {
-		return fmt.Errorf("获取 Settings 失败: %w", err)
+		return fmt.Errorf("не удалось получить Settings: %w", err)
 	}
 	settings := settingsV.ToIDispatch()
 	settings.PutProperty("DisallowStartIfOnBatteries", false)
@@ -337,13 +337,13 @@ func CreateStartupTask(exePath string) error {
 
 	actionsV, err := def.GetProperty("Actions")
 	if err != nil {
-		return fmt.Errorf("获取 Actions 失败: %w", err)
+		return fmt.Errorf("не удалось получить Actions: %w", err)
 	}
 	actions := actionsV.ToIDispatch()
 	actionV, err := actions.CallMethod("Create", tsActionExec)
 	actions.Release()
 	if err != nil {
-		return fmt.Errorf("创建 Action 失败: %w", err)
+		return fmt.Errorf("не удалось создать Action: %w", err)
 	}
 	action := actionV.ToIDispatch()
 	action.PutProperty("Path", absPath)
@@ -354,13 +354,13 @@ func CreateStartupTask(exePath string) error {
 
 	triggersV, err := def.GetProperty("Triggers")
 	if err != nil {
-		return fmt.Errorf("获取 Triggers 失败: %w", err)
+		return fmt.Errorf("не удалось получить Triggers: %w", err)
 	}
 	triggers := triggersV.ToIDispatch()
 	triggerV, err := triggers.CallMethod("Create", tsTriggerLogon)
 	triggers.Release()
 	if err != nil {
-		return fmt.Errorf("创建 Trigger 失败: %w", err)
+		return fmt.Errorf("не удалось создать Trigger: %w", err)
 	}
 	trigger := triggerV.ToIDispatch()
 	trigger.PutProperty("Enabled", true)
@@ -370,7 +370,7 @@ func CreateStartupTask(exePath string) error {
 
 	principalV, err := def.GetProperty("Principal")
 	if err != nil {
-		return fmt.Errorf("获取 Principal 失败: %w", err)
+		return fmt.Errorf("не удалось получить Principal: %w", err)
 	}
 	principal := principalV.ToIDispatch()
 	principal.PutProperty("LogonType", 3) // TASK_LOGON_TOKEN
@@ -378,11 +378,11 @@ func CreateStartupTask(exePath string) error {
 	principal.Release()
 
 	def.PutProperty("DisplayName", tsTaskName)
-	def.PutProperty("Description", "开机自启 GoclashZ 代理客户端")
+	def.PutProperty("Description", "Автозапуск прокси-клиента Misetanibox")
 
 	rootV, err := sched.CallMethod("GetFolder", `\`)
 	if err != nil {
-		return fmt.Errorf("获取根文件夹失败: %w", err)
+		return fmt.Errorf("не удалось получить корневую папку: %w", err)
 	}
 	root := rootV.ToIDispatch()
 	defer root.Release()
@@ -398,7 +398,7 @@ func CreateStartupTask(exePath string) error {
 		logonType,
 	)
 	if err != nil {
-		return fmt.Errorf("注册计划任务失败: %w", err)
+		return fmt.Errorf("не удалось зарегистрировать задачу планировщика: %w", err)
 	}
 
 	return nil
@@ -421,7 +421,7 @@ func DeleteStartupTask() error {
 
 	rootV, err := sched.CallMethod("GetFolder", `\`)
 	if err != nil {
-		return fmt.Errorf("获取根文件夹失败: %w", err)
+		return fmt.Errorf("не удалось получить корневую папку: %w", err)
 	}
 	root := rootV.ToIDispatch()
 	defer root.Release()

@@ -10,6 +10,7 @@ type Options struct {
 	URLs      []string // 🚀 竞速容灾：传入多个下载地址
 	DestPath  string
 	UserAgent string
+	Headers   map[string]string // доп. заголовки (x-hwid и т.п.)
 	MaxBytes  int64
 
 	Client *http.Client

@@ -117,7 +117,7 @@ func GetDataDirInfo() DataDirInfo {
 			Error string `json:"error"`
 		}
 		if json.Unmarshal(data, &errMeta) == nil && errMeta.Error != "" {
-			info.LastError = "迁移失败: " + errMeta.Error
+			info.LastError = "миграция не удалась: " + errMeta.Error
 		}
 	}
 

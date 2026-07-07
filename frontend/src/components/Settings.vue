@@ -6,64 +6,64 @@
 
         <div v-if="view === 'main'" class="settings-page">
           <div class="glass-card setting-group">
-            <h3>网络设置</h3>
+            <h3>Настройки сети</h3>
 
             <div class="setting-item clickable" @click="view = 'network'">
               <div class="info">
-                <h4>基础网络设置</h4>
-                <p>配置内核底层的 TCP 并发、超时以及连接测速逻辑。</p>
+                <h4>Базовые настройки сети</h4>
+                <p>TCP-конкурентность ядра, таймауты и логика проверки соединений.</p>
               </div>
               <span class="arrow">➔</span>
             </div>
 
             <div class="setting-item clickable" @click="view = 'dns'">
               <div class="info">
-                <h4>DNS 服务器配置</h4>
-                <p>管理防污染解析、Fake-IP 策略以及分流专用的 DNS 群组。</p>
+                <h4>Конфигурация DNS-серверов</h4>
+                <p>Антиспуфинг-резолвинг, политика Fake-IP и DNS-группы для маршрутизации.</p>
               </div>
               <span class="arrow">➔</span>
             </div>
 
             <div class="setting-item clickable" @click="view = 'tun'">
               <div class="info">
-                <h4>虚拟网卡设置 (TUN 模式)</h4>
-                <p>管理 Wintun 驱动并开启全局透明代理，接管所有软件流量。</p>
+                <h4>Виртуальный адаптер (Режим TUN)</h4>
+                <p>Драйвер Wintun и глобальный прозрачный прокси для всего трафика.</p>
               </div>
               <span class="arrow">➔</span>
             </div>
           </div>
 
           <div class="glass-card setting-group">
-            <h3>应用设置</h3>
+            <h3>Настройки приложения</h3>
 
             <div class="setting-item clickable" @click="view = 'behavior'">
               <div class="info">
-                <h4>应用行为设置</h4>
-                <p>定制软件启动模式、托盘图标逻辑及订阅请求 User-Agent。</p>
+                <h4>Поведение приложения</h4>
+                <p>Режим запуска, логика трея и User-Agent запросов подписки.</p>
               </div>
               <span class="arrow">➔</span>
             </div>
 
             <div class="setting-item clickable" @click="enterUwpManager">
               <div class="info">
-                <h4>UWP 环回免除工具</h4>
-                <p>赋予 Windows UWP 应用（如微软商店、邮件）访问本地代理的权限。</p>
+                <h4>UWP loopback-исключения</h4>
+                <p>Доступ UWP-приложений (Store, Почта) к локальному прокси.</p>
               </div>
               <span class="arrow">➔</span>
             </div>
 
             <div class="setting-item clickable" @click="view = 'update'">
               <div class="info">
-                <h4>组件与库更新</h4>
-                <p>管理并同步 Mihomo 内核、Wintun 驱动以及 GeoIP/GeoSite 规则数据库。</p>
+                <h4>Обновление компонентов и баз</h4>
+                <p>Ядро Mihomo, драйвер Wintun и базы правил GeoIP/GeoSite.</p>
               </div>
               <span class="arrow">➔</span>
             </div>
 
             <div class="setting-item clickable" @click="view = 'about'">
               <div class="info">
-                <h4>关于应用</h4>
-                <p>查看软件版本、进行配置备份还原以及访问 GitHub 开源仓库。</p>
+                <h4>О приложении</h4>
+                <p>Версия, резервная копия и восстановление, репозиторий GitHub.</p>
               </div>
               <span class="arrow">➔</span>
             </div>
@@ -75,21 +75,21 @@
             <button class="back-btn" @click="view = 'main'">
               <span class="icon back-icon-svg" v-html="ICONS.arrowLeft"></span>
             </button>
-            <h3>组件与库更新</h3>
+            <h3>Обновление компонентов и баз</h3>
           </div>
 
           <UpdateTaskPanel />
 
           <div class="glass-card setting-group scrollable">
             <div class="setting-item col-item" style="padding-bottom: 0; align-items: flex-start;">
-              <h3 style="margin: 0; font-size: 1.15rem; font-weight: 600; color: var(--text-main);">内核与驱动</h3>
+              <h3 style="margin: 0; font-size: 1.15rem; font-weight: 600; color: var(--text-main);">Ядро и драйвер</h3>
             </div>
             <div class="divider" style="margin-top: 10px;"></div>
 
             <div class="setting-item">
               <div class="info">
-                <h4>Mihomo 内核 <span style="color: var(--accent); margin-left: 8px; font-style: italic; font-size: 0.8rem; font-weight: normal;">(更新会短暂断开代理)</span></h4>
-                <p>当前版本: {{ coreVersion }}</p>
+                <h4>Ядро Mihomo <span style="color: var(--accent); margin-left: 8px; font-style: italic; font-size: 0.8rem; font-weight: normal;">(обновление кратко разорвёт прокси)</span></h4>
+                <p>Текущая версия: {{ coreVersion }}</p>
               </div>
               <button 
                 class="action-btn" 
@@ -97,10 +97,10 @@
                 @click="globalState.componentUpdate.pendingCoreUpdate ? executeCoreUpdate() : handleUpdateCore()" 
                 :disabled="globalState.componentUpdate.checkingCoreUpdate || globalState.componentUpdate.updatingCore"
               >
-                <template v-if="globalState.componentUpdate.checkingCoreUpdate">正在检查...</template>
-                <template v-else-if="globalState.componentUpdate.updatingCore">正在处理...</template>
-                <template v-else-if="globalState.componentUpdate.pendingCoreUpdate">更新到 {{ globalState.componentUpdate.coreUpdateInfo.remote }}</template>
-                <template v-else>检查更新</template>
+                <template v-if="globalState.componentUpdate.checkingCoreUpdate">Проверка…</template>
+                <template v-else-if="globalState.componentUpdate.updatingCore">Обработка…</template>
+                <template v-else-if="globalState.componentUpdate.pendingCoreUpdate">Обновить до {{ globalState.componentUpdate.coreUpdateInfo.remote }}</template>
+                <template v-else>Проверить обновления</template>
               </button>
             </div>
 
@@ -108,12 +108,12 @@
 
             <div class="setting-item">
               <div class="info">
-                <h4>Wintun 驱动 (DLL)</h4>
-                <p>当前版本: {{ wintunVersion || '获取中...' }}</p>
+                <h4>Драйвер Wintun (DLL)</h4>
+                <p>Текущая версия: {{ wintunVersion || 'Получение…' }}</p>
               </div>
               <div class="btn-group">
                 <button class="action-btn" @click="installDriver(true)" :disabled="isInstalling">
-                  {{ isInstalling ? '处理中...' : '重新安装' }}
+                  {{ isInstalling ? 'Обработка…' : 'Переустановить' }}
                 </button>
               </div>
             </div>
@@ -122,21 +122,21 @@
 
             <div class="setting-item">
               <div class="info">
-                <h4>后台服务 (GoclashZHelper)</h4>
+                <h4>Фоновая служба (GoclashZHelper)</h4>
                 <p>
-                  状态:
+                  Статус:
                   <span :style="{ color: helperStatus.reachable ? 'var(--green-text)' : (helperStatus.installed ? 'var(--yellow-text)' : 'var(--text-muted)') }">
-                    {{ helperStatus.reachable ? '运行中' : (helperStatus.installed ? (helperStatus.running ? '连接失败' : '已停止') : '未安装') }}
+                    {{ helperStatus.reachable ? 'Работает' : (helperStatus.installed ? (helperStatus.running ? 'Нет связи' : 'Остановлена') : 'Не установлена') }}
                   </span>
-                  <span v-if="!helperStatus.installed" style="color: var(--text-muted); font-size: 0.75rem;"> · TUN 自启需要此服务</span>
+                  <span v-if="!helperStatus.installed" style="color: var(--text-muted); font-size: 0.75rem;"> · нужна для автозапуска TUN</span>
                 </p>
               </div>
               <div class="btn-group">
                 <button class="action-btn" @click="restartHelper" :disabled="helperLoading" v-if="helperStatus.installed">
-                  {{ helperLoading ? '...' : '重新启动' }}
+                  {{ helperLoading ? '...' : 'Перезапустить' }}
                 </button>
                 <button class="action-btn" @click="installHelper" :disabled="helperLoading">
-                  {{ helperLoading ? '...' : (helperStatus.installed ? '重新安装' : '安装') }}
+                  {{ helperLoading ? '...' : (helperStatus.installed ? 'Переустановить' : 'Установить') }}
                 </button>
               </div>
             </div>
@@ -145,10 +145,10 @@
 
             <div class="setting-item col-item" style="flex-direction: row; justify-content: space-between; align-items: center; padding-bottom: 0; margin-top: 10px;">
               <div class="info">
-                <h3 style="margin: 0; font-size: 1.15rem; font-weight: 600; color: var(--text-main);">路由规则数据库</h3>
+                <h3 style="margin: 0; font-size: 1.15rem; font-weight: 600; color: var(--text-main);">Базы правил маршрутизации</h3>
               </div>
               <button class="action-btn primary-btn accent-btn" @click="handleUpdateAllDbs" :disabled="isUpdatingAnyDb">
-                {{ isUpdatingAnyDb ? '更新中' : '更新全部' }}
+                {{ isUpdatingAnyDb ? 'Обновление…' : 'Обновить все' }}
               </button>
             </div>
             <div class="divider" style="margin-top: 14px;"></div>
@@ -156,20 +156,20 @@
             <template v-for="(db, idx) in dbList" :key="db.key">
               <div class="setting-item">
                 <div class="info" style="overflow: hidden;">
-                  <h4>{{ db.title }} 文件</h4>
+                  <h4>Файл {{ db.title }}</h4>
                   <p class="link-text" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                    {{ behavior[db.behaviorKey] || '未配置下载链接' }}
+                    {{ behavior[db.behaviorKey] || 'Ссылка не задана' }}
                   </p>
                   <p v-if="dbFileInfo[db.key]?.ready" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
-                    大小: {{ formatBytes(dbFileInfo[db.key].size) }} | 更新于: {{ formatRelativeTime(dbFileInfo[db.key].modTime) }}
+                    Размер: {{ formatBytes(dbFileInfo[db.key].size) }} | Обновлено: {{ formatRelativeTime(dbFileInfo[db.key].modTime) }}
                   </p>
                   <p v-else-if="dbFileInfo[db.key]?.error" style="font-size: 0.75rem; color: var(--red-text); margin-top: 2px;">{{ dbFileInfo[db.key].error }}</p>
-                  <p v-else style="font-size: 0.75rem; color: var(--red-text); margin-top: 2px;">文件不存在，请点击更新同步</p>
+                  <p v-else style="font-size: 0.75rem; color: var(--red-text); margin-top: 2px;">Файла нет — нажмите «Синхронизировать»</p>
                 </div>
                 <div class="btn-group" style="flex-shrink: 0;">
-                  <button class="action-btn" @click="openDbEditModal(db.key, behavior[db.behaviorKey])" :disabled="isUpdatingDb(db.key)">编辑链接</button>
+                  <button class="action-btn" @click="openDbEditModal(db.key, behavior[db.behaviorKey])" :disabled="isUpdatingDb(db.key)">Изменить ссылку</button>
                   <button class="action-btn" @click="handleUpdateDb(db.key)" :disabled="isUpdatingDb(db.key)">
-                    {{ isUpdatingDb(db.key) ? '同步中...' : '更新同步' }}
+                    {{ isUpdatingDb(db.key) ? 'Синхронизация…' : 'Синхронизировать' }}
                   </button>
                 </div>
               </div>
@@ -183,16 +183,16 @@
             <button class="back-btn" @click="view = 'main'">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
             </button>
-            <h3>虚拟网卡配置</h3>
+            <h3>Виртуальный адаптер</h3>
             <button class="action-btn accent-btn mini-btn-reset" @click="confirmReset('tun')">
-              <span class="btn-icon" v-html="ICONS.refresh"></span> 重置
+              <span class="btn-icon" v-html="ICONS.refresh"></span> Сброс
             </button>
           </div>
 
           <div class="glass-card setting-group scrollable">
 
             <div class="setting-item">
-              <div class="info"><h4>开启 TUN 模式</h4></div>
+              <div class="info"><h4>Включить режим TUN</h4></div>
               <label class="modern-switch">
                 <input type="checkbox" :checked="globalState.tun" @change="handleTunToggle">
                 <span class="slider"></span>
@@ -203,20 +203,20 @@
 
             <div class="setting-item">
               <div class="info">
-                <h4>网卡驱动安装</h4>
+                <h4>Установка драйвера адаптера</h4>
                 <p class="status-msg">
-                  检测状态: <span :class="tunStatus.hasWintun ? 'green-text' : 'red-text'">{{ tunStatus.hasWintun ? 'wintun 已就绪' : (tunStatus.wintunError || 'wintun 不可用') }}</span>
+                  Статус проверки: <span :class="tunStatus.hasWintun ? 'green-text' : 'red-text'">{{ tunStatus.hasWintun ? 'wintun готов' : (tunStatus.wintunError || 'wintun недоступен') }}</span>
                 </p>
               </div>
               <button class="action-btn" @click="installDriver(true)" :disabled="isInstalling || tunStatus.hasWintun">
-                {{ isInstalling ? '处理中...' : (tunStatus.hasWintun ? '已安装' : '安装驱动') }}
+                {{ isInstalling ? 'Обработка…' : (tunStatus.hasWintun ? 'Установлен' : 'Установить драйвер') }}
               </button>
             </div>
 
             <div class="divider"></div>
 
             <div class="setting-item">
-              <div class="info"><h4>堆栈 (Stack)</h4></div>
+              <div class="info"><h4>Стек (Stack)</h4></div>
               <ModernSelect 
                 v-model="tunConfig.stack" 
                 :options="stackOptions" 
@@ -228,42 +228,42 @@
             <div class="divider"></div>
 
             <div class="setting-item">
-              <div class="info"><h4>指定网卡名称 (Device)</h4></div>
-              <input type="text" class="modern-input" v-model="tunConfig.device" placeholder="留空则自动" @blur="saveTun" :disabled="!tunStatus.hasWintun" />
+              <div class="info"><h4>Имя адаптера (Device)</h4></div>
+              <input type="text" class="modern-input" v-model="tunConfig.device" placeholder="Пусто = авто" @blur="saveTun" :disabled="!tunStatus.hasWintun" />
             </div>
 
             <div class="divider"></div>
 
             <div class="setting-item">
-              <div class="info"><h4>自动设置路由 (Auto Route)</h4></div>
+              <div class="info"><h4>Авто-маршруты (Auto Route)</h4></div>
               <label class="modern-switch"><input type="checkbox" v-model="tunConfig.autoRoute" @change="saveTun" :disabled="!tunStatus.hasWintun"><span class="slider"></span></label>
             </div>
 
             <div class="divider"></div>
 
             <div class="setting-item">
-              <div class="info"><h4>自动包含接口 (Auto Detect Interface)</h4></div>
+              <div class="info"><h4>Автоопределение интерфейса (Auto Detect Interface)</h4></div>
               <label class="modern-switch"><input type="checkbox" v-model="tunConfig.autoDetect" @change="saveTun" :disabled="!tunStatus.hasWintun"><span class="slider"></span></label>
             </div>
 
             <div class="divider"></div>
 
             <div class="setting-item">
-              <div class="info"><h4>DNS 劫持 (DNS Hijack)</h4></div>
-              <input type="text" class="modern-input" :value="tunConfig.dnsHijack.join(', ')" @blur="updateTunDnsHijack" placeholder="如 any:53" :disabled="!tunStatus.hasWintun" />
+              <div class="info"><h4>Перехват DNS (DNS Hijack)</h4></div>
+              <input type="text" class="modern-input" :value="tunConfig.dnsHijack.join(', ')" @blur="updateTunDnsHijack" placeholder="напр. any:53" :disabled="!tunStatus.hasWintun" />
             </div>
 
             <div class="divider"></div>
 
             <div class="setting-item">
-              <div class="info"><h4>严格路由 (Strict Route)</h4></div>
+              <div class="info"><h4>Строгие маршруты (Strict Route)</h4></div>
               <label class="modern-switch"><input type="checkbox" v-model="tunConfig.strictRoute" @change="saveTun" :disabled="!tunStatus.hasWintun"><span class="slider"></span></label>
             </div>
 
             <div class="divider"></div>
 
             <div class="setting-item">
-              <div class="info"><h4>最大传输单元 (MTU)</h4></div>
+              <div class="info"><h4>MTU</h4></div>
               <ModernNumberInput 
                 v-model="tunConfig.mtu" 
                 :min="576" 
@@ -281,16 +281,16 @@
             <button class="back-btn" @click="view = 'main'">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
             </button>
-            <h3>DNS 服务器配置</h3>
+            <h3>Конфигурация DNS-серверов</h3>
             <button class="action-btn accent-btn mini-btn-reset" @click="confirmReset('dns')">
-              <span class="btn-icon" v-html="ICONS.refresh"></span> 重置
+              <span class="btn-icon" v-html="ICONS.refresh"></span> Сброс
             </button>
           </div>
 
           <div class="glass-card setting-group scrollable">
 
             <div class="setting-item">
-              <div class="info"><h4>启用 DNS 覆写 (Enable DNS)</h4></div>
+              <div class="info"><h4>Переопределение DNS (Enable DNS)</h4></div>
               <label class="modern-switch">
                 <input type="checkbox" v-model="dnsConfig.enable" @change="saveDns">
                 <span class="slider"></span>
@@ -299,13 +299,13 @@
             <div class="divider"></div>
 
             <div class="setting-item">
-              <div class="info"><h4>DNS 监听端口 (Listen)</h4></div>
-              <input type="text" class="modern-input" v-model="dnsConfig.listen" @blur="saveDns" :disabled="!dnsConfig.enable" placeholder="如 0.0.0.0:1053" />
+              <div class="info"><h4>Порт DNS (Listen)</h4></div>
+              <input type="text" class="modern-input" v-model="dnsConfig.listen" @blur="saveDns" :disabled="!dnsConfig.enable" placeholder="напр. 0.0.0.0:1053" />
             </div>
             <div class="divider"></div>
 
             <div class="setting-item">
-              <div class="info"><h4>开启 IPv6 解析 (IPv6 Resolution)</h4></div>
+              <div class="info"><h4>Резолвинг IPv6 (IPv6 Resolution)</h4></div>
               <label class="modern-switch">
                 <input type="checkbox" v-model="dnsConfig.ipv6" @change="saveDns" :disabled="!dnsConfig.enable">
                 <span class="slider"></span>
@@ -315,8 +315,8 @@
 
             <div class="setting-item">
               <div class="info">
-                <h4>偏好 HTTP/3 (Prefer HTTP/3)</h4>
-                <p>支持 DoH3 的服务器优先使用 HTTP/3 连接</p>
+                <h4>Предпочитать HTTP/3 (Prefer HTTP/3)</h4>
+                <p>Серверы с DoH3 сначала по HTTP/3</p>
               </div>
               <label class="modern-switch">
                 <input type="checkbox" v-model="dnsConfig.preferH3" @change="saveDns" :disabled="!dnsConfig.enable">
@@ -326,7 +326,7 @@
             <div class="divider"></div>
 
             <div class="setting-item">
-              <div class="info"><h4>增强模式 (Enhanced Mode)</h4></div>
+              <div class="info"><h4>Расширенный режим (Enhanced Mode)</h4></div>
               <ModernSelect 
                 v-model="dnsConfig.enhancedMode" 
                 :options="enhancedModeOptions" 
@@ -338,8 +338,8 @@
 
             <div class="setting-item">
               <div class="info">
-                <h4>遵守规则 (Respect Rules)</h4>
-                <p>Fake-IP 模式下，匹配路由规则以决定是否返回真实 IP</p>
+                <h4>Учитывать правила (Respect Rules)</h4>
+                <p>В режиме Fake-IP правила решают, вернуть ли реальный IP</p>
               </div>
               <label class="modern-switch">
                 <input type="checkbox" v-model="dnsConfig.respectRules" @change="saveDns" :disabled="!dnsConfig.enable || dnsConfig.enhancedMode !== 'fake-ip'">
@@ -349,19 +349,19 @@
             <div class="divider"></div>
 
             <div class="setting-item">
-              <div class="info"><h4>Fake-IP 范围 (Fake-IP Range)</h4></div>
+              <div class="info"><h4>Диапазон Fake-IP (Fake-IP Range)</h4></div>
               <input type="text" class="modern-input" v-model="dnsConfig.fakeIpRange" @blur="saveDns" :disabled="!dnsConfig.enable || dnsConfig.enhancedMode !== 'fake-ip'" />
             </div>
             <div class="divider"></div>
 
             <div class="setting-item col-item">
-              <div class="info"><h4>Fake-IP 缓存过滤器 (Fake-IP Filter)</h4></div>
-              <textarea class="modern-textarea" :value="(dnsConfig.fakeIpFilter || []).join('\n')" @blur="updateDnsArray($event, 'fakeIpFilter')" rows="3" placeholder="如 *.lan" :disabled="!dnsConfig.enable || dnsConfig.enhancedMode !== 'fake-ip'"></textarea>
+              <div class="info"><h4>Фильтр Fake-IP (Fake-IP Filter)</h4></div>
+              <textarea class="modern-textarea" :value="(dnsConfig.fakeIpFilter || []).join('\n')" @blur="updateDnsArray($event, 'fakeIpFilter')" rows="3" placeholder="напр. *.lan" :disabled="!dnsConfig.enable || dnsConfig.enhancedMode !== 'fake-ip'"></textarea>
             </div>
             <div class="divider"></div>
 
             <div class="setting-item">
-              <div class="info"><h4>使用系统 Hosts (Use System Hosts)</h4></div>
+              <div class="info"><h4>Системный hosts (Use System Hosts)</h4></div>
               <label class="modern-switch">
                 <input type="checkbox" v-model="dnsConfig.useSystemHosts" @change="saveDns" :disabled="!dnsConfig.enable">
                 <span class="slider"></span>
@@ -370,7 +370,7 @@
             <div class="divider"></div>
 
             <div class="setting-item">
-              <div class="info"><h4>使用 Hosts (Use Hosts)</h4></div>
+              <div class="info"><h4>Использовать hosts (Use Hosts)</h4></div>
               <label class="modern-switch">
                 <input type="checkbox" v-model="dnsConfig.useHosts" @change="saveDns" :disabled="!dnsConfig.enable">
                 <span class="slider"></span>
@@ -379,43 +379,43 @@
             <div class="divider"></div>
 
             <div class="setting-item col-item">
-              <div class="info"><h4>默认名称服务器 (Default Nameservers)</h4></div>
-              <textarea class="modern-textarea" :value="(dnsConfig.defaultNameserver || []).join('\n')" @blur="updateDnsArray($event, 'defaultNameserver')" rows="2" placeholder="纯IP服务器，如 114.114.114.114" :disabled="!dnsConfig.enable"></textarea>
+              <div class="info"><h4>DNS по умолчанию (Default Nameservers)</h4></div>
+              <textarea class="modern-textarea" :value="(dnsConfig.defaultNameserver || []).join('\n')" @blur="updateDnsArray($event, 'defaultNameserver')" rows="2" placeholder="Только IP, напр. 114.114.114.114" :disabled="!dnsConfig.enable"></textarea>
             </div>
             <div class="divider"></div>
 
             <div class="setting-item col-item">
-              <div class="info"><h4>主名称服务器 (Nameservers)</h4></div>
-              <textarea class="modern-textarea" :value="(dnsConfig.nameserver || []).join('\n')" @blur="updateDnsArray($event, 'nameserver')" rows="3" placeholder="推荐使用 DoH / DoT" :disabled="!dnsConfig.enable"></textarea>
+              <div class="info"><h4>Основные DNS (Nameservers)</h4></div>
+              <textarea class="modern-textarea" :value="(dnsConfig.nameserver || []).join('\n')" @blur="updateDnsArray($event, 'nameserver')" rows="3" placeholder="Рекомендуется DoH / DoT" :disabled="!dnsConfig.enable"></textarea>
             </div>
             <div class="divider"></div>
 
             <div class="setting-item col-item">
-              <div class="info"><h4>备用名称服务器 (Fallback)</h4></div>
-              <textarea class="modern-textarea" :value="(dnsConfig.fallback || []).join('\n')" @blur="updateDnsArray($event, 'fallback')" rows="3" placeholder="用于解析境外域名" :disabled="!dnsConfig.enable"></textarea>
+              <div class="info"><h4>Резервные DNS (Fallback)</h4></div>
+              <textarea class="modern-textarea" :value="(dnsConfig.fallback || []).join('\n')" @blur="updateDnsArray($event, 'fallback')" rows="3" placeholder="Для зарубежных доменов" :disabled="!dnsConfig.enable"></textarea>
             </div>
             <div class="divider"></div>
 
             <div class="setting-item col-item">
-              <div class="info"><h4>直连名称服务器 (Direct Nameservers)</h4></div>
-              <textarea class="modern-textarea" :value="(dnsConfig.directNameserver || []).join('\n')" @blur="updateDnsArray($event, 'directNameserver')" rows="2" placeholder="专用于直连规则的 DNS" :disabled="!dnsConfig.enable"></textarea>
+              <div class="info"><h4>DNS прямого соединения (Direct Nameservers)</h4></div>
+              <textarea class="modern-textarea" :value="(dnsConfig.directNameserver || []).join('\n')" @blur="updateDnsArray($event, 'directNameserver')" rows="2" placeholder="DNS для правил прямого соединения" :disabled="!dnsConfig.enable"></textarea>
             </div>
             <div class="divider"></div>
 
             <div class="setting-item col-item">
-              <div class="info"><h4>代理节点解析服务器 (Proxy Server Nameserver)</h4></div>
-              <textarea class="modern-textarea" :value="(dnsConfig.proxyServerNameserver || []).join('\n')" @blur="updateDnsArray($event, 'proxyServerNameserver')" rows="2" placeholder="用于解析代理节点的域名" :disabled="!dnsConfig.enable"></textarea>
+              <div class="info"><h4>DNS доменов узлов (Proxy Server Nameserver)</h4></div>
+              <textarea class="modern-textarea" :value="(dnsConfig.proxyServerNameserver || []).join('\n')" @blur="updateDnsArray($event, 'proxyServerNameserver')" rows="2" placeholder="Для резолвинга доменов прокси-узлов" :disabled="!dnsConfig.enable"></textarea>
             </div>
             <div class="divider"></div>
 
             <div class="setting-item col-item">
-              <div class="info"><h4>指定域名解析服务器 (Nameserver Policy)</h4></div>
+              <div class="info"><h4>DNS по доменам (Nameserver Policy)</h4></div>
               <textarea class="modern-textarea" :value="formatNameserverPolicy(dnsConfig.nameserverPolicy)" @blur="updateNameserverPolicy" rows="4" placeholder="geosite:cn: https://doh.pub/dns-query" :disabled="!dnsConfig.enable"></textarea>
             </div>
             <div class="divider"></div>
 
             <div class="setting-item">
-              <div class="info"><h4>启用 GeoIP 回退 (Fallback Filter GeoIP)</h4></div>
+              <div class="info"><h4>GeoIP-фолбэк (Fallback Filter GeoIP)</h4></div>
               <label class="modern-switch">
                 <input type="checkbox" v-model="dnsConfig.fallbackFilter.geoip" @change="saveDns" :disabled="!dnsConfig.enable">
                 <span class="slider"></span>
@@ -424,20 +424,20 @@
             <div class="divider"></div>
 
             <div class="setting-item">
-              <div class="info"><h4>GeoIP 代码 (GeoIP Code)</h4></div>
-              <input type="text" class="modern-input" v-model="dnsConfig.fallbackFilter.geoipCode" @blur="saveDns" :disabled="!dnsConfig.enable || !dnsConfig.fallbackFilter.geoip" placeholder="默认 CN" />
+              <div class="info"><h4>Код GeoIP (GeoIP Code)</h4></div>
+              <input type="text" class="modern-input" v-model="dnsConfig.fallbackFilter.geoipCode" @blur="saveDns" :disabled="!dnsConfig.enable || !dnsConfig.fallbackFilter.geoip" placeholder="По умолчанию CN" />
             </div>
             <div class="divider"></div>
 
             <div class="setting-item col-item">
-              <div class="info"><h4>IPCIDR 过滤 (Fallback Filter IPCIDR)</h4></div>
-              <textarea class="modern-textarea" :value="(dnsConfig.fallbackFilter.ipcidr || []).join('\n')" @blur="updateFallbackFilterIpcidr" rows="3" placeholder="如 240.0.0.0/4" :disabled="!dnsConfig.enable"></textarea>
+              <div class="info"><h4>Фильтр IPCIDR (Fallback Filter IPCIDR)</h4></div>
+              <textarea class="modern-textarea" :value="(dnsConfig.fallbackFilter.ipcidr || []).join('\n')" @blur="updateFallbackFilterIpcidr" rows="3" placeholder="напр. 240.0.0.0/4" :disabled="!dnsConfig.enable"></textarea>
             </div>
             <div class="divider"></div>
 
             <div class="setting-item col-item">
-              <div class="info"><h4>域名过滤 (Fallback Filter Domain)</h4></div>
-              <textarea class="modern-textarea" :value="(dnsConfig.fallbackFilter.domain || []).join('\n')" @blur="updateFallbackFilterDomain" rows="3" placeholder="匹配的域名将强制走 Fallback" :disabled="!dnsConfig.enable"></textarea>
+              <div class="info"><h4>Фильтр доменов (Fallback Filter Domain)</h4></div>
+              <textarea class="modern-textarea" :value="(dnsConfig.fallbackFilter.domain || []).join('\n')" @blur="updateFallbackFilterDomain" rows="3" placeholder="Совпавшие домены идут через Fallback" :disabled="!dnsConfig.enable"></textarea>
             </div>
 
           </div>
@@ -448,17 +448,17 @@
             <button class="back-btn" @click="view = 'main'">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
             </button>
-            <h3>基础网络配置</h3>
+            <h3>Базовые настройки сети</h3>
             <button class="action-btn accent-btn mini-btn-reset" @click="confirmReset('network')">
-              <span class="btn-icon" v-html="ICONS.refresh"></span> 重置
+              <span class="btn-icon" v-html="ICONS.refresh"></span> Сброс
             </button>
           </div>
 
           <div class="glass-card setting-group scrollable">
             <div class="setting-item">
               <div class="info">
-                <h4>IPv6 支持</h4>
-                <p>开启后内核将解析并接管 IPv6 流量。若网络环境不支持可能导致卡顿。</p>
+                <h4>Поддержка IPv6</h4>
+                <p>Ядро будет резолвить и обрабатывать IPv6. Без поддержки в сети возможны лаги.</p>
               </div>
               <label class="modern-switch">
                 <input type="checkbox" v-model="netConfig.ipv6" @change="saveNet">
@@ -469,8 +469,8 @@
 
             <div class="setting-item">
               <div class="info">
-                <h4>允许局域网连接 (Allow LAN)</h4>
-                <p>开启后将允许局域网内其他设备通过此代理上网。</p>
+                <h4>Доступ из локальной сети (Allow LAN)</h4>
+                <p>Другие устройства в сети смогут выходить через этот прокси.</p>
               </div>
               <label class="modern-switch">
                 <input type="checkbox" v-model="netConfig.allowLan" @change="saveNet">
@@ -481,8 +481,8 @@
 
             <div class="setting-item">
               <div class="info">
-                <h4>统一延迟测试 (Unified Delay)</h4>
-                <p>开启后将去除握手损耗，显示更真实的节点响应延迟。</p>
+                <h4>Единая задержка (Unified Delay)</h4>
+                <p>Убирает затраты на хендшейк — задержка узлов реалистичнее.</p>
               </div>
               <label class="modern-switch">
                 <input type="checkbox" v-model="netConfig.unifiedDelay" @change="saveNet">
@@ -493,8 +493,8 @@
 
             <div class="setting-item">
               <div class="info">
-                <h4>TCP 并发连接</h4>
-                <p>同时向所有解析出的 IP 发起连接，取最快响应者。大幅提升首屏加载速度。</p>
+                <h4>Конкурентный TCP</h4>
+                <p>Соединение сразу со всеми IP, берётся самый быстрый. Заметно ускоряет загрузку.</p>
               </div>
               <label class="modern-switch">
                 <input type="checkbox" v-model="netConfig.tcpConcurrent" @change="saveNet">
@@ -505,8 +505,8 @@
 
             <div class="setting-item">
               <div class="info">
-                <h4>TCP 保持活动 (Keep Alive)</h4>
-                <p>降低在某些防火墙下的断连概率，保持长连接存活。</p>
+                <h4>TCP Keep Alive (Keep Alive)</h4>
+                <p>Меньше обрывов за файрволами, длинные соединения живут дольше.</p>
               </div>
               <label class="modern-switch">
                 <input type="checkbox" v-model="netConfig.tcpKeepAlive" @change="saveNet">
@@ -519,8 +519,8 @@
                 <div class="divider"></div>
                 <div class="setting-item">
                   <div class="info">
-                    <h4>发送时间间隔 (Interval)</h4>
-                    <p>单位为秒，建议值 15-30s</p>
+                    <h4>Интервал отправки (Interval)</h4>
+                    <p>В секундах, рекомендуется 15-30s</p>
                   </div>
                   <div class="input-with-unit">
                     <ModernNumberInput 
@@ -539,8 +539,8 @@
 
             <div class="setting-item col-item">
               <div class="info">
-                <h4>延迟测试网址 (Delay Test URL)</h4>
-                <p>内核进行连接可用性测试时使用的 URL。建议使用 Google 或 Cloudflare 的测速地址。</p>
+                <h4>URL проверки задержки (Delay Test URL)</h4>
+                <p>URL проверки доступности. Лучше адреса Google или Cloudflare.</p>
               </div>
               <input 
                 type="text" 
@@ -555,8 +555,8 @@
 
             <div class="setting-item col-item">
               <div class="info">
-                <h4>外部控制地址 (External Controller)</h4>
-                <p>内核 REST API 的监听地址。默认只允许本机 127.0.0.1 访问，不建议修改。</p>
+                <h4>Адрес внешнего контроллера (External Controller)</h4>
+                <p>Адрес REST API ядра. По умолчанию только 127.0.0.1, менять не стоит.</p>
               </div>
               <input 
                 type="text" 
@@ -572,8 +572,8 @@
 
             <div class="setting-item col-item">
               <div class="info">
-                <h4>本地 Hosts 映射 (Hosts)</h4>
-                <p>手动指定域名与 IP 的映射关系。对接 DNS 设置中的「使用 Hosts」选项。</p>
+                <h4>Локальный hosts (Hosts)</h4>
+                <p>Ручное сопоставление домен → IP. Работает с опцией «Использовать hosts» в DNS.</p>
               </div>
               <div class="hosts-input-container">
                 <textarea 
@@ -581,7 +581,7 @@
                   v-model="netConfig.hosts" 
                   @blur="saveNet" 
                   rows="6" 
-                  placeholder="'example.com': 127.0.0.1 (请遵循 YAML 键值对格式)"
+                  placeholder="'example.com': 127.0.0.1 (формат YAML ключ: значение)"
                   style="margin-top: 10px; font-family: var(--font-mono); font-size: 0.85rem; width: 100%;"
                 ></textarea>
                 
@@ -601,17 +601,17 @@
             <button class="back-btn" @click="view = 'main'">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
             </button>
-            <h3>应用行为设置</h3>
+            <h3>Поведение приложения</h3>
             <button class="action-btn accent-btn mini-btn-reset" @click="confirmReset('behavior')">
-              <span class="btn-icon" v-html="ICONS.refresh"></span> 重置
+              <span class="btn-icon" v-html="ICONS.refresh"></span> Сброс
             </button>
           </div>
 
           <div class="glass-card setting-group scrollable">
             <div class="setting-item">
               <div class="info">
-                <h4>静默启动</h4>
-                <p>启动时直接进入系统托盘，不自动显示主界面。</p>
+                <h4>Тихий запуск</h4>
+                <p>Запуск сразу в трей, без главного окна.</p>
               </div>
               <label class="modern-switch">
                 <input type="checkbox" v-model="behavior.silentStart" @change="saveBehavior">
@@ -622,8 +622,8 @@
 
             <div class="setting-item">
               <div class="info">
-                <h4>关闭面板时隐藏到托盘</h4>
-                <p>点击右上角关闭按钮时，程序将继续在后台运行。</p>
+                <h4>Скрывать в трей при закрытии</h4>
+                <p>По кнопке закрытия программа продолжит работать в фоне.</p>
               </div>
               <label class="modern-switch">
                 <input type="checkbox" v-model="behavior.closeToTray" @change="saveBehavior">
@@ -634,8 +634,8 @@
 
             <div class="setting-item">
               <div class="info">
-                <h4>开机自启</h4>
-                <p>登录 Windows 时自动启动 GoclashZ。</p>
+                <h4>Автозапуск</h4>
+                <p>Запуск Misetanibox при входе в Windows.</p>
               </div>
               <label class="modern-switch">
                 <input type="checkbox" v-model="behavior.startupWithOS" @change="handleStartupWithOSChange">
@@ -650,8 +650,8 @@
                 
                 <div class="setting-item">
                   <div class="info">
-                    <h4>启动后恢复代理状态</h4>
-                    <p>开机自启后，自动恢复退出前启用的系统代理或 TUN 模式。</p>
+                    <h4>Восстанавливать прокси после запуска</h4>
+                    <p>После автозапуска вернуть системный прокси или режим TUN, как до выхода.</p>
                   </div>
                   <label class="modern-switch">
                     <input type="checkbox" v-model="behavior.restoreOnStartup" @change="saveBehavior">
@@ -665,8 +665,8 @@
 
             <div class="setting-item">
               <div class="info">
-                <h4>自动延迟测速</h4>
-                <p>启用后，将按设定的时间间隔在后台自动更新节点延迟。</p>
+                <h4>Автопроверка задержки</h4>
+                <p>Фоновое обновление задержки узлов с заданным интервалом.</p>
               </div>
               <label class="modern-switch">
                 <input type="checkbox" v-model="behavior.autoDelayTest" @change="saveBehavior">
@@ -679,7 +679,7 @@
                 <div class="divider"></div>
                 <div class="setting-item">
                   <div class="info">
-                    <h4>测速间隔</h4>
+                    <h4>Интервал проверки</h4>
                   </div>
                   <div class="input-with-unit">
                     <ModernNumberInput 
@@ -697,8 +697,8 @@
 
             <div class="setting-item">
               <div class="info">
-                <h4>显色彩色延迟数字</h4>
-                <p>启用后，节点延迟将以绿黄红三色显示，替代默认的黑白深浅风格。</p>
+                <h4>Цветные значения задержки</h4>
+                <p>Задержка узлов зелёным/жёлтым/красным вместо чёрно-белого стиля.</p>
               </div>
               <label class="modern-switch">
                 <input type="checkbox" v-model="behavior.colorDelay" @change="saveBehavior">
@@ -709,8 +709,8 @@
 
             <div class="setting-item">
               <div class="info">
-                <h4>延迟结果保留</h4>
-                <p>开启后将缓存测速结果，可选择定时清空或长时间保留。</p>
+                <h4>Хранение результатов задержки</h4>
+                <p>Кэш результатов проверки: очистка по таймеру или долгое хранение.</p>
               </div>
               <label class="modern-switch">
                 <input type="checkbox" v-model="behavior.delayRetention" @change="saveBehavior">
@@ -723,15 +723,15 @@
                 <div class="divider"></div>
                 <div class="setting-item">
                   <div class="info">
-                    <h4>保留时间</h4>
+                    <h4>Время хранения</h4>
                   </div>
                   <ModernSelect 
                     v-model="behavior.delayRetentionTime" 
                     :options="[
-                      { label: '5 秒', value: '5' },
-                      { label: '10 秒', value: '10' },
-                      { label: '30 秒', value: '30' },
-                      { label: '长时间', value: 'long' }
+                      { label: '5 с', value: '5' },
+                      { label: '10 с', value: '10' },
+                      { label: '30 с', value: '30' },
+                      { label: 'Долго', value: 'long' }
                     ]" 
                     @change="saveBehavior" 
                   />
@@ -742,8 +742,8 @@
 
             <div class="setting-item">
               <div class="info">
-                <h4>内核日志等级</h4>
-                <p>调整核心输出的日志详细程度。如遇到问题无法排查，可改为调试。</p>
+                <h4>Уровень логов ядра</h4>
+                <p>Детализация логов ядра. Для разбора проблем включите отладку.</p>
               </div>
               <ModernSelect 
                 v-model="behavior.logLevel" 
@@ -755,8 +755,8 @@
 
             <div class="setting-item">
               <div class="info">
-                <h4>软件日志等级</h4>
-                <p>调整主程序本身的日志输出等级。此设置即时生效，对实时日志页面起过滤作用。</p>
+                <h4>Уровень логов приложения</h4>
+                <p>Уровень логов самой программы. Применяется сразу, фильтрует страницу логов.</p>
               </div>
               <ModernSelect 
                 v-model="behavior.appLogLevel" 
@@ -768,8 +768,52 @@
 
             <div class="setting-item">
               <div class="info">
-                <h4>隐藏日志入口</h4>
-                <p>隐藏侧边栏中的日志页面入口；后台仍会保留最近日志用于故障诊断。</p>
+                <h4>Простой режим (Lite)</h4>
+                <p>Упрощённый интерфейс: список серверов и одна кнопка подключения (глобальный режим). Удобно и близко к мобильному виду.</p>
+              </div>
+              <label class="modern-switch">
+                <input type="checkbox" :checked="globalState.uiMode === 'lite'" @change="onToggleLite">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="setting-item">
+              <div class="info">
+                <h4>Умное ядро (Smart) <span v-if="smartCoreOn" style="color: var(--green-text); font-size: 0.8rem; margin-left: 6px;">установлено</span></h4>
+                <p>Заменяет ядро на сборку с ML-выбором лучшего сервера по истории задержек и нагрузке. Скачивается отдельно (~20 МБ). Ядро неподписанное — при первом запуске Windows Defender может его заблокировать; тогда разрешите файл в «Журнале защиты» или добавьте исключение.</p>
+              </div>
+              <button
+                class="action-btn"
+                :class="{ 'accent-btn': !smartCoreOn }"
+                :disabled="smartCoreBusy"
+                @click="toggleSmartCore"
+              >
+                {{ smartCoreBusy ? 'Подождите…' : (smartCoreOn ? 'Вернуть обычное' : 'Установить Smart') }}
+              </button>
+            </div>
+
+            <template v-if="smartCoreOn">
+              <div class="divider"></div>
+              <div class="setting-item">
+                <div class="info">
+                  <h4>Использовать Смарт для всего</h4>
+                  <p>Весь прокси-трафик направляется через Смарт-группу (умный выбор узла) даже в режиме «по правилам». Прямые правила (РФ-сайты напрямую, блок рекламы) сохраняются.</p>
+                </div>
+                <label class="modern-switch">
+                  <input type="checkbox" :checked="smartRouteOn" @change="onToggleSmartRoute">
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </template>
+
+            <div class="divider"></div>
+
+            <div class="setting-item">
+              <div class="info">
+                <h4>Скрыть раздел логов</h4>
+                <p>Прячет пункт логов в сайдбаре; последние логи хранятся для диагностики.</p>
               </div>
               <label class="modern-switch">
                 <input type="checkbox" v-model="behavior.hideLogs" @change="saveBehavior">
@@ -781,8 +825,8 @@
 
             <div class="setting-item">
               <div class="info">
-                <h4>仅统计代理流量</h4>
-                <p>开启后仪表盘流量图将只计算经由代理节点的流量，排除直连 (DIRECT) 流量。</p>
+                <h4>Считать только прокси-трафик</h4>
+                <p>График трафика учитывает только прокси-узлы, без прямого (DIRECT) трафика.</p>
               </div>
               <label class="modern-switch">
                 <input type="checkbox" v-model="behavior.proxyTrafficOnly" @change="saveBehavior">
@@ -794,8 +838,8 @@
 
             <div class="setting-item">
               <div class="info">
-                <h4>订阅更新 User-Agent</h4>
-                <p>自定义下载或更新订阅配置时的请求头，留空使用默认值。</p>
+                <h4>User-Agent обновления подписки</h4>
+                <p>Свой заголовок при загрузке/обновлении подписки; пусто = по умолчанию.</p>
               </div>
               <input 
                 type="text" 
@@ -803,7 +847,7 @@
                 style="width: 200px; text-align: center;" 
                 v-model="behavior.subUA" 
                 @blur="saveBehavior" 
-                placeholder="默认 UA" 
+                placeholder="UA по умолчанию" 
               />
             </div>
           </div>
@@ -814,7 +858,7 @@
             <button class="back-btn" @click="view = 'main'">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
             </button>
-            <h3>关于应用</h3>
+            <h3>О приложении</h3>
           </div>
 
           <div class="glass-card setting-group scrollable">
@@ -822,7 +866,10 @@
             <div class="setting-item" style="padding: 20px 0; display: flex; justify-content: space-between; align-items: center;">
               <div class="info" style="display: flex; align-items: center; gap: 18px;">
                 <img :src="appLogo" style="width: 52px; height: 52px; border-radius: 12px;" />
-                <h4 style="margin: 0; font-weight: 800; font-size: 1.6rem; letter-spacing: -0.01em;">GoclashZ</h4>
+                <div>
+                  <h4 style="margin: 0; font-weight: 800; font-size: 1.6rem; letter-spacing: -0.01em;">Misetanibox</h4>
+                  <a href="javascript:void(0)" @click="openLink('https://t.me/whxteangel')" style="font-size: 0.75rem; color: var(--text-muted);">Логотип: @whxteangel</a>
+                </div>
               </div>
 
               <!-- 新增：右侧空间显示后台静默下载进度 -->
@@ -831,18 +878,18 @@
                    :class="{ 'clickable-progress': globalState.appUpdateProgress.isDownloaded }"
                    @click="globalState.appUpdateProgress.isDownloaded ? promptInstallApp(globalState.appUpdateProgress) : null">
                 <div class="progress-info">
-                  <span v-if="globalState.appUpdateProgress.isDownloaded" class="speed" style="color: var(--accent); font-weight: 600;">新版本已就绪，点击安装</span>
+                  <span v-if="globalState.appUpdateProgress.isDownloaded" class="speed" style="color: var(--accent); font-weight: 600;">Новая версия готова — установить</span>
                   <template v-else>
                     <span class="speed">{{ formatSpeed(globalState.appUpdateProgress.speedBps) }}</span>
                     <span class="divider-dot">·</span>
-                    <span class="eta">剩余 {{ formatEtaTime(globalState.appUpdateProgress.etaSec) }}</span>
+                    <span class="eta">Осталось {{ formatEtaTime(globalState.appUpdateProgress.etaSec) }}</span>
                   </template>
                 </div>
                 <div class="progress-bar-wrap">
                   <div class="progress-bar-fill" :style="{ width: appUpdatePercent + '%', backgroundColor: globalState.appUpdateProgress.isDownloaded ? 'var(--accent)' : '' }"></div>
                 </div>
                 <div class="progress-size">
-                  <span v-if="globalState.appUpdateProgress.isDownloaded">{{ globalState.appUpdateProgress.version }} 下载完成</span>
+                  <span v-if="globalState.appUpdateProgress.isDownloaded">{{ globalState.appUpdateProgress.version }} — загружено</span>
                   <span v-else>{{ formatBytes(globalState.appUpdateProgress.bytesDone) }} / {{ formatBytes(globalState.appUpdateProgress.totalBytes) }}</span>
                 </div>
               </div>
@@ -851,11 +898,11 @@
             <div class="divider"></div>
             <div class="setting-item">
               <div class="info">
-                <h4>软件版本</h4>
-                <p>{{ globalState.appVersion || '获取中...' }}</p>
+                <h4>Версия приложения</h4>
+                <p>{{ globalState.appVersion || 'Получение…' }}</p>
               </div>
               <button class="action-btn accent-btn" @click="handleCheckUpdate" :disabled="globalState.appUpdateChecking">
-                {{ globalState.appUpdateChecking ? '检查中...' : '检查更新' }}
+                {{ globalState.appUpdateChecking ? 'Проверка…' : 'Проверить обновления' }}
               </button>
             </div>
 
@@ -863,8 +910,8 @@
 
             <div class="setting-item">
               <div class="info">
-                <h4>自动更新</h4>
-                <p>允许软件自动检查并提示新版本。</p>
+                <h4>Автообновление</h4>
+                <p>Автопроверка и уведомление о новых версиях.</p>
               </div>
               <label class="modern-switch">
                 <input type="checkbox" v-model="behavior.autoUpdate" @change="saveBehavior" />
@@ -877,13 +924,13 @@
                 <div class="divider"></div>
                 <div class="setting-item">
                   <div class="info">
-                    <h4>检查更新方式</h4>
+                    <h4>Способ проверки</h4>
                   </div>
                   <ModernSelect 
                     v-model="behavior.updateMethod" 
                     :options="[
-                      { label: '每次启动', value: 'startup' }, 
-                      { label: '定时', value: 'scheduled' }
+                      { label: 'При каждом запуске', value: 'startup' }, 
+                      { label: 'По расписанию', value: 'scheduled' }
                     ]" 
                     @change="saveBehavior" 
                   />
@@ -892,7 +939,7 @@
                 <div class="divider"></div>
                 <div class="setting-item" :class="{ 'disabled-fade': behavior.updateMethod !== 'scheduled' }">
                   <div class="info">
-                    <h4>检查间隔时间</h4>
+                    <h4>Интервал проверки</h4>
                   </div>
                   <div class="input-with-unit">
                     <ModernNumberInput 
@@ -902,7 +949,7 @@
                       :disabled="behavior.updateMethod !== 'scheduled'" 
                       @change="saveBehavior"
                     />
-                    <span class="unit">天</span>
+                    <span class="unit">д</span>
                   </div>
                 </div>
               </div>
@@ -912,48 +959,48 @@
 
             <div class="setting-item">
               <div class="info">
-                <h4>本地配置备份</h4>
-                <p>将订阅、应用设置及主题打包导出为 .gocz 文件</p>
+                <h4>Локальная резервная копия</h4>
+                <p>Экспорт подписок, настроек и темы в файл .gocz</p>
               </div>
-              <button class="action-btn accent-btn" @click="handleExportBackup">导出备份</button>
+              <button class="action-btn accent-btn" @click="handleExportBackup">Экспорт копии</button>
             </div>
 
             <div class="divider"></div>
 
             <div class="setting-item">
               <div class="info">
-                <h4>还原备份</h4>
-                <p>从 .gocz 文件恢复数据，订阅配置将采用智能合并模式</p>
+                <h4>Восстановление копии</h4>
+                <p>Восстановление из .gocz; подписки сольются умным слиянием</p>
               </div>
-              <button class="action-btn accent-btn" @click="openRestoreModal">还原备份</button>
+              <button class="action-btn accent-btn" @click="openRestoreModal">Восстановление копии</button>
             </div>
 
             <div class="divider"></div>
 
             <div class="setting-item">
               <div class="info">
-                <h4>数据目录诊断</h4>
-                <p>查看程序目录、数据目录、内置 seed 与运行组件状态</p>
+                <h4>Диагностика каталога данных</h4>
+                <p>Каталоги программы/данных, встроенный seed и статус компонентов</p>
               </div>
-              <button class="action-btn" @click="openDataDirDiagnosticModal">查看状态</button>
+              <button class="action-btn" @click="openDataDirDiagnosticModal">Показать статус</button>
             </div>
 
             <div class="divider"></div>
 
             <div class="setting-item">
               <div class="info">
-                <h4>应用诊断信息</h4>
-                <p>导出应用路径、资产及服务状态以供故障排查</p>
+                <h4>Диагностика приложения</h4>
+                <p>Экспорт путей, ресурсов и статуса служб для разбора проблем</p>
               </div>
-              <button class="action-btn accent-btn" @click="handleExportDiagnostics">导出诊断</button>
+              <button class="action-btn accent-btn" @click="handleExportDiagnostics">Экспорт диагностики</button>
             </div>
 
             <div class="divider"></div>
 
             <div class="setting-item">
               <div class="info">
-                <h4>GitHub 仓库</h4>
-                <a href="javascript:void(0)" @click="openLink('https://github.com/Zzz-IT/GoclashZ')" class="link-item">https://github.com/Zzz-IT/GoclashZ</a>
+                <h4>Репозиторий GitHub</h4>
+                <a href="javascript:void(0)" @click="openLink('https://github.com/rakexzp/misetanibox')" class="link-item">https://github.com/rakexzp/misetanibox</a>
               </div>
             </div>
           </div>
@@ -965,18 +1012,18 @@
             <button class="back-btn" @click="view = 'main'">
               <span class="icon back-icon-svg" v-html="ICONS.arrowLeft"></span>
             </button>
-            <h3>UWP 环回管理</h3>
+            <h3>Управление UWP loopback</h3>
           </div>
 
           <div class="uwp-toolbar">
             <div class="uwp-search">
               <span class="search-icon" v-html="ICONS.search"></span>
-              <input v-model="uwpSearch" placeholder="搜索应用名称或包名..." />
+              <input v-model="uwpSearch" placeholder="Поиск по имени или пакету…" />
               <span v-if="uwpSearch" class="clear-icon" @click="uwpSearch = ''" v-html="ICONS.close"></span>
             </div>
             <div class="uwp-batch">
-              <button class="batch-btn" @click="toggleAllUwp(true)">全选</button>
-              <button class="batch-btn" @click="toggleAllUwp(false)">反选</button>
+              <button class="batch-btn" @click="toggleAllUwp(true)">Выбрать все</button>
+              <button class="batch-btn" @click="toggleAllUwp(false)">Инвертировать</button>
             </div>
           </div>
 
@@ -993,14 +1040,14 @@
                   {{ app.displayName?.[0]?.toUpperCase() || '?' }}
                 </div>
                 <div class="app-details">
-                  <span class="app-name">{{ app.displayName || '未命名应用' }}</span>
+                  <span class="app-name">{{ app.displayName || 'Без имени' }}</span>
                   <span class="app-pkg">{{ app.packageFamilyName }}</span>
                 </div>
               </div>
 
               <div class="app-status-wrapper">
                 <div class="uwp-status-tag">
-                  {{ app.isEnabled ? '已豁免' : '受限' }}
+                  {{ app.isEnabled ? 'Исключено' : 'Ограничено' }}
                 </div>
               </div>
             </div>
@@ -1008,8 +1055,8 @@
 
           <div class="uwp-footer">
             <button class="apply-btn" :disabled="savingUwp" @click="saveUwpChanges">
-              <span v-if="!savingUwp">应用更改 (需要管理员权限)</span>
-              <span v-else class="loading-spinner">正在保存...</span>
+              <span v-if="!savingUwp">Применить (нужны права админа)</span>
+              <span v-else class="loading-spinner">Сохранение…</span>
             </button>
           </div>
         </div>
@@ -1020,13 +1067,13 @@
       <div class="modal-overlay" v-if="showDbModal" @click.self="showDbModal = false">
         <div class="custom-modal-card" @click.stop>
           <div class="modal-header">
-            <h3>编辑 {{ dbTitles[editingDb.type] }} 下载链接</h3>
+            <h3>Ссылка загрузки {{ dbTitles[editingDb.type] }}</h3>
           </div>
           <div class="modal-body">
             <input type="text" class="modal-input" v-model="editingDb.link" style="text-align: left;" @keyup.enter="saveDbLink" />
             <div class="modal-footer">
-              <button class="action-btn flex-1" @click="showDbModal = false">取消</button>
-              <button class="primary-btn accent-btn flex-1" @click="saveDbLink">保存更改</button>
+              <button class="action-btn flex-1" @click="showDbModal = false">Отмена</button>
+              <button class="primary-btn accent-btn flex-1" @click="saveDbLink">Сохранить</button>
             </div>
           </div>
         </div>
@@ -1037,13 +1084,13 @@
       <div v-if="showResetConfirm" class="modal-overlay" @click="showResetConfirm = false">
         <div class="custom-modal-card" @click.stop>
           <div class="modal-header">
-            <h3 class="danger-text">确认重置</h3>
+            <h3 class="danger-text">Подтверждение сброса</h3>
           </div>
           <div class="modal-body">
-            <p class="global-modal-msg">确定要将 <strong>{{ resetModuleName }}</strong> 恢复为默认设置吗？此操作不可撤销，程序将重新加载配置。</p>
+            <p class="global-modal-msg">Сбросить <strong>{{ resetModuleName }}</strong> к значениям по умолчанию? Действие необратимо, конфигурация будет перезагружена.</p>
             <div class="modal-footer">
-              <button class="action-btn flex-1" @click="showResetConfirm = false">取消</button>
-              <button class="primary-btn accent-btn red-text-btn flex-1" @click="handleReset">确认重置</button>
+              <button class="action-btn flex-1" @click="showResetConfirm = false">Отмена</button>
+              <button class="primary-btn accent-btn red-text-btn flex-1" @click="handleReset">Сбросить</button>
             </div>
           </div>
         </div>
@@ -1054,16 +1101,16 @@
       <div v-if="showCoreUpdateConfirm" class="modal-overlay" @click="cancelCoreUpdateConfirm">
         <div class="custom-modal-card" @click.stop>
           <div class="modal-header">
-            <h3>发现新版本</h3>
+            <h3>Доступна новая версия</h3>
           </div>
           <div class="modal-body">
             <p class="global-modal-msg">
-              检测到 Mihomo 内核新版本 <strong>{{ globalState.componentUpdate.coreUpdateInfo.remote }}</strong>，当前版本为 <strong>{{ globalState.componentUpdate.coreUpdateInfo.local }}</strong>。<br/><br/>
-              更新内核将会短暂断开代理连接。是否立即更新？
+              Найдена новая версия ядра Mihomo <strong>{{ globalState.componentUpdate.coreUpdateInfo.remote }}</strong>, текущая — <strong>{{ globalState.componentUpdate.coreUpdateInfo.local }}</strong>.<br/><br/>
+              Обновление ядра кратко разорвёт прокси. Обновить сейчас?
             </p>
             <div class="modal-footer">
-              <button class="action-btn flex-1" @click="cancelCoreUpdateConfirm">取消</button>
-              <button class="primary-btn accent-btn flex-1" @click="executeCoreUpdate">立即更新</button>
+              <button class="action-btn flex-1" @click="cancelCoreUpdateConfirm">Отмена</button>
+              <button class="primary-btn accent-btn flex-1" @click="executeCoreUpdate">Обновить сейчас</button>
             </div>
           </div>
         </div>
@@ -1075,44 +1122,44 @@
       <div v-if="showRestoreModal" class="modal-overlay" @click.self="showRestoreModal = false">
         <div class="custom-modal-card" @click.stop>
           <div class="modal-header">
-            <h3>还原本地数据</h3>
+            <h3>Восстановление данных</h3>
           </div>
           <div class="modal-body">
-            <p class="global-modal-msg">请选择备份文件并设置还原模式：</p>
+            <p class="global-modal-msg">Выберите файл копии и режим восстановления:</p>
             
             <div class="restore-actions" style="width: 100%; display: flex; flex-direction: column; gap: 4px;">
               <button class="action-btn w-full-btn hover-accent" @click="handleSelectFile" :class="{'active-border': selectedPath}" style="width: 100%; box-sizing: border-box;">
                 <span class="btn-icon" v-html="ICONS.folder" style="margin-right: 4px;"></span>
                 <span class="truncate" style="flex: 1; text-align: center;">
-                  {{ selectedPath ? '已选择: ' + selectedPath.split('\\').pop() : '浏览备份文件 (.gocz)' }}
+                  {{ selectedPath ? 'Выбран: ' + selectedPath.split('\\').pop() : 'Выбрать файл (.gocz)' }}
                 </span>
               </button>
               
-              <div class="divider-text" style="margin: 12px 0">配置还原模式</div>
+              <div class="divider-text" style="margin: 12px 0">Режим восстановления</div>
               
               <div class="mode-selector-group" style="width: 100%;">
                 <ModernSelect 
                   v-model="restoreMode" 
                   :options="[
                     { 
-                      label: '全部恢复（替换设置与订阅）', 
+                      label: 'Всё (настройки и подписки)', 
                       value: 'all',
-                      description: '完整还原软件设置、订阅列表及主配置，当前数据将被完全覆盖。'
+                      description: 'Полный возврат настроек, подписок и основной конфигурации; текущие данные будут перезаписаны.'
                     },
                     { 
-                      label: '恢复订阅配置（替换现有列表）', 
+                      label: 'Подписки (заменить список)', 
                       value: 'subs',
-                      description: '用备份中的订阅列表替换当前列表，当前多余订阅将被移除。'
+                      description: 'Список подписок из копии заменит текущий; лишние подписки удалятся.'
                     },
                     { 
-                      label: '恢复订阅配置（合并入现有列表）', 
+                      label: 'Подписки (слить со списком)', 
                       value: 'subs-merge',
-                      description: '保留当前订阅，并将备份中的新订阅合并进来。同 ID 项将被覆盖。'
+                      description: 'Текущие подписки останутся, новые из копии добавятся; совпавшие ID перезапишутся.'
                     },
                     { 
-                      label: '恢复软件设置（包含主题/日志）', 
+                      label: 'Настройки (с темой/логами)', 
                       value: 'settings',
-                      description: '仅还原应用行为、DNS、网络及主题设置，不影响订阅列表。'
+                      description: 'Только поведение, DNS, сеть и тема; подписки не затрагиваются.'
                     }
                   ]"
                 />
@@ -1120,8 +1167,8 @@
             </div>
 
             <div class="modal-footer">
-              <button class="action-btn flex-1" @click="showRestoreModal = false">取消</button>
-              <button class="primary-btn accent-btn flex-1" :disabled="!selectedPath" @click="confirmRestore">执行还原</button>
+              <button class="action-btn flex-1" @click="showRestoreModal = false">Отмена</button>
+              <button class="primary-btn accent-btn flex-1" :disabled="!selectedPath" @click="confirmRestore">Восстановить</button>
             </div>
           </div>
         </div>
@@ -1132,63 +1179,63 @@
       <div v-if="showDataDirDiagnosticModal" class="modal-overlay" @click.self="showDataDirDiagnosticModal = false">
         <div class="custom-modal-card" @click.stop style="max-width: 500px;">
           <div class="modal-header">
-            <h3>数据目录诊断</h3>
+            <h3>Диагностика каталога данных</h3>
           </div>
           <div class="modal-body">
             <div v-if="dataDirInfo" class="diagnostic-results" style="max-height: 400px; overflow-y: auto;">
               <div class="setting-item" style="padding: 6px 0; align-items: flex-start;">
                 <div class="info">
-                  <h4>程序目录</h4>
+                  <h4>Каталог программы</h4>
                   <p class="link-text" style="word-break: break-all;">{{ dataDirInfo.appDir }}</p>
                 </div>
               </div>
               <div class="setting-item" style="padding: 6px 0; align-items: flex-start;">
                 <div class="info">
-                  <h4>数据目录</h4>
+                  <h4>Каталог данных</h4>
                   <p class="link-text" style="word-break: break-all;">{{ dataDirInfo.dataDir }}</p>
                 </div>
               </div>
               <div class="setting-item" style="padding: 6px 0; align-items: flex-start;">
                 <div class="info">
-                  <h4>内置种子目录</h4>
+                  <h4>Встроенный seed-каталог</h4>
                   <p class="link-text" style="word-break: break-all;">{{ dataDirInfo.seedCoreBinDir }}</p>
-                  <p v-if="dataDirInfo.seedManifestExists" style="color: var(--green-text); font-size: 0.8rem; margin-top: 4px;">seed 清单: 存在</p>
-                  <p v-else style="color: var(--red-text); font-size: 0.8rem; margin-top: 4px;">seed 清单: 缺失</p>
+                  <p v-if="dataDirInfo.seedManifestExists" style="color: var(--green-text); font-size: 0.8rem; margin-top: 4px;">seed-манифест: есть</p>
+                  <p v-else style="color: var(--red-text); font-size: 0.8rem; margin-top: 4px;">seed-манифест: отсутствует</p>
                 </div>
               </div>
               <div class="setting-item" style="padding: 6px 0; align-items: flex-start;">
                 <div class="info">
-                  <h4>运行组件目录</h4>
+                  <h4>Каталог компонентов</h4>
                   <p class="link-text" style="word-break: break-all;">{{ dataDirInfo.coreBinDir }}</p>
-                  <p v-if="dataDirInfo.layoutOK" style="color: var(--green-text); font-size: 0.8rem; margin-top: 4px;">布局: 正常</p>
-                  <p v-else style="color: var(--accent); font-size: 0.8rem; margin-top: 4px;">布局: 异常，将在下次启动时自动修复</p>
+                  <p v-if="dataDirInfo.layoutOK" style="color: var(--green-text); font-size: 0.8rem; margin-top: 4px;">Структура: в норме</p>
+                  <p v-else style="color: var(--accent); font-size: 0.8rem; margin-top: 4px;">Структура: нарушена, будет исправлена при следующем запуске</p>
                 </div>
               </div>
               <div class="setting-item" style="padding: 6px 0; align-items: flex-start;">
                 <div class="info">
-                  <h4>组件状态</h4>
+                  <h4>Статус компонентов</h4>
                   <p :style="{ color: dataDirInfo.coreReady ? 'var(--green-text)' : 'var(--red-text)', fontWeight: 600 }">
-                    Mihomo: {{ dataDirInfo.coreReady ? '就绪' : (dataDirInfo.coreExists ? '损坏' : '缺失') }}
+                    Mihomo: {{ dataDirInfo.coreReady ? 'готов' : (dataDirInfo.coreExists ? 'повреждён' : 'отсутствует') }}
                   </p>
                   <p :style="{ color: dataDirInfo.wintunReady ? 'var(--green-text)' : 'var(--accent)', fontWeight: 600 }">
-                    Wintun: {{ dataDirInfo.wintunReady ? '就绪' : (dataDirInfo.wintunExists ? '损坏' : '缺失') }}
+                    Wintun: {{ dataDirInfo.wintunReady ? 'готов' : (dataDirInfo.wintunExists ? 'повреждён' : 'отсутствует') }}
                   </p>
                 </div>
               </div>
               <div class="setting-item" style="padding: 6px 0; align-items: flex-start; border-bottom: none;">
                 <div class="info">
-                  <h4>旧版目录</h4>
-                  <p class="link-text" style="word-break: break-all;">{{ dataDirInfo.legacyDataDir || '无' }}</p>
-                  <p v-if="dataDirInfo.legacyExists" style="color: var(--accent); font-size: 0.8rem; margin-top: 4px;">仍存在，将在启动时自动迁移</p>
-                  <p v-else style="color: var(--green-text); font-size: 0.8rem; margin-top: 4px;">不存在或已清理</p>
+                  <h4>Старый каталог</h4>
+                  <p class="link-text" style="word-break: break-all;">{{ dataDirInfo.legacyDataDir || 'нет' }}</p>
+                  <p v-if="dataDirInfo.legacyExists" style="color: var(--accent); font-size: 0.8rem; margin-top: 4px;">Ещё есть, будет перенесён при запуске</p>
+                  <p v-else style="color: var(--green-text); font-size: 0.8rem; margin-top: 4px;">Нет или уже удалён</p>
                 </div>
               </div>
             </div>
             
             <div class="modal-footer" style="margin-top: 16px;">
-              <button class="action-btn flex-1" @click="openDataDirDiagnosticModal">重新检测</button>
-              <button class="action-btn flex-1" @click="handleExportDiagnostics">导出诊断</button>
-              <button class="primary-btn accent-btn flex-1" @click="showDataDirDiagnosticModal = false">完成</button>
+              <button class="action-btn flex-1" @click="openDataDirDiagnosticModal">Проверить снова</button>
+              <button class="action-btn flex-1" @click="handleExportDiagnostics">Экспорт диагностики</button>
+              <button class="primary-btn accent-btn flex-1" @click="showDataDirDiagnosticModal = false">Готово</button>
             </div>
           </div>
         </div>
@@ -1201,7 +1248,7 @@
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import * as API from '../../wailsjs/go/main/App';
 import { BrowserOpenURL, EventsOn } from '../../wailsjs/runtime/runtime';
-import { showAlert, showConfirm, globalState } from '../store';
+import { showAlert, showConfirm, globalState, setUiMode } from '../store';
 import { formatBytes, formatSpeed, formatEtaTime, formatRelativeTime } from '../utils/format';
 import { ICONS } from '../utils/icons';
 import appLogo from '../assets/logo.ico';
@@ -1224,10 +1271,10 @@ const selectedPath = ref("");
 const restoreMode = ref("all");
 
 const modules: Record<string, string> = {
-  'network': '基础网络设置',
-  'dns': 'DNS 服务器设置',
-  'tun': '虚拟网卡设置',
-  'behavior': '应用行为设置'
+  'network': 'Базовые настройки сети',
+  'dns': 'Настройки DNS-серверов',
+  'tun': 'Виртуальный адаптер',
+  'behavior': 'Поведение приложения'
 };
 
 const confirmReset = (mod: string) => {
@@ -1258,10 +1305,10 @@ const handleReset = async () => {
         const bh = await API.GetAppBehavior();
         if (bh) behavior.value = bh;
     }
-    showAlert(`${resetModuleName.value} 已重置为默认值`, "成功");
+    showAlert(`${resetModuleName.value} — сброшено к значениям по умолчанию`, "Успешно");
   } catch (e) {
     console.error("重置失败:", e);
-    showAlert("重置失败: " + e, "错误");
+    showAlert("Сброс не удался: " + e, "Ошибка");
   }
 };
 
@@ -1286,8 +1333,8 @@ watch(view, async (v) => {
   }
 });
 
-const coreVersion = ref('读取中...');
-const wintunVersion = ref('读取中...');
+const coreVersion = ref('Чтение…');
+const wintunVersion = ref('Чтение…');
 const isInstalling = ref(false);
 
 
@@ -1313,18 +1360,18 @@ const enhancedModeOptions = [
 ];
 
 const logLevelOptions = [
-  { label: '调试', value: 'debug' },
-  { label: '信息', value: 'info' },
-  { label: '警告', value: 'warn' },
-  { label: '错误', value: 'error' },
-  { label: '静默', value: 'silent' }
+  { label: 'Отладка', value: 'debug' },
+  { label: 'Инфо', value: 'info' },
+  { label: 'Предупреждения', value: 'warn' },
+  { label: 'Ошибки', value: 'error' },
+  { label: 'Тихо', value: 'silent' }
 ];
 
 const appLogLevelOptions = [
-  { label: '调试', value: 'debug' },
-  { label: '信息', value: 'info' },
-  { label: '警告', value: 'warn' },
-  { label: '错误', value: 'error' }
+  { label: 'Отладка', value: 'debug' },
+  { label: 'Инфо', value: 'info' },
+  { label: 'Предупреждения', value: 'warn' },
+  { label: 'Ошибки', value: 'error' }
 ];
 
 const showDbModal = ref(false);
@@ -1341,17 +1388,17 @@ const refreshRuntimeAssets = async () => {
   const wintun = status?.assets?.wintun;
 
   coreVersion.value = core?.ready
-    ? (core.version || '已安装，版本未知')
-    : (core?.error || core?.hint || '未安装');
+    ? (core.version || 'Установлено, версия неизвестна')
+    : (core?.error || core?.hint || 'Не установлено');
 
   wintunVersion.value = wintun?.ready
-    ? (wintun.version || '已安装，版本未知')
-    : (wintun?.error || wintun?.hint || '未安装');
+    ? (wintun.version || 'Установлено, версия неизвестна')
+    : (wintun?.error || wintun?.hint || 'Не установлено');
 
   tunStatus.value = {
     ...tunStatus.value,
     hasWintun: !!wintun?.ready,
-    wintunError: wintun?.ready ? '' : (wintun?.error || wintun?.hint || 'wintun 不可用'),
+    wintunError: wintun?.ready ? '' : (wintun?.error || wintun?.hint || 'wintun недоступен'),
     wintun,
   };
 
@@ -1373,7 +1420,7 @@ const isUpdatingAnyDb = computed(() => {
 const formatUpdateError = (err: any) => {
   let msg = String(err || '');
   // 清洗超长 GitHub Release 资产 Signed URL
-  msg = msg.replace(/https:\/\/release-assets\.githubusercontent\.com\/\S+/g, 'GitHub Release 资产下载地址');
+  msg = msg.replace(/https:\/\/release-assets\.githubusercontent\.com\/\S+/g, 'ссылка ресурса GitHub Release');
   
   // 清洗普通 GitHub Release 下载地址，移除 query
   msg = msg.replace(/https:\/\/github\.com\/\S+\/releases\/download\/\S+/g, (match) => {
@@ -1382,7 +1429,7 @@ const formatUpdateError = (err: any) => {
       url.search = '';
       return url.toString();
     } catch (e) {
-      return 'GitHub Release 下载地址';
+      return 'ссылка GitHub Release';
     }
   });
 
@@ -1403,7 +1450,7 @@ const handleCheckUpdate = async () => {
     // 🚀 核心改进：调用异步静默下载流，将通知权交给全局监听器 (App.vue)
     await (API as any).CheckAndDownloadAppUpdateAsync();
   } catch (e) {
-    await showAlert("检查更新失败: " + e, "错误", true);
+    await showAlert("Проверка обновлений не удалась: " + e, "Ошибка", true);
   }
 };
 
@@ -1412,22 +1459,22 @@ const promptInstallApp = async (progress: any) => {
   const fullPath = progress.path || "";
 
   const ok = await showConfirm(
-      `GoclashZ ${version} 已下载完成。\n\n` +
-      `是否现在关闭程序并启动安装程序？\n\n` +
-      `安装完成后会自动清理临时安装包。`,
-      "新版本已下载完成",
+      `Misetanibox ${version} загружен.\n\n` +
+      `Закрыть программу и запустить установщик?\n\n` +
+      `После установки временный пакет будет удалён.`,
+      "Новая версия загружена",
       false
   );
   
   if (ok) {
       if (!fullPath) {
-        await showAlert("安装包路径为空，请重新下载更新。", "错误", true);
+        await showAlert("Путь к установщику пуст, скачайте обновление заново.", "Ошибка", true);
         return;
       }
       try {
         await (API as any).ApplyAppUpdate(fullPath);
       } catch (e: any) {
-        await showAlert(String(e?.message || e || "未知错误"), "启动安装程序失败", true);
+        await showAlert(String(e?.message || e || "Неизвестная ошибка"), "Не удалось запустить установщик", true);
       }
   }
 };
@@ -1437,10 +1484,10 @@ const handleExportBackup = async () => {
   try {
     const res = await (API as any).ExportBackup();
     if (res === "SUCCESS") {
-      await showAlert("备份成功导出", "通知");
+      await showAlert("Резервная копия экспортирована", "Уведомление");
     }
   } catch (e) {
-    await showAlert("导出失败: " + String(e), "错误");
+    await showAlert("Экспорт не удался: " + String(e), "Ошибка");
   }
 };
 
@@ -1468,17 +1515,17 @@ const confirmRestore = async () => {
   if (!selectedPath.value) return;
 
   const warnings: Record<string, string> = {
-    all: '完整恢复会替换当前软件设置、订阅列表、运行配置和主题设置。恢复过程中会短暂停止内核。',
-    subs: '此操作会用备份中的订阅列表替换当前订阅列表，当前多余订阅会被移除。',
-    'subs-merge': '此操作会保留当前订阅列表，并将备份中的订阅合并进来。同 ID 订阅可能被备份内容覆盖。',
-    settings: '此操作只恢复软件设置和主题设置，不会影响订阅列表。'
+    all: 'Полное восстановление заменит настройки, подписки, рабочую конфигурацию и тему. Ядро будет кратко остановлено.',
+    subs: 'Список подписок из копии заменит текущий; лишние подписки будут удалены.',
+    'subs-merge': 'Текущие подписки останутся, подписки из копии добавятся; совпавшие ID могут быть перезаписаны.',
+    settings: 'Восстановятся только настройки и тема; подписки не изменятся.'
   };
 
-  const confirmMsg = warnings[restoreMode.value] || '确定要执行数据还原吗？';
+  const confirmMsg = warnings[restoreMode.value] || 'Выполнить восстановление данных?';
 
   const ok = await showConfirm(
-    confirmMsg + "\n\n还原完成后，部分设置将即时生效。",
-    "还原备份确认",
+    confirmMsg + "\n\nПосле восстановления часть настроек применится сразу.",
+    "Подтверждение восстановления",
     true
   );
   if (!ok) return;
@@ -1487,10 +1534,10 @@ const confirmRestore = async () => {
     const res = await (API as any).ExecuteRestore(selectedPath.value, restoreMode.value);
     if (res === "SUCCESS") {
       showRestoreModal.value = false;
-      await showAlert("数据还原成功！设置及配置已即时生效。", "成功");
+      await showAlert("Данные восстановлены! Настройки применены.", "Успешно");
     }
   } catch (e) {
-    await showAlert("还原失败: " + String(e), "错误");
+    await showAlert("Восстановление не удалось: " + String(e), "Ошибка");
   }
 };
 
@@ -1573,7 +1620,7 @@ const validateHosts = (val: string) => {
 
     // 正则解析：必须是 "键: 值" 的形式 (至少包含一个冒号，且冒号后面要有内容)
     if (!/^[^:]+:\s*.+$/.test(line)) {
-      hostsError.value = `第 ${i + 1} 行格式错误：请使用 "域名: IP" 的格式 (注意冒号为英文且要有值)`;
+      hostsError.value = `Строка ${i + 1}: неверный формат. Нужно "домен: IP" (двоеточие латинское, значение обязательно)`;
       return false;
     }
   }
@@ -1624,7 +1671,7 @@ const enterUwpManager = async () => {
   try {
     uwpApps.value = await (API as any).GetUwpApps();
   } catch (e) {
-    showAlert('获取 UWP 列表失败: ' + e, '错误');
+    showAlert('Не удалось получить список UWP: ' + e, 'Ошибка');
   }
 };
 
@@ -1649,9 +1696,9 @@ const saveUwpChanges = async () => {
   try {
     const sids = uwpApps.value.filter(a => a.isEnabled).map(a => a.sid);
     await (API as any).SaveUwpExemptions(sids);
-    await showAlert('豁免配置已成功更新！', '完成');
+    await showAlert('Исключения обновлены!', 'Готово');
   } catch (e) {
-    await showAlert('保存失败: ' + e, '错误');
+    await showAlert('Сохранение не удалось: ' + e, 'Ошибка');
   } finally {
     savingUwp.value = false;
   }
@@ -1685,16 +1732,17 @@ const loadData = async () => {
 
 const unsubs: (() => void)[] = [];
 
-onMounted(() => { 
-  loadData(); 
+onMounted(() => {
+  loadData();
+  refreshSmartCore();
 
   unsubs.push(EventsOn("core-version-updated", (payload: any) => {
     coreVersion.value = payload?.version || coreVersion.value;
-    void showAlert(`内核更新成功，当前版本: ${coreVersion.value}`, "更新成功");
+    void showAlert(`Ядро обновлено, текущая версия: ${coreVersion.value}`, "Обновление успешно");
   }));
 
   unsubs.push(EventsOn("core-update-none", () => {
-    void showAlert("当前已是最新版本，无需更新。", "检查更新");
+    void showAlert("Уже последняя версия, обновление не нужно.", "Проверка обновлений");
   }));
 
   unsubs.push(EventsOn("wintun-version-updated", (payload: any) => {
@@ -1708,7 +1756,7 @@ onMounted(() => {
   });
   unsubs.push(EventsOn("app-update-busy", () => {
     globalState.appUpdateChecking = false;
-    void showAlert("已有软件更新任务正在进行，请稍后再试。", "提示");
+    void showAlert("Обновление уже выполняется, попробуйте позже.", "Уведомление");
   }));
 
   ['geoip', 'geosite', 'mmdb', 'asn'].forEach(key => {
@@ -1738,7 +1786,7 @@ const handleTunToggle = async (e: Event) => {
   if (newState && !tunStatus.value.hasWintun) {
     e.preventDefault();
     target.checked = false;
-    await showAlert('无法开启 TUN 模式：\n请先点击下方的“安装驱动”按钮下载并配置 wintun.dll。', '缺少依赖');
+    await showAlert('Не удалось включить режим TUN:\nСначала нажмите «Установить драйвер» ниже, чтобы скачать и настроить wintun.dll.', 'Нет компонента');
     return;
   }
   
@@ -1750,7 +1798,7 @@ const handleTunToggle = async (e: Event) => {
   } catch (err) {
     globalState.tun = !newState;
     target.checked = !newState;
-    await showAlert("操作内核 TUN 失败: " + err, '错误');
+    await showAlert("Операция TUN не удалась: " + err, 'Ошибка');
   }
 };
 
@@ -1758,8 +1806,8 @@ const handleTunToggle = async (e: Event) => {
 const installDriver = async (force: boolean = true) => {
   if (isInstalling.value) return;
   const ok = await showConfirm(
-    "安装过程中，应用网络将会短暂断开。如果正在使用 TUN 模式，系统将自动重启代理内核。",
-    "确定要重新安装 Wintun 驱动吗？",
+    "Во время установки сеть кратко прервётся. При активном режиме TUN ядро перезапустится автоматически.",
+    "Переустановить драйвер Wintun?",
     false
   );
   if (!ok) return;
@@ -1775,7 +1823,7 @@ watch(() => behavior.value.updateInterval, async (newVal) => {
     // 👇 修复：只有在用户实际启用了定时更新的情况下，才弹出警告。
     // 如果是旧版本配置缺失导致的 0，则静默修复并保存，不打扰用户。
     if (behavior.value.autoUpdate && behavior.value.updateMethod === 'scheduled') {
-      await showAlert("检查更新间隔不能小于 1 天。", "配置提示");
+      await showAlert("Интервал проверки — не меньше 1 дня.", "Подсказка");
     }
     
     saveBehavior();
@@ -1822,6 +1870,61 @@ const saveBehavior = async () => {
   }
 };
 
+const onToggleLite = (e: Event) => {
+  const on = (e.target as HTMLInputElement).checked;
+  setUiMode(on ? 'lite' : 'full');
+};
+
+
+const smartCoreOn = ref(false);
+const smartCoreBusy = ref(false);
+const smartRouteOn = ref(false);
+
+const refreshSmartCore = async () => {
+  try { smartCoreOn.value = await (API as any).IsSmartCore(); } catch { smartCoreOn.value = false; }
+  try { smartRouteOn.value = await (API as any).GetSmartRoute(); } catch { smartRouteOn.value = false; }
+};
+
+const onToggleSmartRoute = async (e: Event) => {
+  const on = (e.target as HTMLInputElement).checked;
+  try {
+    await (API as any).SetSmartRoute(on);
+    smartRouteOn.value = on;
+  } catch (err) {
+    await showAlert('Не удалось переключить: ' + err, 'Ошибка', true);
+  }
+};
+
+const toggleSmartCore = async () => {
+  if (smartCoreBusy.value) return;
+  if (!smartCoreOn.value) {
+    const ok = await showConfirm(
+      'Скачать и установить умное ядро? Оно неподписанное — если Windows Defender его заблокирует, разрешите файл в защитнике. Текущее ядро сохранится для отката.',
+      'Умное ядро (Smart)'
+    );
+    if (!ok) return;
+  }
+  smartCoreBusy.value = true;
+  try {
+    if (smartCoreOn.value) {
+      await (API as any).RemoveSmartCore();
+    } else {
+      await (API as any).InstallSmartCore();
+    }
+    await refreshSmartCore();
+    await showAlert(
+      smartCoreOn.value
+        ? 'Умное ядро установлено. В списке серверов появится «Смарт».'
+        : 'Возвращено обычное ядро.',
+      'Готово'
+    );
+  } catch (e) {
+    await showAlert('Не удалось: ' + e, 'Ошибка', true);
+  } finally {
+    smartCoreBusy.value = false;
+  }
+};
+
 const handleStartupWithOSChange = async () => {
   if (!behavior.value.startupWithOS) {
     behavior.value.restoreOnStartup = false;
@@ -1849,9 +1952,9 @@ const installHelper = async () => {
   try {
     await (API as any).InstallHelperService();
     await refreshHelperStatus();
-    showAlert('后台服务安装成功', '完成');
+    showAlert('Фоновая служба установлена', 'Готово');
   } catch (e) {
-    showAlert('安装后台服务失败: ' + e, '错误', true);
+    showAlert('Установка службы не удалась: ' + e, 'Ошибка', true);
   } finally {
     helperLoading.value = false;
   }
@@ -1862,9 +1965,9 @@ const restartHelper = async () => {
   try {
     await (API as any).RestartHelperService();
     await refreshHelperStatus();
-    showAlert('后台服务已重启', '完成');
+    showAlert('Фоновая служба перезапущена', 'Готово');
   } catch (e) {
-    showAlert('重启后台服务失败: ' + e, '错误', true);
+    showAlert('Перезапуск службы не удался: ' + e, 'Ошибка', true);
   } finally {
     helperLoading.value = false;
   }
@@ -1878,17 +1981,17 @@ const openDataDirDiagnosticModal = async () => {
     dataDirInfo.value = await API.GetDataDirInfo();
     showDataDirDiagnosticModal.value = true;
   } catch (error) {
-    showAlert('获取数据目录信息失败: ' + error);
+    showAlert('Не удалось получить данные каталога: ' + error);
   }
 };
 
 const handleExportDiagnostics = async () => {
   try {
     await API.ExportDiagnostics();
-    showAlert('诊断信息导出成功');
+    showAlert('Диагностика экспортирована');
   } catch (error) {
     if (error && String(error).indexOf('User cancelled') === -1) {
-      showAlert('导出诊断信息失败: ' + error);
+      showAlert('Экспорт диагностики не удался: ' + error);
     }
   }
 };
@@ -1912,7 +2015,7 @@ const handleUpdateDb = async (key: string) => {
   try {
     await (API as any).UpdateGeoDatabaseAsync(key);
   } catch (e) {
-    void showAlert(`${key} 更新启动失败：${formatUpdateError(e)}`, '错误', true);
+    void showAlert(`${key}: не удалось запустить обновление: ${formatUpdateError(e)}`, 'Ошибка', true);
   }
 };
 
@@ -1920,7 +2023,7 @@ const handleUpdateAllDbs = async () => {
   try {
     await API.UpdateAllGeoDatabasesAsync();
   } catch (e) {
-    void showAlert(`更新启动失败：${formatUpdateError(e)}`, '错误', true);
+    void showAlert(`Не удалось запустить обновление: ${formatUpdateError(e)}`, 'Ошибка', true);
   }
 };
 

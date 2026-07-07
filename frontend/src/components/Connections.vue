@@ -3,32 +3,32 @@
     <Transition name="slide-fade" mode="out-in">
       <div v-if="!selectedConn" class="connections-list-wrapper">
         <Teleport v-if="titleTargetReady" to="#title-extra-target">
-          <span v-if="connections.length > 0" class="conn-title-count">活跃连接: {{ connections.length }}</span>
+          <span v-if="connections.length > 0" class="conn-title-count">Активные соединения: {{ connections.length }}</span>
         </Teleport>
         <div class="action-bar card-panel page-sticky-mask">
         <div class="conn-tabs-viewport">
           <div class="conn-tabs-track" ref="tabsTrackRef">
-            <button :ref="(el) => { if (filterMode === 'all') connTabEl = el as HTMLElement | null }" :class="['conn-tab-btn', { active: filterMode === 'all' }]" @click="filterMode = 'all'">全部</button>
-            <button :ref="(el) => { if (filterMode === 'proxy') connTabEl = el as HTMLElement | null }" :class="['conn-tab-btn', { active: filterMode === 'proxy' }]" @click="filterMode = 'proxy'">代理</button>
-            <button :ref="(el) => { if (filterMode === 'direct') connTabEl = el as HTMLElement | null }" :class="['conn-tab-btn', { active: filterMode === 'direct' }]" @click="filterMode = 'direct'">直连</button>
+            <button :ref="(el) => { if (filterMode === 'all') connTabEl = el as HTMLElement | null }" :class="['conn-tab-btn', { active: filterMode === 'all' }]" @click="filterMode = 'all'">Все</button>
+            <button :ref="(el) => { if (filterMode === 'proxy') connTabEl = el as HTMLElement | null }" :class="['conn-tab-btn', { active: filterMode === 'proxy' }]" @click="filterMode = 'proxy'">Прокси</button>
+            <button :ref="(el) => { if (filterMode === 'direct') connTabEl = el as HTMLElement | null }" :class="['conn-tab-btn', { active: filterMode === 'direct' }]" @click="filterMode = 'direct'">Прямые</button>
             <div class="conn-tab-slider" :class="{ animated: connSliderReady }" v-show="connSliderVisible" :style="connSliderStyle"></div>
           </div>
         </div>
         <div class="global-actions">
           <button class="action-btn" @click="isPaused = !isPaused">
             <span class="btn-icon" v-html="isPaused ? ICONS.play : ICONS.pause"></span>
-            {{ isPaused ? '继续刷新' : '暂停刷新' }}
+            {{ isPaused ? 'Возобновить' : 'Пауза' }}
           </button>
           <button v-if="connections.length > 0" class="primary-btn accent-btn" @click="closeAll">
             <span class="btn-icon" style="color: #ff5a5a;" v-html="ICONS.xCircle"></span>
-            断开全部
+            Разорвать все
           </button>
         </div>
       </div>
 
       <div class="scroll-content">
         <div v-if="isLoading" class="empty-state">
-          <p>正在获取连接列表...</p>
+          <p>Получение списка соединений...</p>
         </div>
         <div class="conn-grid" v-else-if="filteredConnections.length > 0">
           <div v-for="conn in filteredConnections" :key="conn.id" class="conn-card" @click="openDetail(conn)">
@@ -67,34 +67,34 @@
           </div>
         </div>
         <div v-else class="empty-state">
-          <p v-if="connections.length > 0">当前分类下没有连接</p>
-          <p v-else>当前没有流量经过</p>
+          <p v-if="connections.length > 0">В этой категории нет соединений</p>
+          <p v-else>Сейчас трафик не проходит</p>
         </div>
       </div>
       </div>
 
       <div v-else class="detail-page card-panel">
         <div class="detail-header">
-          <h3>连接详情</h3>
+          <h3>Детали соединения</h3>
           <button class="action-btn back-btn" @click="closeDetail">
-            返回
+            Назад
           </button>
         </div>
 
         <div class="detail-body scroll-content">
           <div class="detail-row"><span>ID:</span> <span class="font-mono">{{ selectedConn.id }}</span></div>
-          <div class="detail-row"><span>网络:</span> <span>{{ selectedConn.metadata.network }}</span></div>
-          <div class="detail-row"><span>源地址:</span> <span class="font-mono">{{ selectedConn.metadata.sourceIP }}:{{ selectedConn.metadata.sourcePort }}</span></div>
-          <div class="detail-row"><span>目标地址:</span> <span class="font-mono">{{ selectedConn.metadata.destinationIP || selectedConn.metadata.host }}:{{ selectedConn.metadata.destinationPort }}</span></div>
-          <div class="detail-row"><span>匹配规则:</span> <span>{{ selectedConn.rule }} {{ selectedConn.rulePayload ? `(${selectedConn.rulePayload})` : '' }}</span></div>
-          <div class="detail-row"><span>代理链路:</span> <span class="path-chain">{{ selectedConn.chains.join(' ➔ ') }}</span></div>
-          <div class="detail-row"><span>上传流量:</span> <span class="font-mono">{{ selectedConn.uploadStr }}</span></div>
-          <div class="detail-row"><span>下载流量:</span> <span class="font-mono">{{ selectedConn.downloadStr }}</span></div>
-          <div class="detail-row"><span>连接时间:</span> <span>{{ new Date(selectedConn.start).toLocaleString() }} ({{ selectedConn.durationStr }})</span></div>
+          <div class="detail-row"><span>Сеть:</span> <span>{{ selectedConn.metadata.network }}</span></div>
+          <div class="detail-row"><span>Источник:</span> <span class="font-mono">{{ selectedConn.metadata.sourceIP }}:{{ selectedConn.metadata.sourcePort }}</span></div>
+          <div class="detail-row"><span>Назначение:</span> <span class="font-mono">{{ selectedConn.metadata.destinationIP || selectedConn.metadata.host }}:{{ selectedConn.metadata.destinationPort }}</span></div>
+          <div class="detail-row"><span>Правило:</span> <span>{{ selectedConn.rule }} {{ selectedConn.rulePayload ? `(${selectedConn.rulePayload})` : '' }}</span></div>
+          <div class="detail-row"><span>Цепочка прокси:</span> <span class="path-chain">{{ selectedConn.chains.join(' ➔ ') }}</span></div>
+          <div class="detail-row"><span>Отправлено:</span> <span class="font-mono">{{ selectedConn.uploadStr }}</span></div>
+          <div class="detail-row"><span>Загружено:</span> <span class="font-mono">{{ selectedConn.downloadStr }}</span></div>
+          <div class="detail-row"><span>Время соединения:</span> <span>{{ new Date(selectedConn.start).toLocaleString() }} ({{ selectedConn.durationStr }})</span></div>
         </div>
 
         <div class="detail-footer">
-          <button class="action-btn red-text-btn" @click="closeSingleConnection(selectedConn.id)">强行断开此连接</button>
+          <button class="action-btn red-text-btn" @click="closeSingleConnection(selectedConn.id)">Принудительно разорвать</button>
         </div>
       </div>
     </Transition>
@@ -181,7 +181,7 @@ const startMonitor = async () => {
 
     await API.StartConnectionMonitor();
   } catch (e) {
-    console.error("启动连接监控失败:", e);
+    console.error("启动连接监控失败:", e); // 保留原文（console.log 类）
   } finally {
     isLoading.value = false;
   }
@@ -251,26 +251,26 @@ const closeDetail = () => {
 };
 
 const closeAll = async () => {
-  const ok = await showConfirm('确定要强行切断当前所有的网络连接吗？', '强行断开全部', true);
+  const ok = await showConfirm('Принудительно разорвать все текущие сетевые соединения?', 'Разорвать все', true);
   if (ok) {
     try {
       await API.CloseAllConnections();
       if (selectedConn.value) closeDetail();
-    } catch (e) { 
-      await showAlert("操作失败: " + e, '错误'); 
+    } catch (e) {
+      await showAlert("Операция не удалась: " + e, 'Ошибка');
     }
   }
 };
 
 const closeSingleConnection = async (id: string) => {
-  const ok = await showConfirm(`确定要强行断开连接吗？`, '断开连接', true);
+  const ok = await showConfirm(`Принудительно разорвать это соединение?`, 'Разорвать соединение', true);
   if (!ok) return;
-  
+
   try {
     await API.CloseConnection(id);
     closeDetail();
-  } catch (e) { 
-    await showAlert("断开失败: " + e, '错误'); 
+  } catch (e) {
+    await showAlert("Не удалось разорвать: " + e, 'Ошибка');
   }
 };
 </script>

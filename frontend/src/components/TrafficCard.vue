@@ -2,7 +2,7 @@
   <section class="traffic-card">
     <div class="traffic-head">
       <div class="title-wrap">
-        <h3>网络流量</h3>
+        <h3>Сетевой трафик</h3>
       </div>
 
       <div
@@ -10,15 +10,15 @@
         :title="outboundIPTitle"
         @click="refreshOutboundIPRouteAware('manual')"
       >
-        <span class="ip-label">当前出站IP</span>
-        <span class="ip-value" :class="{ detecting: !outboundIPText || outboundIPText === '检测失败' }">
+        <span class="ip-label">Текущий исходящий IP</span>
+        <span class="ip-value" :class="{ detecting: !outboundIPText || outboundIPText === 'Ошибка проверки' }">
           {{ outboundIPText }}
         </span>
-        <span v-if="globalState.ipDetecting && outboundIPHasValue" class="ip-refreshing">刷新中</span>
+        <span v-if="globalState.ipDetecting && outboundIPHasValue" class="ip-refreshing">Обновление…</span>
       </div>
 
       <button class="reset-btn" @click="handleReset">
-        重置
+        Сброс
       </button>
     </div>
 
@@ -26,7 +26,7 @@
       <!-- 上传 -->
       <div class="wave-col">
         <div class="wave-label-row">
-          <span class="speed-label">上传速度</span>
+          <span class="speed-label">Скорость отдачи</span>
           <strong class="speed-val">{{ traffic.up }}</strong>
         </div>
         <div class="wave-box">
@@ -34,13 +34,13 @@
             <path class="wave-area" :d="uploadAreaPath" />
           </svg>
         </div>
-        <span class="total-label">累计 {{ traffic.uploadTotal || '0 B' }}</span>
+        <span class="total-label">Всего {{ traffic.uploadTotal || '0 B' }}</span>
       </div>
 
       <!-- 下载 -->
       <div class="wave-col">
         <div class="wave-label-row">
-          <span class="speed-label">下载速度</span>
+          <span class="speed-label">Скорость загрузки</span>
           <strong class="speed-val">{{ traffic.down }}</strong>
         </div>
         <div class="wave-box">
@@ -48,7 +48,7 @@
             <path class="wave-area" :d="downloadAreaPath" />
           </svg>
         </div>
-        <span class="total-label">累计 {{ traffic.downloadTotal || '0 B' }}</span>
+        <span class="total-label">Всего {{ traffic.downloadTotal || '0 B' }}</span>
       </div>
     </div>
   </section>
@@ -87,11 +87,11 @@ const outboundIPText = computed(() => {
   const r = globalState.outboundIP;
 
   if (!r) {
-    return globalState.ipDetecting ? '检测中' : '未检测';
+    return globalState.ipDetecting ? 'Проверка…' : 'Не проверено';
   }
 
   if (!r.preferred) {
-    return globalState.ipDetecting ? '检测中' : '检测失败';
+    return globalState.ipDetecting ? 'Проверка…' : 'Ошибка проверки';
   }
 
   return r.preferred;
@@ -104,23 +104,23 @@ const outboundIPTitle = computed(() => {
 
   const modeText =
     r.mode === 'proxy'
-      ? '代理检测'
+      ? 'проверка через прокси'
       : r.mode === 'tun-route'
-        ? 'TUN 路由检测'
-        : '直连检测';
+        ? 'проверка через TUN-маршрут'
+        : 'прямая проверка';
 
   const lines = [
-    `模式：${modeText}`,
-    `IPv6：${r.ipv6 || '不可用'}`,
-    `IPv4：${r.ipv4 || '不可用'}`,
+    `Режим: ${modeText}`,
+    `IPv6: ${r.ipv6 || 'недоступно'}`,
+    `IPv4: ${r.ipv4 || 'недоступно'}`,
   ];
 
   if (r.source) {
-    lines.push(`来源：${r.source}`);
+    lines.push(`Источник: ${r.source}`);
   }
 
   if (r.message && !r.preferred) {
-    lines.push(`状态：${r.message}`);
+    lines.push(`Статус: ${r.message}`);
   }
 
   return lines.join('\n');

@@ -33,8 +33,11 @@ function Download-File($url, $dest) {
   }
 }
 
-# 1. mihomo latest
-$release = Invoke-RestMethod "https://api.github.com/repos/MetaCubeX/mihomo/releases/latest"
+# 1. mihomo latest (стабильное ядро MetaCubeX)
+# Авторизованный запрос (если доступен GITHUB_TOKEN) — иначе анонимный лимит API быстро исчерпывается.
+$ghHeaders = @{ "User-Agent" = "misetanibox-ci" }
+if ($env:GITHUB_TOKEN) { $ghHeaders["Authorization"] = "Bearer $env:GITHUB_TOKEN" }
+$release = Invoke-RestMethod "https://api.github.com/repos/MetaCubeX/mihomo/releases/latest" -Headers $ghHeaders
 $asset = $release.assets | Where-Object { $_.name -match "mihomo-windows-amd64.*\.zip$" } | Select-Object -First 1
 if ($null -eq $asset) {
   throw "mihomo windows amd64 asset not found"

@@ -60,7 +60,7 @@ func MigrateRuleStorageV2() error {
 		}
 	}
 	if firstErr != nil {
-		logger.Errorf("规则存储迁移失败: %v", firstErr)
+		logger.Errorf("не удалось выполнить миграцию хранилища правил: %v", firstErr)
 	}
 	return firstErr
 }

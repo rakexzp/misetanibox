@@ -40,7 +40,7 @@ func StartLogStream(ctx context.Context, onLog LogCallback) {
 
 	conn, _, err := dialer.Dial(wsURL, nil)
 	if err != nil {
-		logger.Errorf("日志连接失败: %v", err)
+		logger.Errorf("не удалось подключиться к потоку логов: %v", err)
 		return
 	}
 	defer conn.Close()
@@ -105,13 +105,13 @@ func StartLogStream(ctx context.Context, onLog LogCallback) {
 func PatchConfig(settings map[string]interface{}) error {
 	payload, err := json.Marshal(settings)
 	if err != nil {
-		return fmt.Errorf("配置序列化失败: %v", err)
+		return fmt.Errorf("не удалось сериализовать конфигурацию: %v", err)
 	}
 
 	// 使用动态 API 地址
 	req, err := http.NewRequest("PATCH", APIURL("/configs"), strings.NewReader(string(payload)))
 	if err != nil {
-		return fmt.Errorf("构建补丁请求失败: %v", err)
+		return fmt.Errorf("не удалось построить PATCH-запрос: %v", err)
 	}
 
 	resp, err := localAPIClient.Do(req)
@@ -121,7 +121,7 @@ func PatchConfig(settings map[string]interface{}) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("内核返回错误码: %d", resp.StatusCode)
+		return fmt.Errorf("ядро вернуло код ошибки: %d", resp.StatusCode)
 	}
 	return nil
 }

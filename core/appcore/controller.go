@@ -307,7 +307,7 @@ func (c *Controller) Bootstrap(ctx context.Context, opts BootstrapOptions) {
 
 			if wasSysProxy {
 				if err := sys.DisableSystemProxy(); err != nil {
-					c.logWarn("内核异常退出后关闭系统代理失败: %v", err)
+					c.logWarn("Не удалось отключить системный прокси после аварийного завершения ядра: %v", err)
 				}
 			}
 
@@ -379,26 +379,26 @@ func (c *Controller) runStartupRestoreJob(ctx context.Context) {
 		cancel()
 
 		if err == nil {
-			c.logInfo("启动恢复成功 (attempt %d)", i+1)
+			c.logInfo("Восстановление запуска успешно (attempt %d)", i+1)
 			return
 		}
 
 		switch {
 		case errors.Is(err, ErrNoActiveConfig):
-			c.events.Emit("notify-error", "启动恢复失败：尚未添加配置")
+			c.events.Emit("notify-error", "Восстановление запуска не удалось: конфигурация ещё не добавлена")
 			return
 		case errors.Is(err, ErrHelperInstallRequired):
-			c.events.Emit("notify-error", "TUN 启动恢复需要初始化后台服务")
+			c.events.Emit("notify-error", "Для восстановления запуска TUN требуется инициализация фоновой службы")
 			return
 		case errors.Is(err, ErrWintunMissing):
-			c.events.Emit("notify-error", "TUN 启动恢复失败：缺少 Wintun 驱动")
+			c.events.Emit("notify-error", "Восстановление запуска TUN не удалось: отсутствует драйвер Wintun")
 			return
 		default:
-			c.logWarn("启动恢复失败 attempt=%d: %v", i+1, err)
+			c.logWarn("Восстановление запуска не удалось attempt=%d: %v", i+1, err)
 		}
 	}
 
-	c.logWarn("启动恢复在 5 次尝试后仍未成功")
+	c.logWarn("Восстановление запуска не удалось после 5 попыток")
 }
 
 func (c *Controller) syncStartupTaskStateSafe() {
@@ -546,10 +546,10 @@ func (c *Controller) ensureCoreRunningWithDesiredState(ctx context.Context, desi
 	if assetStatus, assetErr := runtimeassets.EnsureReady(ctx, assetReq, runtimeassets.RepairInvalid); assetErr != nil {
 		for _, asset := range assetStatus.Assets {
 			if !asset.Ready && asset.Error != "" {
-				c.logWarn("运行组件不可用: %s path=%s error=%s", asset.Key, asset.Path, asset.Error)
+				c.logWarn("Рабочий компонент недоступен: %s path=%s error=%s", asset.Key, asset.Path, asset.Error)
 			}
 		}
-		return fmt.Errorf("运行组件不可用: %w", assetErr)
+		return fmt.Errorf("Рабочий компонент недоступен: %w", assetErr)
 	}
 
 	if desired.ActiveConfig == "" {
@@ -571,7 +571,7 @@ func (c *Controller) ensureCoreRunningWithDesiredState(ctx context.Context, desi
 	}
 
 	if err := EnsureRuntimeAssets(ctx, behavior); err != nil {
-		c.logWarn("确保运行期资产失败: %v", err)
+		c.logWarn("Не удалось подготовить рабочие ресурсы: %v", err)
 	}
 
 	if err := clash.Start(ctx, desired.Tun); err != nil {
@@ -619,7 +619,7 @@ func (c *Controller) ensureCoreRunningWithDesiredState(ctx context.Context, desi
 		c.userCoreRunning = false
 		c.coreStartedAt = time.Time{}
 		c.mu.Unlock()
-		return fmt.Errorf("内核启动失败: %s", classifyProbeError(lastProbeErr))
+		return fmt.Errorf("Не удалось запустить ядро: %s", classifyProbeError(lastProbeErr))
 	}
 
 	c.mu.Lock()
@@ -670,44 +670,44 @@ func (c *Controller) stopCoreProcessLocked() {
 // classifyProbeError 将探针错误分类为用户可读的诊断信息
 func classifyProbeError(err error) string {
 	if err == nil {
-		return "API 未能在预期时间内就绪"
+		return "API не стал доступен за отведённое время"
 	}
 
 	msg := err.Error()
 
 	// 端口未监听：内核未绑定 API 端口
 	if strings.Contains(msg, "connection refused") {
-		return "端口未监听，内核未绑定 API 端口"
+		return "Порт не прослушивается: ядро не привязало API-порт"
 	}
 
 	// 超时
 	if strings.Contains(msg, "timeout") || strings.Contains(msg, "deadline exceeded") {
-		return "内核响应超时，可能配置文件过大或系统资源不足"
+		return "Таймаут ответа ядра: возможно, слишком большая конфигурация или нехватка ресурсов системы"
 	}
 
 	// HTTP 状态码非 2xx
 	if strings.Contains(msg, "failed: HTTP") || strings.Contains(msg, "HTTP ") {
-		return "端口被其他程序占用，收到非预期响应"
+		return "Порт занят другой программой: получен неожиданный ответ"
 	}
 
 	// 响应非合法 JSON
 	if strings.Contains(msg, "unexpected end") || strings.Contains(msg, "invalid character") ||
 		strings.Contains(msg, "cannot decode") || strings.Contains(msg, "JSON") {
-		return "端口被其他程序占用，响应内容非内核格式"
+		return "Порт занят другой программой: ответ не в формате ядра"
 	}
 
 	// 连接重置 / 连接断开
 	if strings.Contains(msg, "connection reset") || strings.Contains(msg, "broken pipe") {
-		return "连接被重置，内核可能已崩溃"
+		return "Соединение сброшено: ядро, вероятно, аварийно завершилось"
 	}
 
 	// 其他 net.OpError
 	var opErr *net.OpError
 	if errors.As(err, &opErr) {
-		return "网络连接异常"
+		return "Ошибка сетевого соединения"
 	}
 
-	return "API 探针异常，请检查内核配置"
+	return "Сбой API-пробы, проверьте конфигурацию ядра"
 }
 
 // --- 导出方法 ---
@@ -771,7 +771,7 @@ func (c *Controller) ensureSystemProxyEnabled() error {
 		"localhost;127.*;10.*;172.16.*;172.17.*;172.18.*;172.19.*;172.20.*;172.21.*;172.22.*;172.23.*;172.24.*;172.25.*;172.26.*;172.27.*;172.28.*;172.29.*;172.30.*;172.31.*;192.168.*;<local>",
 	)
 	if err != nil {
-		c.setLastError("设置 Windows 系统代理失败: " + err.Error())
+		c.setLastError("Не удалось установить системный прокси Windows: " + err.Error())
 		c.mu.Lock()
 		c.sysProxyActive = false
 		c.mu.Unlock()
@@ -786,12 +786,12 @@ func (c *Controller) ensureSystemProxyEnabled() error {
 func (c *Controller) ensureSystemProxyDisabled() error {
 	current, err := sys.GetSystemProxyState()
 	if err != nil {
-		return fmt.Errorf("读取 Windows 系统代理状态失败: %w", err)
+		return fmt.Errorf("Не удалось прочитать состояние системного прокси Windows: %w", err)
 	}
 
 	if current.Enabled {
 		if err := sys.DisableSystemProxy(); err != nil {
-			return fmt.Errorf("关闭 Windows 系统代理失败: %w", err)
+			return fmt.Errorf("Не удалось отключить системный прокси Windows: %w", err)
 		}
 	}
 
@@ -842,7 +842,7 @@ func (c *Controller) DisableAll() {
 	c.delayCoreRefs = 0
 	c.delayCoreStarted = false
 	c.delayCoreStarting = false
-	c.delayCoreStartErr = fmt.Errorf("测速已取消")
+	c.delayCoreStartErr = fmt.Errorf("Тест задержки отменён")
 	c.delayCoreStartCancel = nil
 	c.delayCoreReady = nil
 
@@ -905,7 +905,7 @@ func (c *Controller) EnsureDelayCore(ctx context.Context) (cleanup func(), warmu
 		}
 
 		if !clash.IsRunning() {
-			return nil, false, fmt.Errorf("测速内核启动失败")
+			return nil, false, fmt.Errorf("Не удалось запустить ядро для теста задержки")
 		}
 
 		c.delayCoreRefs++
@@ -916,7 +916,7 @@ func (c *Controller) EnsureDelayCore(ctx context.Context) (cleanup func(), warmu
 	profileID := c.Behavior.Get().ActiveConfig
 	if profileID == "" {
 		c.delayCoreMu.Unlock()
-		return nil, false, fmt.Errorf("请先在订阅管理中选择并应用一个配置文件")
+		return nil, false, fmt.Errorf("Сначала выберите и примените конфигурацию в управлении подписками")
 	}
 
 	startCtx, cancel := context.WithCancel(ctx)
@@ -938,7 +938,7 @@ func (c *Controller) EnsureDelayCore(ctx context.Context) (cleanup func(), warmu
 			clash.Stop()
 			c.SyncState()
 		}
-		return nil, false, fmt.Errorf("测速已取消")
+		return nil, false, fmt.Errorf("Тест задержки отменён")
 	}
 
 	if startErr != nil {
@@ -979,7 +979,7 @@ func (c *Controller) startDelayCoreAndWaitReady(ctx context.Context, profileID s
 	ready := false
 
 	if err := c.StartCoreOnly(ctx, profileID); err != nil {
-		return fmt.Errorf("启动测速内核失败: %w", err)
+		return fmt.Errorf("Не удалось запустить ядро для теста задержки: %w", err)
 	}
 	started = true
 
@@ -1003,7 +1003,7 @@ func (c *Controller) startDelayCoreAndWaitReady(ctx context.Context, profileID s
 			return ctx.Err()
 
 		case <-timeout.C:
-			return fmt.Errorf("测速内核启动超时")
+			return fmt.Errorf("Таймаут запуска ядра для теста задержки")
 
 		case <-ticker.C:
 			if _, err := clash.GetInitialData(); err == nil {
@@ -1153,14 +1153,14 @@ func (c *Controller) ensureHelperReadySlow(reason string) error {
 	helperExe := filepath.Join(utils.GetAppDir(), "GoclashZHelper.exe")
 	sid, err := sys.CurrentUserSID()
 	if err != nil {
-		return fmt.Errorf("获取当前用户 SID 失败: %w", err)
+		return fmt.Errorf("Не удалось получить SID текущего пользователя: %w", err)
 	}
 
 	if err := sys.RecoverHelperServiceForUser(helperExe, sid); err != nil {
-		return fmt.Errorf("修复后台服务失败: %w", err)
+		return fmt.Errorf("Не удалось восстановить фоновую службу: %w", err)
 	}
 
-	c.logInfo("Helper 服务已自愈并就绪 (reason: %s)", reason)
+	c.logInfo("Служба helper восстановлена и готова (reason: %s)", reason)
 	return nil
 }
 
@@ -1190,7 +1190,7 @@ func (c *Controller) ToggleTunMode(ctx context.Context, enable bool) error {
 		// 管理员模式下 helper 不可达，静默安装/修复
 		if !helperReachable && sys.CheckAdmin() {
 			if err := c.EnsureHelperReady("tun-first-install"); err != nil {
-				return fmt.Errorf("安装后台服务失败: %w", err)
+				return fmt.Errorf("Не удалось установить фоновую службу: %w", err)
 			}
 		}
 
@@ -1199,7 +1199,7 @@ func (c *Controller) ToggleTunMode(ctx context.Context, enable bool) error {
 		if assetErr != nil {
 			w := assetStatus.Assets[runtimeassets.AssetWintun]
 			if !w.Ready {
-				return fmt.Errorf("缺少 Wintun 依赖: %s (%s)", w.Error, w.Path)
+				return fmt.Errorf("Отсутствует зависимость Wintun: %s (%s)", w.Error, w.Path)
 			}
 			return assetErr
 		}
@@ -1288,7 +1288,7 @@ func (c *Controller) UpdateClashMode(ctx context.Context, mode string) error {
 	// 1. 更新配置并写盘
 	behavior.ActiveMode = mode
 	if err := c.Behavior.SetAndSave(behavior); err != nil {
-		c.events.Emit("notify-error", "模式持久化保存失败: "+err.Error())
+		c.events.Emit("notify-error", "Не удалось сохранить режим: "+err.Error())
 		c.SyncState()
 		return err
 	}
@@ -1302,7 +1302,7 @@ func (c *Controller) UpdateClashMode(ctx context.Context, mode string) error {
 	if clash.IsRunning() {
 		if err := clash.UpdateModeWithContext(ctx, mode); err != nil {
 			c.SyncState()
-			return fmt.Errorf("内核模式切换失败: %v", err)
+			return fmt.Errorf("Не удалось переключить режим ядра: %v", err)
 		}
 
 		st := c.runtimeState.Get()
@@ -1515,7 +1515,7 @@ func (c *Controller) handleStartupWithOSChange(enable bool) {
 			behavior := c.Behavior.Get()
 			behavior.StartupWithOS = false
 			_ = c.Behavior.SetAndSave(behavior)
-			c.setLastError("设置开机自启失败: " + createTaskErr.Error())
+			c.setLastError("Не удалось настроить автозапуск: " + createTaskErr.Error())
 			c.events.Emit("app-state-sync", c.GetAppState())
 		}
 	}
@@ -1599,15 +1599,15 @@ func (c *Controller) SelectProxyWithModeSync(
 	if mode == "global" {
 		// 1. 预校验 GLOBAL 是否支持该节点
 		if err := c.validateProxySelection(ctx, groupName, proxyName, true); err != nil {
-			return fmt.Errorf("全局同步预校验失败: %w", err)
+			return fmt.Errorf("Предварительная проверка глобальной синхронизации не пройдена: %w", err)
 		}
 
 		// 2. 依次切换正常组和 GLOBAL 组
 		if err := clash.SelectProxyWithContext(ctx, groupName, proxyName); err != nil {
-			return fmt.Errorf("切换代理组失败: %w", err)
+			return fmt.Errorf("Не удалось переключить прокси-группу: %w", err)
 		}
 		if err := clash.SelectProxyWithContext(ctx, "GLOBAL", proxyName); err != nil {
-			return fmt.Errorf("同步全局出口失败: %w", err)
+			return fmt.Errorf("Не удалось синхронизировать глобальный выход: %w", err)
 		}
 
 		// 3. 依次记录持久化状态
@@ -1628,7 +1628,7 @@ func (c *Controller) SelectProxyWithModeSync(
 
 func (c *Controller) validateProxySelection(ctx context.Context, groupName, nodeName string, checkGlobal bool) error {
 	if nodeName == "" || nodeName == "DIRECT" || nodeName == "REJECT" {
-		return fmt.Errorf("无效的节点名称: %s", nodeName)
+		return fmt.Errorf("Недопустимое имя узла: %s", nodeName)
 	}
 
 	data, err := clash.GetInitialDataWithContext(ctx)
@@ -1638,26 +1638,26 @@ func (c *Controller) validateProxySelection(ctx context.Context, groupName, node
 
 	groups, ok := data["groups"].(map[string]interface{})
 	if !ok {
-		return fmt.Errorf("无效的代理组数据")
+		return fmt.Errorf("Недопустимые данные прокси-группы")
 	}
 
 	// 1. 校验目标组是否包含该节点
 	if g, ok := groups[groupName].(map[string]interface{}); ok {
 		if !proxyGroupContainsNode(g, nodeName) {
-			return fmt.Errorf("代理组 %s 不包含节点 %s", groupName, nodeName)
+			return fmt.Errorf("Прокси-группа %s не содержит узел %s", groupName, nodeName)
 		}
 	} else {
-		return fmt.Errorf("代理组 %s 不存在", groupName)
+		return fmt.Errorf("Прокси-группа %s не существует", groupName)
 	}
 
 	// 2. 可选：校验 GLOBAL 是否包含该节点
 	if checkGlobal {
 		if g, ok := groups["GLOBAL"].(map[string]interface{}); ok {
 			if !proxyGroupContainsNode(g, nodeName) {
-				return fmt.Errorf("全局出口 (GLOBAL) 不支持节点 %s", nodeName)
+				return fmt.Errorf("Глобальный выход (GLOBAL) не поддерживает узел %s", nodeName)
 			}
 		} else {
-			return fmt.Errorf("GLOBAL 组不存在，无法同步")
+			return fmt.Errorf("Группа GLOBAL не существует, синхронизация невозможна")
 		}
 	}
 
@@ -1688,7 +1688,7 @@ func (c *Controller) syncGlobalSelectionOnModeEnter(ctx context.Context, profile
 
 	// 执行同步
 	if err := c.selectGlobalProxyIfValid(ctx, targetNode); err != nil {
-		c.logError("进入全局模式同步失败: %v", err)
+		c.logError("Не удалось выполнить синхронизацию при входе в глобальный режим: %v", err)
 	}
 }
 
@@ -1707,7 +1707,7 @@ func (c *Controller) SelectOfflineProxyWithModeSync(
 
 func (c *Controller) selectGlobalProxyIfValid(ctx context.Context, proxyName string) error {
 	if proxyName == "" || proxyName == "DIRECT" || proxyName == "REJECT" {
-		return fmt.Errorf("无效的全局出口节点: %s", proxyName)
+		return fmt.Errorf("Недопустимый узел глобального выхода: %s", proxyName)
 	}
 
 	data, err := clash.GetInitialDataWithContext(ctx)
@@ -1717,21 +1717,21 @@ func (c *Controller) selectGlobalProxyIfValid(ctx context.Context, proxyName str
 
 	groups, ok := data["groups"].(map[string]interface{})
 	if !ok {
-		return fmt.Errorf("内核代理组数据无效")
+		return fmt.Errorf("Недопустимые данные прокси-групп ядра")
 	}
 
 	raw, ok := groups["GLOBAL"]
 	if !ok {
-		return fmt.Errorf("GLOBAL 组不存在")
+		return fmt.Errorf("Группа GLOBAL не существует")
 	}
 
 	globalGroup, ok := raw.(map[string]interface{})
 	if !ok {
-		return fmt.Errorf("GLOBAL 组数据无效")
+		return fmt.Errorf("Недопустимые данные группы GLOBAL")
 	}
 
 	if !proxyGroupContainsNode(globalGroup, proxyName) {
-		return fmt.Errorf("GLOBAL 不包含节点: %s", proxyName)
+		return fmt.Errorf("GLOBAL не содержит узел: %s", proxyName)
 	}
 
 	return clash.SelectProxyWithContext(ctx, "GLOBAL", proxyName)
@@ -1745,7 +1745,7 @@ func (c *Controller) applyStoredProxySelections(ctx context.Context, profileID s
 
 	data, err := clash.GetInitialDataWithContext(ctx)
 	if err != nil {
-		c.logError("读取内核代理组失败，跳过节点选择回放: %v", err)
+		c.logError("Не удалось прочитать прокси-группы ядра, воспроизведение выбора узлов пропущено: %v", err)
 		return
 	}
 
@@ -1787,7 +1787,7 @@ func (c *Controller) applyStoredProxySelections(ctx context.Context, profileID s
 	if behavior.ActiveMode == "global" {
 		if globalNode, ok := selected["GLOBAL"]; ok && globalNode != "" {
 			if err := c.selectGlobalProxyIfValid(ctx, globalNode); err != nil {
-				c.logError("回放 GLOBAL 出口失败: %v", err)
+				c.logError("Не удалось воспроизвести выбор выхода GLOBAL: %v", err)
 			}
 		}
 	}
@@ -1830,7 +1830,7 @@ func (c *Controller) GetDiagnosticInfo() DiagnosticInfo {
 func (c *Controller) ExportDiagnostics() error {
 	path, err := runtime.SaveFileDialog(c.ctx, runtime.SaveDialogOptions{
 		DefaultFilename: "goclashz_diagnostics.json",
-		Title:           "导出诊断信息",
+		Title:           "Экспорт диагностики",
 		Filters: []runtime.FileFilter{
 			{DisplayName: "JSON Files (*.json)", Pattern: "*.json"},
 		},

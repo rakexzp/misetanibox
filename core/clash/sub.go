@@ -4,7 +4,9 @@ package clash
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
+	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -13,6 +15,7 @@ import (
 	"time"
 
 	"goclashz/core/downloader"
+	"goclashz/core/sys"
 	"goclashz/core/utils"
 
 	"gopkg.in/yaml.v3"
@@ -47,6 +50,28 @@ func parseSubUserInfo(header string) (upload, download, total, expire int64) {
 	return
 }
 
+// parseSubProfileName извлекает человекочитаемое имя подписки из заголовков ответа.
+// Приоритет: profile-title (может быть "base64:<...>" или plain), затем Content-Disposition filename.
+func parseSubProfileName(h http.Header) string {
+	if pt := strings.TrimSpace(h.Get("profile-title")); pt != "" {
+		if strings.HasPrefix(strings.ToLower(pt), "base64:") {
+			if dec, err := base64.StdEncoding.DecodeString(pt[len("base64:"):]); err == nil {
+				return strings.TrimSpace(string(dec))
+			}
+		}
+		return pt
+	}
+	if cd := h.Get("Content-Disposition"); cd != "" {
+		if _, params, err := mime.ParseMediaType(cd); err == nil {
+			if fn := strings.TrimSpace(params["filename"]); fn != "" {
+				fn = strings.TrimSuffix(fn, filepath.Ext(fn))
+				return fn
+			}
+		}
+	}
+	return ""
+}
+
 // DownloadSub 下载订阅 (id 为空表示新增，不为空表示更新)
 func DownloadSub(ctx context.Context, name, url, existingId, userAgent string) (string, error) {
 	id := existingId
@@ -69,6 +94,7 @@ func DownloadSub(ctx context.Context, name, url, existingId, userAgent string) (
 	os.MkdirAll(filepath.Dir(originPath), 0755)
 
 	var upload, download, total, expire int64
+	var headerName string
 
 	// 在更新之前，先备份原有的 origin 文件（如果存在）
 	if _, statErr := os.Stat(originPath); statErr == nil {
@@ -80,6 +106,7 @@ func DownloadSub(ctx context.Context, name, url, existingId, userAgent string) (
 		URLs:      []string{url},
 		DestPath:  originPath,
 		UserAgent: userAgent,
+		Headers:   sys.SubscriptionHeaders(),
 		MaxBytes:  50 * 1024 * 1024,
 		Strategy: func() downloader.DownloadStrategy {
 			var pUrl string
@@ -99,6 +126,8 @@ func DownloadSub(ctx context.Context, name, url, existingId, userAgent string) (
 			if info := resp.Header.Get("Subscription-Userinfo"); info != "" {
 				upload, download, total, expire = parseSubUserInfo(info)
 			}
+			// [имя из заголовков] profile-title (часто base64) или Content-Disposition filename
+			headerName = parseSubProfileName(resp.Header)
 		},
 		Validator: func(tmpPath string) error {
 			// 🛡️ [原子防损] 只有通过极严 YAML 结构校验的文件才会被最终替换
@@ -107,10 +136,10 @@ func DownloadSub(ctx context.Context, name, url, existingId, userAgent string) (
 				return err
 			}
 			if err := StrictVerifyClashConfig(data); err != nil {
-				return fmt.Errorf("订阅配置校验失败: %v (可能下载到了网页、HTML 或乱码)", err)
+				return fmt.Errorf("проверка конфигурации подписки не пройдена: %v (возможно, скачалась веб-страница, HTML или мусор)", err)
 			}
 			if err := ValidateClashReferencesBytes(data); err != nil {
-				return fmt.Errorf("订阅配置引用校验失败: %v", err)
+				return fmt.Errorf("проверка ссылок конфигурации подписки не пройдена: %v", err)
 			}
 			return nil
 		},
@@ -131,12 +160,12 @@ func DownloadSub(ctx context.Context, name, url, existingId, userAgent string) (
 			return readErr
 		}
 		if writeErr := utils.WriteFileAtomic(workingPath, originData, 0644); writeErr != nil {
-			return fmt.Errorf("覆盖工作文件失败: %w", writeErr)
+			return fmt.Errorf("не удалось перезаписать рабочий файл: %w", writeErr)
 		}
 
 		// 4. 确保 overlay 存在 (如果是新订阅，创建空 overlay；如果是更新，保留用户配置)
 		if err := EnsureEmptyOverlay(safeId); err != nil {
-			return fmt.Errorf("初始化规则配置失败: %w", err)
+			return fmt.Errorf("не удалось инициализировать конфигурацию правил: %w", err)
 		}
 
 		return nil
@@ -153,6 +182,15 @@ func DownloadSub(ctx context.Context, name, url, existingId, userAgent string) (
 	// 确认更新成功后删除 bak 文件
 	_ = os.Remove(originPath + ".bak")
 
+	// Имя: если вызывающий не задал — берём из заголовков подписки, иначе дефолт.
+	resolvedName := strings.TrimSpace(name)
+	if resolvedName == "" {
+		resolvedName = strings.TrimSpace(headerName)
+	}
+	if resolvedName == "" {
+		resolvedName = "Подписка"
+	}
+
 	// 5. 更新全局索引
 	IndexLock.Lock()
 	found := false
@@ -163,6 +201,11 @@ func DownloadSub(ctx context.Context, name, url, existingId, userAgent string) (
 			SubIndex[i].Total = total
 			SubIndex[i].Expire = expire
 			SubIndex[i].Updated = time.Now().Unix()
+			// при обновлении имя, заданное пользователем, не трогаем;
+			// если пользователь не задавал имя (пустой аргумент) и появилось имя из заголовка — обновим.
+			if strings.TrimSpace(name) == "" && strings.TrimSpace(headerName) != "" {
+				SubIndex[i].Name = strings.TrimSpace(headerName)
+			}
 			found = true
 			break
 		}
@@ -170,7 +213,7 @@ func DownloadSub(ctx context.Context, name, url, existingId, userAgent string) (
 	if !found {
 		SubIndex = append(SubIndex, SubIndexItem{
 			ID:       safeId,
-			Name:     name,
+			Name:     resolvedName,
 			URL:      url,
 			Type:     "remote",
 			Upload:   upload,
@@ -216,7 +259,7 @@ func DeleteConfig(id string) error {
 	var removeErr error
 	WithRuleStorageLock(func() error {
 		if err := os.Remove(yamlPath); err != nil && !os.IsNotExist(err) {
-			removeErr = fmt.Errorf("无法删除配置文件，可能正被内核占用，请停止代理后重试: %v", err)
+			removeErr = fmt.Errorf("не удалось удалить файл конфигурации: возможно, он занят ядром; остановите прокси и повторите: %v", err)
 			return nil
 		}
 		// 清理伴生文件
@@ -259,11 +302,11 @@ func StrictVerifyClashConfig(data []byte) error {
 	var root map[string]interface{}
 	// 1. 基础语法校验：必须是合法的 YAML
 	if err := yaml.Unmarshal(data, &root); err != nil {
-		return fmt.Errorf("文件解析失败，非合法 YAML 格式 (可能下载到了网页、HTML 或乱码)")
+		return fmt.Errorf("не удалось разобрать файл: это не корректный YAML (возможно, скачалась веб-страница, HTML или мусор)")
 	}
 
 	if len(root) == 0 {
-		return fmt.Errorf("文件格式拒绝：配置文件为空")
+		return fmt.Errorf("формат отклонён: файл конфигурации пуст")
 	}
 
 	// 2. 宏观特征校验：必须包含 Clash 的核心特征字段 (兼容首字母大写)
@@ -272,28 +315,28 @@ func StrictVerifyClashConfig(data []byte) error {
 	hasProxyProviders := root["proxy-providers"] != nil
 
 	if !hasProxies && !hasProxyGroups && !hasProxyProviders {
-		return fmt.Errorf("格式拒绝：未检测到 proxies 或 proxy-groups。这不是一个标准的 Clash 订阅文件")
+		return fmt.Errorf("формат отклонён: не найдены proxies или proxy-groups. Это не стандартный файл подписки Clash")
 	}
 
 	// 3. 刚性结构与语义抽样校验：防止披着 proxies 外衣的假数据
 	if proxiesNode := root["proxies"]; proxiesNode != nil {
 		proxiesList, ok := proxiesNode.([]interface{})
 		if !ok {
-			return fmt.Errorf("语法结构致命错误：[proxies] 必须是一个节点列表 (Array)")
+			return fmt.Errorf("критическая ошибка структуры: [proxies] должен быть списком узлов (Array)")
 		}
 
 		// 抽样检查第一个代理节点的内部结构
 		if len(proxiesList) > 0 {
 			firstProxy, isMap := proxiesList[0].(map[string]interface{})
 			if !isMap {
-				return fmt.Errorf("语法结构致命错误：[proxies] 列表内的元素必须是节点对象 (Object)")
+				return fmt.Errorf("критическая ошибка структуры: элементы списка [proxies] должны быть объектами узлов (Object)")
 			}
 
 			// Clash 节点的刚性必备属性，缺一不可
 			requiredKeys := []string{"name", "type", "server", "port"}
 			for _, key := range requiredKeys {
 				if _, exists := firstProxy[key]; !exists {
-					return fmt.Errorf("语义合规拒绝：代理节点缺失 Clash 必备底层属性 [%s]", key)
+					return fmt.Errorf("семантическая проверка не пройдена: у прокси-узла отсутствует обязательное поле Clash [%s]", key)
 				}
 			}
 		}
@@ -303,20 +346,20 @@ func StrictVerifyClashConfig(data []byte) error {
 	if groupsNode := root["proxy-groups"]; groupsNode != nil {
 		groupsList, ok := groupsNode.([]interface{})
 		if !ok {
-			return fmt.Errorf("语法结构致命错误：[proxy-groups] 必须是一个组列表 (Array)")
+			return fmt.Errorf("критическая ошибка структуры: [proxy-groups] должен быть списком групп (Array)")
 		}
 
 		if len(groupsList) > 0 {
 			firstGroup, isMap := groupsList[0].(map[string]interface{})
 			if !isMap {
-				return fmt.Errorf("语法结构致命错误：[proxy-groups] 内的元素必须是对象 (Object)")
+				return fmt.Errorf("критическая ошибка структуры: элементы [proxy-groups] должны быть объектами (Object)")
 			}
 			// 策略组必备属性
 			if _, ok := firstGroup["name"]; !ok {
-				return fmt.Errorf("语义合规拒绝：策略组缺失必备属性 [name]")
+				return fmt.Errorf("семантическая проверка не пройдена: у группы отсутствует обязательное поле [name]")
 			}
 			if _, ok := firstGroup["type"]; !ok {
-				return fmt.Errorf("语义合规拒绝：策略组缺失必备属性 [type]")
+				return fmt.Errorf("семантическая проверка не пройдена: у группы отсутствует обязательное поле [type]")
 			}
 		}
 	}

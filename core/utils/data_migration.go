@@ -67,12 +67,12 @@ func migrateLegacyAppDataToInstallData(force bool) error {
 	}
 
 	if err := os.MkdirAll(target, 0755); err != nil {
-		return fmt.Errorf("创建目标数据目录失败: %w", err)
+		return fmt.Errorf("не удалось создать целевой каталог данных: %w", err)
 	}
 
 	lock, err := acquireMigrationLock(target)
 	if err != nil {
-		return fmt.Errorf("数据迁移已在进行中或锁文件被占用: %w", err)
+		return fmt.Errorf("миграция данных уже выполняется или lock-файл занят: %w", err)
 	}
 	defer func() {
 		lock.Close()
@@ -91,21 +91,21 @@ func migrateLegacyAppDataToInstallData(force bool) error {
 	if hasMeaningfulData(target) {
 		backupDir := migrationBackupDir(target)
 		if err := copyDir(target, backupDir, shouldSkipMigrationFile); err != nil {
-			writeMigrationError(target, legacy, fmt.Sprintf("备份目标数据目录失败: %v", err))
-			return fmt.Errorf("备份目标数据目录失败: %w", err)
+			writeMigrationError(target, legacy, fmt.Sprintf("не удалось создать резервную копию целевого каталога данных: %v", err))
+			return fmt.Errorf("не удалось создать резервную копию целевого каталога данных: %w", err)
 		}
 	}
 
 	// Copy data
 	if err := copyDir(legacy, target, shouldSkipMigrationFile); err != nil {
-		writeMigrationError(target, legacy, fmt.Sprintf("复制旧 AppData 数据失败: %v", err))
-		return fmt.Errorf("复制旧 AppData 数据失败: %w", err)
+		writeMigrationError(target, legacy, fmt.Sprintf("не удалось скопировать данные из старого AppData: %v", err))
+		return fmt.Errorf("не удалось скопировать данные из старого AppData: %w", err)
 	}
 
 	// Verify copied data
 	if err := verifyCopied(legacy, target, shouldSkipMigrationFile); err != nil {
-		writeMigrationError(target, legacy, fmt.Sprintf("迁移校验失败: %v", err))
-		return fmt.Errorf("迁移校验失败: %w", err)
+		writeMigrationError(target, legacy, fmt.Sprintf("проверка миграции не пройдена: %v", err))
+		return fmt.Errorf("проверка миграции не пройдена: %w", err)
 	}
 
 	// Write migration meta
@@ -132,7 +132,7 @@ func migrateLegacyAppDataToInstallData(force bool) error {
 		meta.SourceDeleted = false
 		meta.DeleteError = err.Error()
 		_ = saveMigrationMeta(target, meta)
-		logger.Warnf("旧 AppData 目录删除失败，请手动删除: %s, err=%v", legacy, err)
+		logger.Warnf("не удалось удалить старый каталог AppData, удалите вручную: %s, err=%v", legacy, err)
 		return nil
 	}
 
@@ -371,12 +371,12 @@ func verifyCopied(src, dst string, skipFunc func(string) bool) error {
 
 		dstInfo, err := os.Stat(dstPath)
 		if err != nil {
-			return fmt.Errorf("缺失文件: %s", relPath)
+			return fmt.Errorf("отсутствует файл: %s", relPath)
 		}
 
 		// Optionally check size, but size should be fine.
 		if info.Size() != dstInfo.Size() {
-			return fmt.Errorf("文件大小不匹配: %s", relPath)
+			return fmt.Errorf("размер файла не совпадает: %s", relPath)
 		}
 
 		return nil

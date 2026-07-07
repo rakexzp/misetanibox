@@ -34,7 +34,7 @@ func GetUwpAppList() ([]UwpApp, error) {
 	const mappingKey = `Local Settings\Software\Microsoft\Windows\CurrentVersion\AppContainer\Mappings`
 	k, err := registry.OpenKey(registry.CLASSES_ROOT, mappingKey, registry.ENUMERATE_SUB_KEYS|registry.QUERY_VALUE)
 	if err != nil {
-		return nil, fmt.Errorf("无法读取注册表映射: %v", err)
+		return nil, fmt.Errorf("не удалось прочитать сопоставления в реестре: %v", err)
 	}
 	defer k.Close()
 

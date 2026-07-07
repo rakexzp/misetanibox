@@ -5,15 +5,15 @@
       <div class="task-actions">
         <span class="task-status" :class="task.status">{{ statusText }}</span>
         
-        <button class="icon-btn cancel-btn" @click="handleTogglePause" :title="task.status === 'running' ? '暂停任务' : '继续任务'" :disabled="task.status === 'success'">
+        <button class="icon-btn cancel-btn" @click="handleTogglePause" :title="task.status === 'running' ? 'Приостановить задачу' : 'Продолжить задачу'" :disabled="task.status === 'success'">
           <span class="icon" v-html="task.status === 'running' ? ICONS.pause : ICONS.play"></span>
         </button>
 
-        <button class="icon-btn retry-btn" @click="handleForceRetry" title="重新下载 (清空缓存)" :disabled="task.status === 'running' || task.status === 'success'">
+        <button class="icon-btn retry-btn" @click="handleForceRetry" title="Загрузить заново (очистить кэш)" :disabled="task.status === 'running' || task.status === 'success'">
           <span class="icon" v-html="ICONS.refresh"></span>
         </button>
 
-        <button class="icon-btn cancel-btn" @click="handleRemove" title="关闭任务">
+        <button class="icon-btn cancel-btn" @click="handleRemove" title="Закрыть задачу">
           <span class="icon" v-html="ICONS.close"></span>
         </button>
       </div>
@@ -55,11 +55,11 @@ const progressPercent = computed(() => {
 
 const statusText = computed(() => {
   switch (props.task.status) {
-    case 'running': return '下载中...';
-    case 'success': return '已完成';
-    case 'error': return '失败';
-    case 'cancelled': return '已暂停';
-    default: return '等待中';
+    case 'running': return 'Загрузка...';
+    case 'success': return 'Готово';
+    case 'error': return 'Не удалось';
+    case 'cancelled': return 'Пауза';
+    default: return 'Ожидание';
   }
 });
 
