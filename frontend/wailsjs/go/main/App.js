@@ -397,3 +397,55 @@ export function UpdateSub(arg1, arg2) {
 export function ValidateConfigText(arg1) {
   return window['go']['main']['App']['ValidateConfigText'](arg1);
 }
+
+export function ListInstalledApps() {
+  return window['go']['main']['App']['ListInstalledApps']();
+}
+
+export function SelectAppExe() {
+  return window['go']['main']['App']['SelectAppExe']();
+}
+
+export function GetAppRouting(arg1) {
+  return window['go']['main']['App']['GetAppRouting'](arg1);
+}
+
+export function SetAppRouting(arg1, arg2, arg3) {
+  return window['go']['main']['App']['SetAppRouting'](arg1, arg2, arg3);
+}
+
+export function AddSubViaDNS(arg1, arg2) {
+  return window['go']['main']['App']['AddSubViaDNS'](arg1, arg2);
+}
+
+export function IsSmartCore() {
+  return window['go']['main']['App']['IsSmartCore']();
+}
+
+export function InstallSmartCore() {
+  return window['go']['main']['App']['InstallSmartCore']();
+}
+
+export function RemoveSmartCore() {
+  return window['go']['main']['App']['RemoveSmartCore']();
+}
+
+export function GetSmartRoute() {
+  return window['go']['main']['App']['GetSmartRoute']();
+}
+
+export function SetSmartRoute(arg1) {
+  return window['go']['main']['App']['SetSmartRoute'](arg1);
+}
+
+export function SetConsoleBg() {
+  return window['go']['main']['App']['SetConsoleBg']();
+}
+
+export function GetConsoleBg() {
+  return window['go']['main']['App']['GetConsoleBg']();
+}
+
+export function ClearConsoleBg() {
+  return window['go']['main']['App']['ClearConsoleBg']();
+}

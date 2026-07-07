@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	_ "embed"
+	"encoding/base64"
 	"fmt"
 	"goclashz/core/appcore"
 	"goclashz/core/clash"
@@ -123,10 +124,10 @@ func (a *App) runStartupRuntimeAssetMaintenance(ctx context.Context) {
 	// 第一阶段：必须修好 core + wintun
 	coreStatus, coreErr := runtimeassets.EnsureReady(ctx, runtimeassets.RequireTun, runtimeassets.RepairInvalid)
 	if coreErr != nil {
-		logger.Errorf("核心运行组件自修复失败: %v", coreErr)
+		logger.Errorf("самовосстановление основных компонентов не удалось: %v", coreErr)
 		for _, asset := range coreStatus.Assets {
 			if !asset.Ready && asset.Error != "" {
-				logger.Errorf("组件不可用: %s path=%s error=%s", asset.Key, asset.Path, asset.Error)
+				logger.Errorf("компонент недоступен: %s path=%s error=%s", asset.Key, asset.Path, asset.Error)
 			}
 		}
 	}
@@ -134,7 +135,7 @@ func (a *App) runStartupRuntimeAssetMaintenance(ctx context.Context) {
 	// 第二阶段：尝试修 geo，失败不影响应用启动
 	geoStatus, geoErr := runtimeassets.EnsureReady(ctx, runtimeassets.RequireGeoOnly, runtimeassets.RepairMissingOnly)
 	if geoErr != nil {
-		logger.Warnf("Geo 数据组件自修复失败，可稍后由在线更新补齐: %v", geoErr)
+		logger.Warnf("самовосстановление Geo-данных не удалось, будет добито онлайн-обновлением позже: %v", geoErr)
 	}
 
 	status := runtimeassets.MergeStatus(coreStatus, geoStatus)
@@ -205,7 +206,7 @@ func (a *App) shutdown(ctx context.Context) {
 	select {
 	case <-done:
 	case <-time.After(5 * time.Second):
-		logger.Warnf("停止内核/流量流超时，继续退出")
+		logger.Warnf("таймаут остановки ядра/потока трафика, продолжаем выход")
 	}
 }
 
@@ -366,6 +367,114 @@ func (a *App) UpdateSub(name, url string) error {
 	return a.core.UpdateSub(a.ctx, name, url)
 }
 
+// AddSubViaDNS получает подписку через DNS TXT-запись домена: в TXT лежит либо ссылка
+// на подписку (http/https), либо inline-конфиг (обычно base64 YAML). Резолв идёт через DoH,
+// поэтому работает даже когда провайдер портит обычный DNS или блокирует URL подписки.
+func (a *App) AddSubViaDNS(domain, name string) (string, error) {
+	content, err := clash.ResolveConfigViaDNS(a.ctx, domain)
+	if err != nil {
+		return "", fmt.Errorf("не удалось получить запись DNS: %w", err)
+	}
+	content = strings.TrimSpace(content)
+	if content == "" {
+		return "", fmt.Errorf("TXT-запись пуста")
+	}
+
+	// Вариант 1: в TXT лежит ссылка на подписку.
+	if strings.HasPrefix(content, "http://") || strings.HasPrefix(content, "https://") {
+		if err := a.core.UpdateSub(a.ctx, name, content); err != nil {
+			return "", err
+		}
+		return content, nil
+	}
+
+	// Вариант 2: inline-конфиг. Пробуем base64, иначе берём как есть.
+	raw := []byte(content)
+	trimmed := strings.TrimPrefix(content, "base64:")
+	if dec, decErr := base64.StdEncoding.DecodeString(strings.TrimSpace(trimmed)); decErr == nil && len(dec) > 0 {
+		raw = dec
+	}
+
+	tmp, err := os.CreateTemp("", "mise-dns-*.yaml")
+	if err != nil {
+		return "", err
+	}
+	tmpPath := tmp.Name()
+	defer os.Remove(tmpPath)
+	if _, err := tmp.Write(raw); err != nil {
+		tmp.Close()
+		return "", err
+	}
+	tmp.Close()
+
+	finalName := strings.TrimSpace(name)
+	if finalName == "" {
+		finalName = "DNS-конфиг"
+	}
+	id, err := a.core.DoLocalImport(tmpPath, finalName)
+	if err != nil {
+		return "", fmt.Errorf("получено из DNS, но не удалось импортировать: %w", err)
+	}
+	return id, nil
+}
+
+// --- Smart-ядро (опциональная докачка форк-ядра vernesong) ---
+
+func (a *App) IsSmartCore() bool {
+	return clash.IsSmartCoreActive()
+}
+
+// InstallSmartCore скачивает и ставит смарт-ядро, подменяя стоковое. Ядро на время подмены
+// останавливается; затем перезапускается, если было запущено.
+func (a *App) InstallSmartCore() error {
+	wasRunning := a.core.GetAppState().IsRunning
+	a.core.StopCoreProcess() // освобождаем clash.exe от блокировки
+	if err := clash.InstallSmartCore(a.ctx); err != nil {
+		if wasRunning {
+			_ = a.core.RestartCoreWithReason(a.ctx, "smart-core-install-failed")
+		}
+		return err
+	}
+	if wasRunning {
+		return a.core.RestartCoreWithReason(a.ctx, "smart-core-installed")
+	}
+	a.core.SyncState()
+	return nil
+}
+
+// RemoveSmartCore возвращает стоковое ядро.
+func (a *App) RemoveSmartCore() error {
+	wasRunning := a.core.GetAppState().IsRunning
+	a.core.StopCoreProcess()
+	if err := clash.RevertToStockCore(); err != nil {
+		if wasRunning {
+			_ = a.core.RestartCoreWithReason(a.ctx, "smart-core-revert-failed")
+		}
+		return err
+	}
+	if wasRunning {
+		return a.core.RestartCoreWithReason(a.ctx, "smart-core-removed")
+	}
+	a.core.SyncState()
+	return nil
+}
+
+// GetSmartRoute — включён ли режим «весь прокси-трафик через Смарт» (для Про/по правилам).
+func (a *App) GetSmartRoute() bool {
+	return clash.IsSmartRouteActive()
+}
+
+// SetSmartRoute сохраняет флаг и перезапускает ядро (если запущено), чтобы правила перегенерились.
+func (a *App) SetSmartRoute(active bool) error {
+	if err := clash.SetSmartRouteActive(active); err != nil {
+		return err
+	}
+	if a.core.GetAppState().IsRunning {
+		return a.core.RestartCoreWithReason(a.ctx, "smart-route-toggle")
+	}
+	return nil
+}
+
 func (a *App) UpdateSingleSub(id string) error {
 	return a.core.UpdateSingleSub(a.ctx, id)
 }
@@ -471,17 +580,17 @@ func (a *App) GetHelperServiceStatus() sys.HelperStatusData {
 func (a *App) InstallHelperService() error {
 	exePath := filepath.Join(utils.GetAppDir(), "GoclashZHelper.exe")
 	if _, err := os.Stat(exePath); err != nil {
-		return fmt.Errorf("GoclashZHelper.exe 不存在于 %s，请先部署 helper 程序", exePath)
+		return fmt.Errorf("GoclashZHelper.exe не найден в %s, сначала разверните программу helper", exePath)
 	}
 
 	sid, err := sys.CurrentUserSID()
 	if err != nil {
-		return fmt.Errorf("获取当前用户 SID 失败: %w", err)
+		return fmt.Errorf("не удалось получить SID текущего пользователя: %w", err)
 	}
 
 	if !sys.CheckAdmin() {
 		if err := sys.RunElevatedWithArgsWait("--install-helper", "--allowed-sid", sid); err != nil {
-			return fmt.Errorf("安装后台服务失败: %w", err)
+			return fmt.Errorf("не удалось установить фоновую службу: %w", err)
 		}
 		return sys.WaitForHelperReady(15, 500*time.Millisecond)
 	}
@@ -558,6 +667,79 @@ func (a *App) RepairDataDirMigration() error {
 	return utils.ForceMigrateLegacyAppDataToInstallData()
 }
 
+func mimeForExt(ext string) string {
+	switch strings.ToLower(ext) {
+	case ".jpg", ".jpeg":
+		return "image/jpeg"
+	case ".webp":
+		return "image/webp"
+	case ".gif":
+		return "image/gif"
+	default:
+		return "image/png"
+	}
+}
+
+func consoleBgGlob() string { return filepath.Join(utils.GetDataDir(), "console_bg.*") }
+
+// SetConsoleBg открывает диалог выбора картинки, сохраняет её в data-каталог и возвращает
+// как data-URI для немедленного показа. Ограничение 6 МБ.
+func (a *App) SetConsoleBg() (string, error) {
+	path, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Выберите картинку для консоли",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "Изображения (*.png; *.jpg; *.jpeg; *.webp; *.gif)", Pattern: "*.png;*.jpg;*.jpeg;*.webp;*.gif"},
+		},
+	})
+	if err != nil || path == "" {
+		return "", err
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	if len(data) > 6*1024*1024 {
+		return "", fmt.Errorf("файл больше 6 МБ — выберите картинку поменьше")
+	}
+	// удаляем старый фон (любое расширение) и сохраняем новый
+	if old, _ := filepath.Glob(consoleBgGlob()); old != nil {
+		for _, f := range old {
+			_ = os.Remove(f)
+		}
+	}
+	ext := strings.ToLower(filepath.Ext(path))
+	if ext == "" {
+		ext = ".png"
+	}
+	dest := filepath.Join(utils.GetDataDir(), "console_bg"+ext)
+	if err := utils.WriteFileAtomic(dest, data, 0644); err != nil {
+		return "", err
+	}
+	return "data:" + mimeForExt(ext) + ";base64," + base64.StdEncoding.EncodeToString(data), nil
+}
+
+// GetConsoleBg возвращает сохранённый фон консоли как data-URI (или "" если не задан).
+func (a *App) GetConsoleBg() string {
+	matches, _ := filepath.Glob(consoleBgGlob())
+	if len(matches) == 0 {
+		return ""
+	}
+	data, err := os.ReadFile(matches[0])
+	if err != nil {
+		return ""
+	}
+	return "data:" + mimeForExt(filepath.Ext(matches[0])) + ";base64," + base64.StdEncoding.EncodeToString(data)
+}
+
+// ClearConsoleBg удаляет сохранённый фон консоли.
+func (a *App) ClearConsoleBg() error {
+	matches, _ := filepath.Glob(consoleBgGlob())
+	for _, f := range matches {
+		_ = os.Remove(f)
+	}
+	return nil
+}
+
 func (a *App) RepairDataDirPermission() error {
 	if !sys.CheckAdmin() {
 		return sys.RunElevatedWithArgsWait("--repair-permissions")
@@ -593,12 +775,12 @@ func (a *App) GetWintunVersion() string {
 	status := runtimeassets.GetStatus(a.ctx)
 	w := status.Assets[runtimeassets.AssetWintun]
 	if !w.Ready {
-		return "未安装"
+		return "не установлено"
 	}
 	if w.Version != "" {
 		return w.Version
 	}
-	return "已安装，版本未知"
+	return "установлено, версия неизвестна"
 }
 
 func (a *App) GetComponentFileInfo() map[string]runtimeassets.AssetHealth {
@@ -662,9 +844,9 @@ func (a *App) SelectLocalConfig(id string) error {
 
 func (a *App) SelectLocalFile() (FileInfo, error) {
 	path, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: "选择本地配置文件",
+		Title: "Выберите локальный файл конфигурации",
 		Filters: []runtime.FileFilter{
-			{DisplayName: "Clash 配置文件 (*.yaml; *.yml)", Pattern: "*.yaml;*.yml"},
+			{DisplayName: "Файлы конфигурации Clash (*.yaml; *.yml)", Pattern: "*.yaml;*.yml"},
 		},
 	})
 	if err != nil || path == "" {
@@ -696,12 +878,12 @@ func (a *App) GetCoreVersion() string {
 	status := runtimeassets.GetStatus(a.ctx)
 	core := status.Assets[runtimeassets.AssetCore]
 	if !core.Ready {
-		return "未安装"
+		return "не установлено"
 	}
 	if core.Version != "" {
 		return core.Version
 	}
-	return "已安装，版本未知"
+	return "установлено, версия неизвестна"
 }
 
 func (a *App) GetRuntimeAssetStatus() runtimeassets.RuntimeAssetStatus {
@@ -711,7 +893,7 @@ func (a *App) GetRuntimeAssetStatus() runtimeassets.RuntimeAssetStatus {
 func (a *App) RepairRuntimeAssets() runtimeassets.RuntimeAssetStatus {
 	status, err := runtimeassets.EnsureReady(a.ctx, runtimeassets.RequireAll, runtimeassets.RepairForce)
 	if err != nil {
-		a.core.LogApp("error", "修复运行组件失败: %v", err)
+		a.core.LogApp("error", "не удалось восстановить компоненты: %v", err)
 	}
 	return status
 }
@@ -733,14 +915,14 @@ func (a *App) GetCustomRules(id string) ([]string, error) {
 func (a *App) SaveCustomRules(id string, rules []string) error {
 	item, _ := clash.FindSubIndexByID(id)
 	if item.Type == "remote" {
-		return fmt.Errorf("旧规则保存接口已废弃，远程配置请使用 AddRule/DeleteRule/SaveRuleSection")
+		return fmt.Errorf("старый интерфейс сохранения правил устарел, для удалённых конфигураций используйте AddRule/DeleteRule/SaveRuleSection")
 	}
 	return a.SaveRuleSection(id, "local", rules)
 }
 
 // Deprecated: no longer needed in V2 rule engine
 func (a *App) SyncRules(id string) error {
-	return fmt.Errorf("规则同步功能已废弃")
+	return fmt.Errorf("функция синхронизации правил устарела")
 }
 
 // --- Rule V2 API ---
@@ -749,7 +931,7 @@ func (a *App) GetRulePageData(id string) (clash.RulePageData, error) {
 	var res clash.RulePageData
 	err := clash.WithRuleStorageLock(func() error {
 		if err := clash.EnsureRuleStorageMigratedLocked(id); err != nil {
-			return fmt.Errorf("规则存储迁移失败: %w", err)
+			return fmt.Errorf("не удалось мигрировать хранилище правил: %w", err)
 		}
 
 		workingRoot, err := clash.ReadWorkingRootWithRecovery(id)
@@ -835,7 +1017,7 @@ func (a *App) GetRuleFormOptions(id string) (clash.RuleFormOptions, error) {
 	var opts clash.RuleFormOptions
 	err := clash.WithRuleStorageLock(func() error {
 		if err := clash.EnsureRuleStorageMigratedLocked(id); err != nil {
-			return fmt.Errorf("规则存储迁移失败: %w", err)
+			return fmt.Errorf("не удалось мигрировать хранилище правил: %w", err)
 		}
 		var innerErr error
 		opts, innerErr = clash.GetRuleFormOptionsData(id)
@@ -960,21 +1142,59 @@ func (a *App) SaveRuleSection(id string, section string, rules []string) error {
 	})
 }
 
+// --- App routing (маршрутизация по приложениям) ---
+
+// ListInstalledApps сканирует установленные приложения (ярлыки меню Пуск).
+func (a *App) ListInstalledApps() ([]sys.AppInfo, error) {
+	return sys.ListInstalledApps()
+}
+
+// SelectAppExe открывает диалог выбора .exe вручную и возвращает AppInfo.
+func (a *App) SelectAppExe() (sys.AppInfo, error) {
+	path, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Выберите приложение",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "Приложения (*.exe)", Pattern: "*.exe"},
+		},
+	})
+	if err != nil || path == "" {
+		return sys.AppInfo{}, err
+	}
+	return sys.AppInfoForExe(path), nil
+}
+
+// GetAppRouting возвращает текущую настройку маршрутизации по приложениям для конфигурации.
+func (a *App) GetAppRouting(id string) (clash.AppRouting, error) {
+	return clash.LoadAppRouting(id)
+}
+
+// SetAppRouting сохраняет настройку и, если конфигурация активна и запущена, перезапускает ядро.
+func (a *App) SetAppRouting(id string, mode string, apps []string) error {
+	if err := clash.SaveAppRouting(id, clash.AppRouting{Mode: mode, Apps: apps}); err != nil {
+		return err
+	}
+	state := a.core.GetAppState()
+	if state.ActiveConfig == id && state.IsRunning {
+		return a.core.RestartCoreWithReason(a.ctx, "app-routing-update")
+	}
+	return nil
+}
+
 func (a *App) ExportConfig(id string, useCustomRules bool) error {
 	_, yamlPath, err := clash.ProfilePathByID(id)
 	if err != nil {
-		return fmt.Errorf("找不到配置文件: %w", err)
+		return fmt.Errorf("файл конфигурации не найден: %w", err)
 	}
 
 	data, err := os.ReadFile(yamlPath)
 	if err != nil {
-		return fmt.Errorf("读取配置失败: %w", err)
+		return fmt.Errorf("не удалось прочитать конфигурацию: %w", err)
 	}
 
 	if useCustomRules {
 		var root map[string]interface{}
 		if err := yaml.Unmarshal(data, &root); err != nil {
-			return fmt.Errorf("解析 YAML 失败: %w", err)
+			return fmt.Errorf("не удалось разобрать YAML: %w", err)
 		}
 
 		runtimeRules, err := clash.BuildRuntimeRules(id, root)
@@ -992,7 +1212,7 @@ func (a *App) ExportConfig(id string, useCustomRules bool) error {
 
 		data, err = yaml.Marshal(root)
 		if err != nil {
-			return fmt.Errorf("序列化 YAML 失败: %w", err)
+			return fmt.Errorf("не удалось сериализовать YAML: %w", err)
 		}
 	}
 
@@ -1003,10 +1223,10 @@ func (a *App) ExportConfig(id string, useCustomRules bool) error {
 	}
 
 	savePath, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
-		Title:           "导出配置文件",
+		Title:           "Экспорт файла конфигурации",
 		DefaultFilename: defaultName + ".yaml",
 		Filters: []runtime.FileFilter{
-			{DisplayName: "YAML 配置文件 (*.yaml)", Pattern: "*.yaml"},
+			{DisplayName: "Файлы конфигурации YAML (*.yaml)", Pattern: "*.yaml"},
 		},
 	})
 	if err != nil {
@@ -1084,16 +1304,16 @@ func (a *App) CheckAndDownloadAppUpdateAsync() {
 
 func (a *App) ApplyAppUpdate(path string) error {
 	if strings.TrimSpace(path) == "" {
-		return fmt.Errorf("更新包路径为空")
+		return fmt.Errorf("пустой путь к пакету обновления")
 	}
 
 	if _, err := os.Stat(path); err != nil {
-		return fmt.Errorf("更新包不存在: %v", err)
+		return fmt.Errorf("пакет обновления не найден: %v", err)
 	}
 
 	// 标记：下次启动后清理这个安装包
 	if err := markAppliedUpdateForCleanup(path); err != nil {
-		logger.Errorf("写入更新清理标记失败: %v", err)
+		logger.Errorf("не удалось записать маркер очистки обновления: %v", err)
 	}
 
 	// 停止托盘，避免安装期间继续触发操作
@@ -1112,7 +1332,7 @@ func (a *App) ApplyAppUpdate(path string) error {
 
 	// 启动安装包
 	if err := sys.ShellOpen(path); err != nil {
-		return fmt.Errorf("无法启动安装程序: %v", err)
+		return fmt.Errorf("не удалось запустить установщик: %v", err)
 	}
 
 	// 退出当前程序，让安装程序接管
@@ -1163,10 +1383,10 @@ func removeEmptyDir(path string) error {
 
 func (a *App) ExportBackup() (string, error) {
 	savePath, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
-		Title:           "选择备份保存位置",
-		DefaultFilename: fmt.Sprintf("GoclashZ_Backup_%s.gocz", time.Now().Format("20060102")),
+		Title:           "Выберите место сохранения резервной копии",
+		DefaultFilename: fmt.Sprintf("Misetanibox_Backup_%s.gocz", time.Now().Format("20060102")),
 		Filters: []runtime.FileFilter{
-			{DisplayName: "GoclashZ 备份文件 (*.gocz)", Pattern: "*.gocz"},
+			{DisplayName: "Файлы резервных копий Misetanibox (*.gocz)", Pattern: "*.gocz"},
 		},
 	})
 	if err != nil {
@@ -1187,14 +1407,14 @@ func (a *App) ExportBackup() (string, error) {
 
 func (a *App) SelectBackupFile() (string, error) {
 	selected, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: "选择要还原的备份文件",
+		Title: "Выберите файл резервной копии для восстановления",
 		Filters: []runtime.FileFilter{
-			{DisplayName: "GoclashZ 备份文件 (*.gocz)", Pattern: "*.gocz"},
-			{DisplayName: "Zip 压缩包 (*.zip)", Pattern: "*.zip"},
+			{DisplayName: "Файлы резервных копий Misetanibox (*.gocz)", Pattern: "*.gocz"},
+			{DisplayName: "Архивы Zip (*.zip)", Pattern: "*.zip"},
 		},
 	})
 	if err != nil {
-		return "", fmt.Errorf("选择文件失败: %v", err)
+		return "", fmt.Errorf("не удалось выбрать файл: %v", err)
 	}
 	return selected, nil
 }
@@ -1211,7 +1431,7 @@ func (a *App) ExecuteRestore(selected string, mode string) (string, error) {
 func (a *App) safeShowMainWindow() {
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Errorf("显示主窗口异常: %v", r)
+			logger.Errorf("ошибка при показе главного окна: %v", r)
 		}
 	}()
 
@@ -1221,7 +1441,7 @@ func (a *App) safeShowMainWindow() {
 func (a *App) safeToggleMainWindow() {
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Errorf("切换主窗口异常: %v", r)
+			logger.Errorf("ошибка при переключении главного окна: %v", r)
 		}
 	}()
 
@@ -1231,7 +1451,7 @@ func (a *App) safeToggleMainWindow() {
 func (a *App) safeQuit() {
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Errorf("退出程序异常: %v", r)
+			logger.Errorf("ошибка при выходе из программы: %v", r)
 			os.Exit(0)
 		}
 	}()
@@ -1239,7 +1459,7 @@ func (a *App) safeQuit() {
 	// 强制退出兜底：8秒后强制结束进程
 	go func() {
 		time.Sleep(8 * time.Second)
-		logger.Warnf("正常退出超时，强制结束进程")
+		logger.Warnf("таймаут штатного выхода, принудительно завершаем процесс")
 		os.Exit(0)
 	}()
 

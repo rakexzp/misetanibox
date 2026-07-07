@@ -13,7 +13,7 @@ import (
 
 func FetchSmallFileAtomic(ctx context.Context, opt Options) error {
 	if strings.TrimSpace(opt.DestPath) == "" {
-		return fmt.Errorf("DestPath 为空")
+		return fmt.Errorf("DestPath пуст")
 	}
 	unlock := lockDest(opt.DestPath)
 	defer unlock()
@@ -37,7 +37,7 @@ func FetchSmallFileAtomic(ctx context.Context, opt Options) error {
 
 	ua := opt.UserAgent
 	if ua == "" {
-		ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) GoclashZ/1.0"
+		ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Misetanibox/1.0"
 	}
 
 	for _, client := range clients {
@@ -49,6 +49,9 @@ func FetchSmallFileAtomic(ctx context.Context, opt Options) error {
 					return
 				}
 				req.Header.Set("User-Agent", ua)
+				for k, v := range opt.Headers {
+					req.Header.Set(k, v)
+				}
 				resp, err := c.Do(req)
 				if err != nil {
 					resultCh <- result{err: err}

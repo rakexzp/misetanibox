@@ -28,7 +28,7 @@ func WaitFileReleased(path string, timeout time.Duration) error {
 	}
 
 	if lastErr == nil {
-		return fmt.Errorf("等待文件释放超时")
+		return fmt.Errorf("тайм-аут ожидания освобождения файла")
 	}
 
 	return lastErr
@@ -56,7 +56,7 @@ func ReplaceFileWithBackup(newPath, destPath string) error {
 
 	// 1. 确保目标文件不再被占用
 	if err := WaitFileReleased(destPath, 5*time.Second); err != nil {
-		return fmt.Errorf("等待目标文件释放失败: %w", err)
+		return fmt.Errorf("не удалось дождаться освобождения целевого файла: %w", err)
 	}
 
 	// 2. 清理旧备份
@@ -65,7 +65,7 @@ func ReplaceFileWithBackup(newPath, destPath string) error {
 	// 3. 备份当前文件
 	if _, err := os.Stat(destPath); err == nil {
 		if err := retryRename(destPath, backupPath, 10, 300*time.Millisecond); err != nil {
-			return fmt.Errorf("备份旧文件失败: %w", err)
+			return fmt.Errorf("не удалось создать резервную копию старого файла: %w", err)
 		}
 	}
 
@@ -76,7 +76,7 @@ func ReplaceFileWithBackup(newPath, destPath string) error {
 			_ = retryRename(backupPath, destPath, 10, 300*time.Millisecond)
 		}
 
-		return fmt.Errorf("替换新文件失败: %w", err)
+		return fmt.Errorf("не удалось заменить файл новым: %w", err)
 	}
 
 	// 5. 替换成功，清理备份

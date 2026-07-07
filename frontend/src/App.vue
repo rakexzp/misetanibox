@@ -2,16 +2,27 @@
   <div class="app-shell" :class="{ dark: globalState.theme === 'dark' }">
     <div class="drag-bar" style="--wails-draggable:drag">
       <div class="top-actions" style="--wails-draggable:none">
+        <button
+          @click="toggleUiMode"
+          class="ctrl-btn mode-switch-btn"
+          :class="{ 'is-lite': globalState.uiMode === 'lite' }"
+          :title="globalState.uiMode === 'lite' ? 'Переключить в Про-режим' : 'Переключить в простой режим (Lite)'"
+        >
+          <span v-html="globalState.uiMode === 'lite' ? ICONS.settings : ICONS.zap"></span>
+          <span class="mode-switch-label">{{ globalState.uiMode === 'lite' ? 'Про' : 'Lite' }}</span>
+        </button>
         <div class="window-controls">
-          <button @click="WindowMinimise" class="ctrl-btn" title="最小化" v-html="ICONS.min"></button>
-          <button @click="handleToggleMaximise" class="ctrl-btn" title="最大化/还原" v-html="isMaximized ? ICONS.restore : ICONS.max"></button>
-          <button @click="handleClose" class="ctrl-btn close-btn" title="关闭" v-html="ICONS.close"></button>
+          <button @click="WindowMinimise" class="ctrl-btn" title="Свернуть" v-html="ICONS.min"></button>
+          <button @click="handleToggleMaximise" class="ctrl-btn" title="Развернуть/Восстановить" v-html="isMaximized ? ICONS.restore : ICONS.max"></button>
+          <button @click="handleClose" class="ctrl-btn close-btn" title="Закрыть" v-html="ICONS.close"></button>
         </div>
       </div>
     </div>
 
-    <div class="main-layout">
-      <Sidebar 
+    <LiteApp v-if="globalState.uiMode === 'lite'" :traffic="traffic" />
+
+    <div v-else class="main-layout">
+      <Sidebar
         :activeId="currentTab" 
         :traffic="traffic" 
         :menu="menu" 
@@ -73,9 +84,9 @@
               <div class="logs-header" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 0px;">
                 <div class="conn-tabs-viewport" style="flex: none;">
                   <div class="conn-tabs-track" ref="logsTabsTrackRef">
-                    <button :ref="(el) => { if (logSourceFilter === 'all') logsTabEl = el as HTMLElement | null }" :class="['conn-tab-btn', { active: logSourceFilter === 'all' }]" @click="logSourceFilter = 'all'">全部</button>
-                    <button :ref="(el) => { if (logSourceFilter === 'core') logsTabEl = el as HTMLElement | null }" :class="['conn-tab-btn', { active: logSourceFilter === 'core' }]" @click="logSourceFilter = 'core'">内核</button>
-                    <button :ref="(el) => { if (logSourceFilter === 'app') logsTabEl = el as HTMLElement | null }" :class="['conn-tab-btn', { active: logSourceFilter === 'app' }]" @click="logSourceFilter = 'app'">主程序</button>
+                    <button :ref="(el) => { if (logSourceFilter === 'all') logsTabEl = el as HTMLElement | null }" :class="['conn-tab-btn', { active: logSourceFilter === 'all' }]" @click="logSourceFilter = 'all'">Все</button>
+                    <button :ref="(el) => { if (logSourceFilter === 'core') logsTabEl = el as HTMLElement | null }" :class="['conn-tab-btn', { active: logSourceFilter === 'core' }]" @click="logSourceFilter = 'core'">Ядро</button>
+                    <button :ref="(el) => { if (logSourceFilter === 'app') logsTabEl = el as HTMLElement | null }" :class="['conn-tab-btn', { active: logSourceFilter === 'app' }]" @click="logSourceFilter = 'app'">Приложение</button>
                     <div class="conn-tab-slider" :class="{ animated: logsSliderReady }" v-show="logsSliderVisible" :style="logsSliderStyle"></div>
                   </div>
                 </div>
@@ -88,9 +99,9 @@
                 </div>
               </div>
               <div class="logs-footer" style="display: flex; justify-content: flex-end;">
-                <button class="action-btn" title="清空日志" @click="handleClearLogs">
+                <button class="action-btn" title="Очистить журнал" @click="handleClearLogs">
                   <span class="btn-icon" v-html="ICONS.trash"></span>
-                  清空日志
+                  Очистить журнал
                 </button>
               </div>
             </div>
@@ -119,12 +130,12 @@
             
             <div class="modal-footer">
               <template v-if="globalState.modal.type === 'confirm'">
-                <button class="action-btn flex-1" @click="handleModalCancel">取消</button>
-                <button class="primary-btn accent-btn flex-1" :class="{ 'red-text-btn': globalState.modal.isDanger }" @click="handleModalConfirm">确定</button>
+                <button class="action-btn flex-1" @click="handleModalCancel">Отмена</button>
+                <button class="primary-btn accent-btn flex-1" :class="{ 'red-text-btn': globalState.modal.isDanger }" @click="handleModalConfirm">ОК</button>
               </template>
               
               <template v-else>
-                <button class="primary-btn accent-btn flex-1" style="width: 100%" @click="handleModalConfirm">我知道了</button>
+                <button class="primary-btn accent-btn flex-1" style="width: 100%" @click="handleModalConfirm">Понятно</button>
               </template>
             </div>
           </div>
@@ -139,6 +150,7 @@ import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue';
 import * as API from '../wailsjs/go/main/App';
 import { ICONS } from './utils/icons';
 import Sidebar from './components/Sidebar.vue';
+import LiteApp from './components/LiteApp.vue';
 import Overview from './components/Overview.vue';
 import Proxies from './components/Proxies.vue';
 import Subscriptions from './components/Subscriptions.vue';
@@ -160,9 +172,14 @@ import {
   WindowMinimise,
   WindowToggleMaximise,
   WindowIsMaximised,
+  WindowSetSize,
+  WindowGetSize,
+  WindowSetMinSize,
+  WindowUnmaximise,
+  WindowCenter,
   Quit
 } from '../wailsjs/runtime/runtime';
-import { globalState, initStore, updateStateFromBackend } from './store';
+import { globalState, initStore, updateStateFromBackend, setUiMode } from './store';
 
 const currentTab = ref('home');
 const targetSettingsView = ref('main');
@@ -171,7 +188,7 @@ const editingConfigName = ref('');
 const editingConfigType = ref<'local' | 'remote'>('local');
 const isMaximized = ref(false);
 const viewScroller = ref<HTMLElement | null>(null);
-const yamlEditorStatus = ref('已保存');
+const yamlEditorStatus = ref('Сохранено');
 const yamlEditorModified = ref(false);
 const yamlEditorHasError = ref(false);
 const yamlEditorCursor = ref('');
@@ -283,17 +300,17 @@ let unsubUpdateNone: (() => void) | null = null;
 let unsubUpdateError: (() => void) | null = null;
 
 const menu = [
-  { id: 'home', label: '控制台', icon: ICONS.home },
-  { id: 'proxies', label: '代理节点', icon: ICONS.proxies },
-  { id: 'connections', label: '当前连接', icon: ICONS.connections },
-  { id: 'logs', label: '实时日志', icon: ICONS.logs },
-  { id: 'rules', label: '配置规则', icon: ICONS.rules },
-  { id: 'subs', label: '订阅管理', icon: ICONS.subs },
-  { id: 'settings', label: '软件设置', icon: ICONS.settings }
+  { id: 'home', label: 'Консоль', icon: ICONS.home },
+  { id: 'proxies', label: 'Прокси-узлы', icon: ICONS.proxies },
+  { id: 'connections', label: 'Соединения', icon: ICONS.connections },
+  { id: 'logs', label: 'Журнал', icon: ICONS.logs },
+  { id: 'rules', label: 'Правила', icon: ICONS.rules },
+  { id: 'subs', label: 'Подписки', icon: ICONS.subs },
+  { id: 'settings', label: 'Настройки', icon: ICONS.settings }
 ];
 
 const activeMenuLabel = computed(() => {
-  if (currentTab.value === 'yaml-editor') return '配置编辑';
+  if (currentTab.value === 'yaml-editor') return 'Редактор конфигурации';
   return menu.find(m => m.id === currentTab.value)?.label;
 });
 
@@ -312,7 +329,7 @@ watch(currentTab, (newVal) => {
   if (newVal !== 'yaml-editor') {
     editingConfigId.value = '';
     editingConfigName.value = '';
-    yamlEditorStatus.value = '已保存';
+    yamlEditorStatus.value = 'Сохранено';
     yamlEditorModified.value = false;
     yamlEditorHasError.value = false;
     yamlEditorCursor.value = '';
@@ -326,7 +343,7 @@ const handleYamlStatusChange = (payload: { text: string; modified: boolean; erro
 };
 
 const handleYamlCursorChange = (payload: { line: number; col: number }) => {
-  yamlEditorCursor.value = `行 ${payload.line}，列 ${payload.col}`;
+  yamlEditorCursor.value = `Стр ${payload.line}, кол ${payload.col}`;
 };
 
 const handleResize = async () => {
@@ -347,6 +364,52 @@ const handleClose = async () => {
     Quit();
   }
 };
+
+const toggleUiMode = () => {
+  setUiMode(globalState.uiMode === 'lite' ? 'full' : 'lite');
+};
+
+// Размеры окна под режим: Lite — узкое «телефонное», Про — обычное десктопное.
+const LITE_W = 400, LITE_H = 720;
+const PRO_MIN_W = 900, PRO_MIN_H = 600;
+let savedProSize: { w: number; h: number } | null = null;
+
+const applyWindowForMode = async (mode: 'full' | 'lite') => {
+  try {
+    if (mode === 'lite') {
+      const s = await WindowGetSize().catch(() => null);
+      if (s && s.w > 500) savedProSize = { w: s.w, h: s.h };
+      WindowUnmaximise();
+      WindowSetMinSize(360, 560);
+      WindowSetSize(LITE_W, LITE_H);
+      WindowCenter();
+    } else {
+      WindowSetMinSize(PRO_MIN_W, PRO_MIN_H);
+      WindowSetSize(savedProSize?.w ?? 1024, savedProSize?.h ?? 768);
+      WindowCenter();
+    }
+  } catch (e) {
+    // окно недоступно — игнорируем
+  }
+};
+
+watch(() => globalState.uiMode, (mode) => {
+  applyWindowForMode(mode);
+
+  // Lite всегда работает в global; чтобы это не затирало режим Про («по правилам» и т.п.),
+  // при входе в Lite запоминаем режим Про, при возврате — восстанавливаем.
+  if (mode === 'lite') {
+    if (globalState.mode && globalState.mode !== 'global') {
+      localStorage.setItem('mise_proMode', globalState.mode);
+    }
+  } else {
+    const proMode = localStorage.getItem('mise_proMode') || 'rule';
+    if (globalState.isRunning && globalState.mode !== proMode) {
+      (API as any).UpdateClashMode(proMode).catch(() => {});
+    }
+    globalState.mode = proMode;
+  }
+});
 
 const handleModalConfirm = () => {
   globalState.modal.show = false;
@@ -372,6 +435,14 @@ const watchTheme = watch(() => globalState.theme, (val) => {
 
 onMounted(async () => {
   initStore();
+
+  // если приложение запущено сразу в Lite — сжать окно под телефонный вид
+  if (globalState.uiMode === 'lite') {
+    setTimeout(() => applyWindowForMode('lite'), 100);
+  }
+
+  // подгрузить пользовательский фон Консоли
+  (API as any).GetConsoleBg().then((bg: string) => { globalState.consoleBg = bg || ''; }).catch(() => {});
 
   try {
     if (!globalState.appVersion) {
@@ -438,8 +509,8 @@ onMounted(async () => {
 
     globalState.modal = {
       show: true,
-      title: "发现新版本",
-      message: `发现 GoclashZ 新版本 ${version}。\n\n是否现在下载更新？`,
+      title: "Доступна новая версия",
+      message: `Найдена новая версия Misetanibox ${version}.\n\nЗагрузить обновление сейчас?`,
       detail: '',
       type: "confirm",
       isDanger: false,
@@ -450,8 +521,8 @@ onMounted(async () => {
         } catch (e: any) {
           globalState.modal = {
             show: true,
-            title: "开始下载失败",
-            message: String(e?.message || e || "未知错误"),
+            title: "Не удалось начать загрузку",
+            message: String(e?.message || e || "Неизвестная ошибка"),
             detail: '',
             type: "alert",
             isDanger: true,
@@ -475,11 +546,11 @@ onMounted(async () => {
 
     globalState.modal = {
       show: true,
-      title: "新版本已下载完成",
+      title: "Новая версия загружена",
       message:
-        `GoclashZ ${version} 已下载完成。\n\n` +
-        `是否现在关闭程序并启动安装程序？\n\n` +
-        `安装完成后会自动清理临时安装包。`,
+        `Misetanibox ${version} загружен.\n\n` +
+        `Закрыть программу и запустить установщик сейчас?\n\n` +
+        `После установки временный пакет будет удалён автоматически.`,
       detail: '',
       type: "confirm",
       isDanger: false,
@@ -488,8 +559,8 @@ onMounted(async () => {
         if (!fullPath) {
           globalState.modal = {
             show: true,
-            title: "无法启动安装程序",
-            message: "安装包路径为空，请重新检查更新。",
+            title: "Не удалось запустить установщик",
+            message: "Путь к установщику пуст, проверьте обновления заново.",
             detail: '',
             type: "alert",
             isDanger: true,
@@ -503,8 +574,8 @@ onMounted(async () => {
         } catch (e: any) {
           globalState.modal = {
             show: true,
-            title: "启动安装程序失败",
-            message: String(e?.message || e || "未知错误"),
+            title: "Не удалось запустить установщик",
+            message: String(e?.message || e || "Неизвестная ошибка"),
             detail: '',
             type: "alert",
             isDanger: true,
@@ -521,8 +592,8 @@ onMounted(async () => {
     globalState.appUpdateChecking = false;
     globalState.modal = {
       show: true,
-      title: "已是最新版本",
-      message: payload?.message || "当前已经是最新版本。",
+      title: "Установлена последняя версия",
+      message: payload?.message || "У вас уже последняя версия.",
       detail: '',
       type: "alert",
       isDanger: false,
@@ -533,12 +604,12 @@ onMounted(async () => {
 
   unsubUpdateError = EventsOn("app-update-error", (err: string) => {
     globalState.appUpdateChecking = false;
-    const s = String(err || "未知错误");
-    const msg = s.length > 120 ? "操作失败，请检查网络或稍后重试。" : s;
+    const s = String(err || "Неизвестная ошибка");
+    const msg = s.length > 120 ? "Операция не удалась. Проверьте сеть и повторите позже." : s;
 
     globalState.modal = {
       show: true,
-      title: "软件更新失败",
+      title: "Обновление не удалось",
       message: msg,
       detail: '',
       type: "alert",
@@ -631,10 +702,38 @@ const resetViewScroller = () => {
   flex-shrink: 0; 
 }
 
+/* Переключатель Lite/Про в верхней панели */
+.mode-switch-btn {
+  width: auto;
+  min-width: max-content;
+  padding: 0 10px;
+  gap: 6px;
+  margin-right: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-sub);
+  border: 1px solid var(--surface-hover);
+}
+.mode-switch-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.mode-switch-btn.is-lite {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.mode-switch-btn :deep(svg) {
+  width: 14px !important;
+  height: 14px !important;
+  min-width: 14px !important;
+  min-height: 14px !important;
+}
+.mode-switch-label { line-height: 1; }
+
 /* 🚀 4. 彻底锁死 SVG 的内部渲染框 */
-.ctrl-btn :deep(svg) { 
+.ctrl-btn :deep(svg) {
   width: 12px !important;      /* 恢复图标大小 */
-  height: 12px !important; 
+  height: 12px !important;
   min-width: 12px !important;  /* 终极锁死：确保矢量图在重绘帧中绝对不拉伸 */
   min-height: 12px !important;
   display: block;

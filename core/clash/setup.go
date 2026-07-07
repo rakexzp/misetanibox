@@ -28,7 +28,7 @@ func PrepareEnv(ctx context.Context) error {
 	status, err := runtimeassets.EnsureReady(ctx, runtimeassets.RequireCoreOnly, runtimeassets.RepairInvalid)
 	if err != nil {
 		core := status.Assets[runtimeassets.AssetCore]
-		return fmt.Errorf("内核不可用: %s (%s)", core.Error, core.Path)
+		return fmt.Errorf("ядро недоступно: %s (%s)", core.Error, core.Path)
 	}
 
 	_ = os.MkdirAll(utils.GetSubscriptionsDir(), 0755)
@@ -66,7 +66,7 @@ func getLocalCoreVersionLocked(ctx context.Context) string {
 
 	stat, err := os.Stat(path)
 	if err != nil || stat.IsDir() {
-		return "未安装"
+		return "не установлено"
 	}
 
 	localCoreVersionCache.mu.Lock()
@@ -110,12 +110,12 @@ func readLocalCoreVersionByCommand(path string) string {
 
 	out, err := cmd.CombinedOutput()
 	if err != nil && len(out) == 0 {
-		return "已安装，版本未知"
+		return "установлено, версия неизвестна"
 	}
 
 	s := strings.TrimSpace(string(out))
 	if s == "" {
-		return "已安装，版本未知"
+		return "установлено, версия неизвестна"
 	}
 
 	if m := coreVersionRe.FindString(s); m != "" {
@@ -153,7 +153,7 @@ func extractKernelToFile(zipPath, targetExe string) error {
 	}
 
 	if targetFile == nil {
-		return fmt.Errorf("zip 中未找到 .exe 可执行文件")
+		return fmt.Errorf("в zip не найден исполняемый файл .exe")
 	}
 
 	rc, err := targetFile.Open()
@@ -193,7 +193,7 @@ func PrepareCoreUpdate(ctx context.Context, assetURL string, strategy func() dow
 	defer os.Remove(zipPath)
 
 	if strings.TrimSpace(assetURL) == "" {
-		return nil, fmt.Errorf("内核下载地址为空")
+		return nil, fmt.Errorf("URL загрузки ядра пуст")
 	}
 
 	if err := downloader.DownloadLargeAssetAtomic(ctx, downloader.Options{
@@ -201,7 +201,7 @@ func PrepareCoreUpdate(ctx context.Context, assetURL string, strategy func() dow
 		DestPath:            zipPath,
 		Strategy:            strategy,
 		MaxBytes:            200 << 20,
-		UserAgent:           "GoclashZ-CoreUpdater",
+		UserAgent:           "Misetanibox-CoreUpdater",
 		AttemptsPerEndpoint: 3,
 		Validator: func(tmpPath string) error {
 			return validateKernelZip(tmpPath)
@@ -235,7 +235,7 @@ func CommitCoreUpdate(ctx context.Context, prepared map[string]string) (string, 
 	exePath := prepared["exePath"]
 
 	if stagedExe == "" || exePath == "" {
-		return "", fmt.Errorf("内核更新 staging 信息缺失")
+		return "", fmt.Errorf("обновление ядра: отсутствует staging-информация")
 	}
 
 	// 如果 core\bin 不可写，通过 helper 服务替换
@@ -245,7 +245,7 @@ func CommitCoreUpdate(ctx context.Context, prepared map[string]string) (string, 
 			Source: stagedExe,
 			Target: exePath,
 		}); err != nil {
-			return "", fmt.Errorf("通过 Helper 替换内核失败: %w", err)
+			return "", fmt.Errorf("не удалось заменить ядро через Helper: %w", err)
 		}
 	} else {
 		if err := WaitFileReleased(exePath, 5*time.Second); err != nil {
@@ -288,7 +288,7 @@ func CheckLatestCore(ctx context.Context, strategy func() downloader.DownloadStr
 			continue
 		}
 
-		req.Header.Set("User-Agent", "GoclashZ-CoreUpdateChecker")
+		req.Header.Set("User-Agent", "Misetanibox-CoreUpdateChecker")
 		req.Header.Set("Accept", "application/vnd.github+json")
 
 		resp, reqErr := client.Do(req)
@@ -300,7 +300,7 @@ func CheckLatestCore(ctx context.Context, strategy func() downloader.DownloadStr
 		func() {
 			defer resp.Body.Close()
 			if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-				lastErr = fmt.Errorf("GitHub API 返回 HTTP %d", resp.StatusCode)
+				lastErr = fmt.Errorf("GitHub API вернул HTTP %d", resp.StatusCode)
 				return
 			}
 			lastErr = json.NewDecoder(resp.Body).Decode(&release)
@@ -313,14 +313,14 @@ func CheckLatestCore(ctx context.Context, strategy func() downloader.DownloadStr
 
 	if lastErr != nil || release.TagName == "" {
 		if lastErr == nil {
-			lastErr = fmt.Errorf("未获取到有效的最新版本信息")
+			lastErr = fmt.Errorf("не удалось получить сведения о последней версии")
 		}
 		return "", "", "", lastErr
 	}
 
 	assetURL = selectMihomoWindowsAmd64Asset(release.Assets)
 	if assetURL == "" {
-		return "", "", "", fmt.Errorf("未找到 mihomo windows amd64 release asset")
+		return "", "", "", fmt.Errorf("не найден mihomo windows amd64 release asset")
 	}
 
 	return release.TagName, assetURL, release.HTMLURL, nil
@@ -451,7 +451,7 @@ func UpdateGeoDB(ctx context.Context, key string, url string, strategy func() do
 		DestPath:            destPath,
 		Strategy:            strategy,
 		MaxBytes:            geoDBMaxBytes(),
-		UserAgent:           "GoclashZ-GeoUpdater",
+		UserAgent:           "Misetanibox-GeoUpdater",
 		AttemptsPerEndpoint: 3,
 		Validator: func(tmpPath string) error {
 			return ValidateGeoDBFile(key, tmpPath, destPath)
@@ -473,13 +473,13 @@ func ValidateGeoDBFile(key, tmpPath, destPath string) error {
 
 	// 太小基本就是 HTML 错误页、空文件或下载失败
 	if info.Size() < 1024 {
-		return fmt.Errorf("%s 文件体积异常: %d bytes", key, info.Size())
+		return fmt.Errorf("%s: аномальный размер файла: %d bytes", key, info.Size())
 	}
 
 	switch strings.ToLower(strings.TrimSpace(key)) {
 	case "mmdb":
 		if filepath.Ext(destPath) != ".mmdb" {
-			return fmt.Errorf("mmdb 目标路径扩展名异常: %s", destPath)
+			return fmt.Errorf("mmdb: некорректное расширение целевого пути: %s", destPath)
 		}
 	case "geoip", "geosite", "asn":
 		// dat/metadb 不强行解析格式，先做体积保护

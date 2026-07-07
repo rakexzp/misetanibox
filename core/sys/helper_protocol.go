@@ -10,8 +10,8 @@ import (
 
 const (
 	HelperServiceName = "GoclashZHelper"
-	HelperDisplayName = "GoclashZ Helper Service"
-	HelperDescription = "为 GoclashZ 提供高权限能力：TUN 启动、Wintun 安装、核心文件替换、权限修复"
+	HelperDisplayName = "Misetanibox Helper Service"
+	HelperDescription = "Привилегированные операции для Misetanibox: запуск TUN, установка Wintun, замена файлов ядра, исправление прав"
 
 	// 固定 Named Pipe 名称
 	HelperPipeName = `\\.\pipe\GoclashZ.Helper`

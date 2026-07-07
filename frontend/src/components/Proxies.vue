@@ -25,20 +25,20 @@
             :disabled="isTesting || !activeGroupData"
           >
             <span class="btn-icon" v-html="ICONS.zap"></span>
-            {{ isTesting ? '测速中...' : '测速当前组' }}
+            {{ isTesting ? 'Проверка скорости...' : 'Проверить группу' }}
           </button>
         </div>
       </div>
 
       <div v-if="activeGroupData" class="proxy-sub-toolbar">
         <div class="sub-toolbar-actions">
-          <button class="tool-btn" :class="{ 'active': sortState === 1 }" @click="toggleSort" title="按延迟排序">
+          <button class="tool-btn" :class="{ 'active': sortState === 1 }" @click="toggleSort" title="Сортировка по задержке">
             <span class="btn-icon" v-html="ICONS.sort"></span>
           </button>
-          <button class="tool-btn" @click="locateActiveNode" title="定位当前节点">
+          <button class="tool-btn" @click="locateActiveNode" title="Найти текущий узел">
             <span class="btn-icon" v-html="ICONS.target"></span>
           </button>
-          <button class="tool-btn" :class="{ 'active': showSearch || searchQuery }" @click="toggleSearch" title="搜索节点">
+          <button class="tool-btn" :class="{ 'active': showSearch || searchQuery }" @click="toggleSearch" title="Поиск узлов">
             <span class="btn-icon" v-html="ICONS.search"></span>
           </button>
           <div class="search-wrapper" :class="{ 'is-active': showSearch }">
@@ -47,7 +47,7 @@
               v-model="searchQuery" 
               type="text" 
               class="search-input" 
-              placeholder="搜索节点..." 
+              placeholder="Поиск узлов..."
               @keyup.esc="toggleSearch"
             />
           </div>
@@ -99,7 +99,7 @@
         </div>
       </div>
       <div v-else class="empty-state">
-        <p>暂无代理组数据，请检查内核状态或订阅配置。</p>
+        <p>Нет данных о группах прокси. Проверьте состояние ядра или конфигурацию подписки.</p>
       </div>
     </div>
   </div>
@@ -253,10 +253,12 @@ const loadData = async () => {
         const item = data.groups[name];
         if (!item) return;
 
-        const isGroupType = ['Selector', 'URLTest', 'Fallback', 'LoadBalance'].includes(item.type);
+        const isGroupType = ['Selector', 'URLTest', 'Fallback', 'LoadBalance', 'Smart'].includes(item.type);
         const isSystemReserved = ['GLOBAL', 'DIRECT', 'REJECT'].includes(name);
+        // группы с hidden:true в конфиге не показываем (внутренние регион-группы и т.п.)
+        const isHidden = item.hidden === true;
 
-        if (isGroupType && !isSystemReserved) {
+        if (isGroupType && !isSystemReserved && !isHidden) {
           const proxies = (item.all || []).map((memberName: string) => {
             // 【核心修改】：同时去 data.proxies 和 data.groups 中查找节点详情
             const detail = (data.proxies && data.proxies[memberName]) || (data.groups && data.groups[memberName]);
@@ -319,7 +321,7 @@ const selectNode = async (groupName: string, nodeName: string) => {
       reason: 'node-switch',
     });
   } catch (e) {
-    await showAlert("切换失败: " + e, '错误');
+    await showAlert("Не удалось переключить: " + e, 'Ошибка');
   }
 };
 
@@ -377,7 +379,7 @@ const testSingleDelay = async (node: any) => {
   } catch (e) {
     const msg = String(e);
     // 🛡️ 核心修复：如果是 busy 状态（说明已在批量测速中），则静默退出，不要覆盖已有结果为 0
-    if (msg.includes('DELAY_TEST_BUSY') || msg.includes('已有测速任务') || msg.includes('busy')) {
+    if (msg.includes('DELAY_TEST_BUSY') || msg.includes('busy')) {
       return;
     }
 
@@ -394,9 +396,9 @@ const formatDelay = (delayInfo: any) => {
   // 🚀 核心优化：只要存在大于 0 的历史有效延迟，就优先展示数字，避免测速波动导致的结果瞬间消失
   if (delay > 0) return `${delay}ms`;
   
-  if (status === 'timeout') return '超时';
-  if (status === 'connect-error') return '连接失败';
-  return '失败';
+  if (status === 'timeout') return 'Таймаут';
+  if (status === 'connect-error') return 'Нет связи';
+  return 'Ошибка';
 };
 
 // 👇 改写颜色计算逻辑

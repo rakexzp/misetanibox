@@ -23,7 +23,7 @@ func SanitizeDownloadError(err error) error {
 
 	// 清洗超长 GitHub Release 资产 Signed URL
 	reAsset := regexp.MustCompile(`https://release-assets\.githubusercontent\.com/[^\s"]+`)
-	msg = reAsset.ReplaceAllString(msg, "GitHub Release 资产下载地址")
+	msg = reAsset.ReplaceAllString(msg, "адрес загрузки ассета GitHub Release")
 
 	// 清洗普通 GitHub Release 下载地址，移除 query
 	reGithub := regexp.MustCompile(`https://github\.com/[^\s"]+/releases/download/[^\s"]+`)
@@ -32,7 +32,7 @@ func SanitizeDownloadError(err error) error {
 			u.RawQuery = ""
 			return u.String()
 		}
-		return "GitHub Release 下载地址"
+		return "адрес загрузки GitHub Release"
 	})
 
 	// 移除常见的签名敏感参数

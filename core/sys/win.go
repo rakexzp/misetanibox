@@ -49,7 +49,7 @@ type MainWindowState struct {
 
 // FindMainWindow 根据窗口标题查找主窗口句柄
 func FindMainWindow() uintptr {
-	windowName, _ := syswin.UTF16PtrFromString("GoclashZ")
+	windowName, _ := syswin.UTF16PtrFromString("Misetanibox")
 	hwnd, _, _ := procFindWindow.Call(0, uintptr(unsafe.Pointer(windowName)))
 	return hwnd
 }

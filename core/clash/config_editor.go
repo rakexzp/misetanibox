@@ -39,7 +39,7 @@ func ReadConfigText(id string) (ConfigTextResult, error) {
 
 	data, err := os.ReadFile(configPath)
 	if err != nil {
-		return ConfigTextResult{}, fmt.Errorf("读取配置文件失败: %w", err)
+		return ConfigTextResult{}, fmt.Errorf("не удалось прочитать файл конфигурации: %w", err)
 	}
 
 	return ConfigTextResult{
@@ -58,7 +58,7 @@ func SaveConfigText(id string, content string) error {
 
 		var root map[string]interface{}
 		if err := yaml.Unmarshal([]byte(content), &root); err != nil {
-			return fmt.Errorf("YAML 语法错误: %w", err)
+			return fmt.Errorf("ошибка синтаксиса YAML: %w", err)
 		}
 
 		if item.Type == "remote" {
@@ -77,11 +77,11 @@ func SaveConfigText(id string, content string) error {
 			rootForValidation["rules"] = runtimeRules
 
 			if err := ValidateClashReferences(rootForValidation); err != nil {
-				return fmt.Errorf("远程配置运行时引用完整性错误: %w", err)
+				return fmt.Errorf("удалённая конфигурация: ошибка целостности runtime-ссылок: %w", err)
 			}
 		} else {
 			if err := ValidateClashReferences(root); err != nil {
-				return fmt.Errorf("引用完整性错误: %w", err)
+				return fmt.Errorf("ошибка целостности ссылок: %w", err)
 			}
 		}
 
@@ -91,7 +91,7 @@ func SaveConfigText(id string, content string) error {
 		}
 
 		if err := utils.WriteFileAtomic(configPath, []byte(content), 0644); err != nil {
-			return fmt.Errorf("保存配置文件失败: %w", err)
+			return fmt.Errorf("не удалось сохранить файл конфигурации: %w", err)
 		}
 
 		return nil
@@ -102,10 +102,10 @@ func SaveConfigText(id string, content string) error {
 func ValidateConfigText(content string) error {
 	var root map[string]interface{}
 	if err := yaml.Unmarshal([]byte(content), &root); err != nil {
-		return fmt.Errorf("YAML 语法错误: %w", err)
+		return fmt.Errorf("ошибка синтаксиса YAML: %w", err)
 	}
 	if err := ValidateClashReferences(root); err != nil {
-		return fmt.Errorf("引用完整性错误: %w", err)
+		return fmt.Errorf("ошибка целостности ссылок: %w", err)
 	}
 	return nil
 }

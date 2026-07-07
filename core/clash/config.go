@@ -282,6 +282,108 @@ func UpdateNetworkConfig(newCfg *NetworkConfig) error {
 // ==========================================
 
 // BuildRuntimeConfig 核心流水线：基础配置 + 用户设置 = 最终运行配置
+// SmartGroupName — имя авто-группы Smart, добавляемой в каждый конфиг.
+const SmartGroupName = "⚡ Смарт"
+
+// injectSmartGroup добавляет в конфиг proxy-group типа smart (ядро vernesong с LightGBM).
+// include-all:true цепляет ВСЕ узлы — и из списка proxies, и из proxy-providers (важно: многие
+// подписки отдают узлы только через провайдеры). Инжектится ТОЛЬКО когда установлено смарт-ядро —
+// иначе стоковое ядро MetaCubeX не знает type=smart и конфиг не распарсится.
+func injectSmartGroup(root map[string]interface{}) {
+	if !IsSmartCoreActive() {
+		return
+	}
+
+	// есть ли вообще узлы (inline или через провайдеры)?
+	_, hasProxies := root["proxies"].([]interface{})
+	_, hasProviders := root["proxy-providers"].(map[string]interface{})
+	if !hasProxies && !hasProviders {
+		return
+	}
+
+	groups, _ := root["proxy-groups"].([]interface{})
+
+	// если Smart-группа уже есть — не дублируем
+	for _, g := range groups {
+		if gm, ok := g.(map[string]interface{}); ok {
+			if n, _ := gm["name"].(string); n == SmartGroupName {
+				return
+			}
+		}
+	}
+
+	smart := map[string]interface{}{
+		"name":        SmartGroupName,
+		"type":        "smart",
+		"include-all": true,
+		"uselightgbm": true,               // ML-модель (Model.bin) — умный выбор по обученным весам
+		"collectdata": true,               // копит историю задержек/успешности для обучения
+		"strategy":    "sticky-sessions",  // трафик к одному адресу держится на одном узле —
+		//                                    смарт не перекидывает сервера посреди игры
+	}
+
+	// ставим Smart-группу первой, чтобы была видна вверху выбора
+	root["proxy-groups"] = append([]interface{}{smart}, groups...)
+}
+
+const smartRouteSettingKey = "smart_route" // рулит ли Смарт всем прокси-трафиком (режим по правилам)
+
+// IsSmartRouteActive — включён ли режим «весь прокси-трафик через Смарт».
+func IsSmartRouteActive() bool {
+	v, err := utils.LoadSetting(smartRouteSettingKey, false)
+	if err != nil || v == nil {
+		return false
+	}
+	return *v
+}
+
+// SetSmartRouteActive сохраняет флаг.
+func SetSmartRouteActive(active bool) error {
+	return utils.SaveSetting(smartRouteSettingKey, &active)
+}
+
+// специальные цели правил, которые НЕ перенаправляем на Смарт (сохраняем сплит подписки).
+var nonSmartTargets = map[string]bool{
+	"DIRECT": true, "REJECT": true, "REJECT-DROP": true, "PASS": true, "COMPATIBLE": true,
+}
+
+// rewriteRulesToSmart перенаправляет все прокси-правила на Смарт-группу, оставляя DIRECT/REJECT.
+// Так РФ-напрямую и блок рекламы остаются, а весь прокси-трафик идёт через смарт-выбор.
+func rewriteRulesToSmart(root map[string]interface{}) {
+	rulesRaw, ok := root["rules"].([]interface{})
+	if !ok {
+		return
+	}
+	for i, r := range rulesRaw {
+		line, ok := r.(string)
+		if !ok {
+			continue
+		}
+		parts := strings.Split(line, ",")
+		if len(parts) < 2 {
+			continue
+		}
+		// последний непустой сегмент — это цель (у MATCH их 2: MATCH,TARGET; у обычных 3+ и могут быть опции no-resolve)
+		// определяем цель: для MATCH — parts[1]; иначе parts[2] (тип,значение,цель[,опции])
+		var tIdx int
+		if strings.EqualFold(strings.TrimSpace(parts[0]), "MATCH") {
+			tIdx = 1
+		} else if len(parts) >= 3 {
+			tIdx = 2
+		} else {
+			continue
+		}
+		target := strings.TrimSpace(parts[tIdx])
+		up := strings.ToUpper(target)
+		if nonSmartTargets[up] || target == SmartGroupName {
+			continue
+		}
+		parts[tIdx] = SmartGroupName
+		rulesRaw[i] = strings.Join(parts, ",")
+	}
+	root["rules"] = rulesRaw
+}
+
 func BuildRuntimeConfig(id string, mode string, logLevel string, tunEnabled bool) error {
 	configMu.Lock()         // ✅ 加锁
 	defer configMu.Unlock() // ✅ 保证最终释放
@@ -291,17 +393,17 @@ func BuildRuntimeConfig(id string, mode string, logLevel string, tunEnabled bool
 	// 1. 提取当前界面的全局设置 (避免被覆盖丢失)
 	userDns, err := GetDNSConfig()
 	if err != nil {
-		return fmt.Errorf("读取 DNS 设置失败: %w", err)
+		return fmt.Errorf("не удалось прочитать настройки DNS: %w", err)
 	}
 
 	userTun, err := GetTunConfig()
 	if err != nil {
-		return fmt.Errorf("读取 TUN 设置失败: %w", err)
+		return fmt.Errorf("не удалось прочитать настройки TUN: %w", err)
 	}
 
 	userNet, err := GetNetworkConfig()
 	if err != nil {
-		return fmt.Errorf("读取网络设置失败: %w", err)
+		return fmt.Errorf("не удалось прочитать сетевые настройки: %w", err)
 	}
 
 	// 2. 读取选中的订阅文件作为 "Base Config" (只读模板)
@@ -312,7 +414,7 @@ func BuildRuntimeConfig(id string, mode string, logLevel string, tunEnabled bool
 		if err := WithRuleStorageLock(func() error {
 			recoveredRoot, innerErr := ReadWorkingRootWithRecovery(id)
 			if innerErr != nil {
-				return fmt.Errorf("读取或恢复配置失败: %w", innerErr)
+				return fmt.Errorf("не удалось прочитать или восстановить конфигурацию: %w", innerErr)
 			}
 			root = recoveredRoot
 
@@ -333,16 +435,16 @@ func BuildRuntimeConfig(id string, mode string, logLevel string, tunEnabled bool
 
 		baseData, err := os.ReadFile(profilePath)
 		if err != nil {
-			return fmt.Errorf("读取基础配置失败: %w (路径: %s)", err, profilePath)
+			return fmt.Errorf("не удалось прочитать базовую конфигурацию: %w (путь: %s)", err, profilePath)
 		}
 
 		if err := yaml.Unmarshal(baseData, &root); err != nil {
-			return fmt.Errorf("解析基础配置失败: %v", err)
+			return fmt.Errorf("не удалось разобрать базовую конфигурацию: %v", err)
 		}
 
 		rules, err := BuildRuntimeRules(id, root)
 		if err != nil {
-			return fmt.Errorf("构建运行时规则失败: %w", err)
+			return fmt.Errorf("не удалось построить runtime-правила: %w", err)
 		}
 		runtimeRules = rules
 	}
@@ -351,6 +453,16 @@ func BuildRuntimeConfig(id string, mode string, logLevel string, tunEnabled bool
 	// 注入模式 (rule / global / direct)
 	if mode != "" {
 		root["mode"] = mode
+	}
+
+	// Маршрутизация по приложениям работает через секцию rules, а global/direct её
+	// игнорируют — поэтому при активной фиче принудительно включаем rule-режим.
+	if id != "" {
+		if ar, _ := LoadAppRouting(id); ar.Mode == AppRouteBlacklist || ar.Mode == AppRouteWhitelist {
+			if len(ar.Apps) > 0 {
+				root["mode"] = "rule"
+			}
+		}
 	}
 
 	// 注入基础网络设置
@@ -415,6 +527,14 @@ func BuildRuntimeConfig(id string, mode string, logLevel string, tunEnabled bool
 		}
 	}
 
+	// Инжект Smart-группы (type=smart, ML-модель) — доступна для выбора и в Lite, и в Про.
+	injectSmartGroup(root)
+
+	// Если включено «Использовать Смарт» — весь прокси-трафик правил идёт через Смарт-группу.
+	if IsSmartCoreActive() && IsSmartRouteActive() {
+		rewriteRulesToSmart(root)
+	}
+
 	// 👇 新增：强制注入混合代理端口和外部控制 API
 	// 确保在不启用 TUN 时，系统代理能够将流量送入内核
 	if userNet != nil && userNet.MixedPort != 0 {
@@ -455,7 +575,7 @@ func BuildRuntimeConfig(id string, mode string, logLevel string, tunEnabled bool
 
 	// 4. 执行最终严格的引用校验，确保没有悬空引用导致 mihomo 启动崩溃
 	if err := ValidateClashReferences(root); err != nil {
-		return fmt.Errorf("配置引用完整性校验失败: %w", err)
+		return fmt.Errorf("проверка целостности ссылок конфигурации не пройдена: %w", err)
 	}
 
 	// 5. 序列化并生成最终的 config.yaml
