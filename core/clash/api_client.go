@@ -402,7 +402,7 @@ func doKernelRequest(ctx context.Context, method, path string, body any, okStatu
 		}
 	}
 
-	return fmt.Errorf("内核 API 调用失败: %s %s -> HTTP %d", method, path, resp.StatusCode)
+	return fmt.Errorf("не удалось вызвать API ядра: %s %s -> HTTP %d", method, path, resp.StatusCode)
 }
 
 // GetInitialData 获取模式和代理组信息
@@ -519,12 +519,12 @@ func FlushFakeIP() error {
 	// 1. 读取当前的 DNS 配置，判断是否是 Fake-IP 模式
 	dnsCfg, err := GetDNSConfig()
 	if err != nil || dnsCfg == nil {
-		return fmt.Errorf("通信失败：无法获取当前 DNS 状态，请检查内核是否运行")
+		return fmt.Errorf("сбой связи: не удалось получить текущее состояние DNS, проверьте, запущено ли ядро")
 	}
 
 	// 2. 如果根本不是 Fake-IP 模式，直接返回，不打扰内核
 	if dnsCfg.EnhancedMode != "fake-ip" {
-		return fmt.Errorf("当前为 %s 模式，仅 Fake-IP 模式支持刷新缓存", dnsCfg.EnhancedMode)
+		return fmt.Errorf("текущий режим: %s; сброс кэша поддерживается только в режиме Fake-IP", dnsCfg.EnhancedMode)
 	}
 
 	// 3. 只有确认是 Fake-IP 模式，才真正向内核发送清理请求

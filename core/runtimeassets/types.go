@@ -9,6 +9,8 @@ const (
 	AssetGeoSite AssetKey = "geosite"
 	AssetMMDB    AssetKey = "mmdb"
 	AssetASN     AssetKey = "asn"
+	// LightGBM-модель для Smart-группы (необязательна; кладётся рядом с ядром)
+	AssetSmartModel AssetKey = "smart-model"
 )
 
 type AssetErrorCode string

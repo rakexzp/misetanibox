@@ -28,7 +28,7 @@ type AppUpdateInfo struct {
 var strictVersionRe = regexp.MustCompile(`(?i)(?:^|[^0-9])v?(\d+\.\d+(?:\.\d+)?(?:\.\d+)?)`)
 
 func CheckAppUpdate(ctx context.Context, currentVersion string, strategy func() DownloadStrategy) (*AppUpdateInfo, error) {
-	apiURL := "https://api.github.com/repos/Zzz-IT/GoclashZ/releases/latest"
+	apiURL := "https://api.github.com/repos/rakexzp/misetanibox/releases/latest"
 
 	clients := BuildOrderedClients(strategy, 60*time.Second)
 
@@ -49,7 +49,7 @@ func CheckAppUpdate(ctx context.Context, currentVersion string, strategy func() 
 			lastErr = reqErr
 			continue
 		}
-		req.Header.Set("User-Agent", "GoclashZ-Updater")
+		req.Header.Set("User-Agent", "Misetanibox-Updater")
 
 		resp, reqErr := client.Do(req)
 		if reqErr != nil {
@@ -60,7 +60,7 @@ func CheckAppUpdate(ctx context.Context, currentVersion string, strategy func() 
 		func() {
 			defer resp.Body.Close()
 			if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-				lastErr = fmt.Errorf("GitHub API 返回 HTTP %d", resp.StatusCode)
+				lastErr = fmt.Errorf("GitHub API вернул HTTP %d", resp.StatusCode)
 				return
 			}
 			lastErr = json.NewDecoder(resp.Body).Decode(&release)
@@ -195,10 +195,10 @@ func DownloadAppUpdate(
 	strategy func() DownloadStrategy,
 ) (string, error) {
 	if info == nil {
-		return "", fmt.Errorf("更新信息为空")
+		return "", fmt.Errorf("информация об обновлении пуста")
 	}
 	if strings.TrimSpace(info.DownloadURL) == "" {
-		return "", fmt.Errorf("没有可用的应用更新下载地址")
+		return "", fmt.Errorf("нет доступного адреса загрузки обновления приложения")
 	}
 
 	if err := os.MkdirAll(destDir, 0755); err != nil {
@@ -208,7 +208,7 @@ func DownloadAppUpdate(
 	fileName := sanitizeUpdateAssetName(info.AssetName)
 	if fileName == "" {
 		// 兜底方案
-		fileName = fmt.Sprintf("GoclashZ_%s_Setup.exe", strings.TrimPrefix(info.Version, "v"))
+		fileName = fmt.Sprintf("Misetanibox_%s_Setup.exe", strings.TrimPrefix(info.Version, "v"))
 	}
 
 	destPath := filepath.Join(destDir, fileName)
@@ -217,7 +217,7 @@ func DownloadAppUpdate(
 	err := DownloadLargeAssetAtomic(ctx, Options{
 		URLs:       []string{info.DownloadURL},
 		DestPath:   destPath,
-		UserAgent:  "GoclashZ-Updater",
+		UserAgent:  "Misetanibox-Updater",
 		MaxBytes:   300 << 20, // 限制 300MB
 		Strategy:   strategy,
 		OnProgress: onProgress,
@@ -241,7 +241,7 @@ func ValidateWindowsExecutable(path string) error {
 
 	// 最小体积校验 (1MB)
 	if info.Size() < 1024*1024 {
-		return fmt.Errorf("更新包体积异常 (小于 1MB)")
+		return fmt.Errorf("пакет обновления: аномальный размер (меньше 1MB)")
 	}
 
 	f, err := os.Open(path)
@@ -257,7 +257,7 @@ func ValidateWindowsExecutable(path string) error {
 	}
 
 	if string(header) != "MZ" {
-		return fmt.Errorf("更新包不是有效的 Windows 可执行文件 (缺少 MZ 标识)")
+		return fmt.Errorf("пакет обновления не является допустимым исполняемым файлом Windows (нет сигнатуры MZ)")
 	}
 
 	return nil

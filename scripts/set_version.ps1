@@ -9,7 +9,7 @@ if ($Version -notmatch '^\d+\.\d+\.\d+$') {
     throw "Invalid version: $Version. Expected X.Y.Z"
 }
 
-Write-Host "Setting GoclashZ version to $Version..."
+Write-Host "Setting Misetanibox version to $Version..."
 
 function Write-Utf8NoBom($Path, $Content) {
     $utf8NoBom = New-Object System.Text.UTF8Encoding($false)

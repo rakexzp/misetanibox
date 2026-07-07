@@ -95,7 +95,7 @@ func MigrateLegacyRootSettings() {
 
 		if _, err := os.Stat(newPath); os.IsNotExist(err) {
 			if err := moveOrCopyFile(oldPath, newPath); err != nil {
-				logger.Warnf("迁移旧设置失败 %s -> %s: %v", oldPath, newPath, err)
+				logger.Warnf("Не удалось перенести старые настройки %s -> %s: %v", oldPath, newPath, err)
 				continue
 			}
 		} else {

@@ -99,7 +99,7 @@ func enableSystemProxyLocked(host string, port int, bypassDomains string) error 
 		uintptr(list.dwSize),
 	)
 	if ret == 0 {
-		return fmt.Errorf("设置默认连接代理失败: %v", err)
+		return fmt.Errorf("не удалось задать прокси для подключения по умолчанию: %v", err)
 	}
 
 	// 2. 设置 RAS 拨号/VPN 代理
@@ -111,7 +111,7 @@ func enableSystemProxyLocked(host string, port int, bypassDomains string) error 
 	// 标记代理所有权，用于异常崩溃后的精准自愈
 	markSystemProxyOwnedLocked(host, port)
 
-	logger.Infof("系统代理设置成功: %s", serverStr)
+	logger.Infof("системный прокси успешно установлен: %s", serverStr)
 
 	// GC 护城河！必须保持这些变量在 Syscall 执行完毕前不被回收！
 	runtime.KeepAlive(serverPtr)
@@ -150,7 +150,7 @@ func disableSystemProxyLocked() error {
 		uintptr(list.dwSize),
 	)
 	if ret == 0 {
-		return fmt.Errorf("关闭代理选项失败: %v", err)
+		return fmt.Errorf("не удалось отключить параметры прокси: %v", err)
 	}
 
 	setRasProxy(&list)
@@ -160,7 +160,7 @@ func disableSystemProxyLocked() error {
 	// 清理代理所有权标记
 	unmarkSystemProxyOwnedLocked()
 
-	logger.Infof("系统代理已禁用")
+	logger.Infof("системный прокси отключён")
 
 	// 保护指针
 	runtime.KeepAlive(options)

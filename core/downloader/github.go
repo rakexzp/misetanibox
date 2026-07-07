@@ -53,7 +53,7 @@ func ResolveGitHubAssetSHA256(ctx context.Context, client *http.Client, rawURL s
 
 	m := githubReleaseAssetRe.FindStringSubmatch(rawURL)
 	if len(m) != 5 {
-		return "", fmt.Errorf("不是 GitHub release asset URL: %s", rawURL)
+		return "", fmt.Errorf("не является URL ассета GitHub release: %s", rawURL)
 	}
 
 	owner := m[1]
@@ -89,7 +89,7 @@ func ResolveGitHubAssetSHA256(ctx context.Context, client *http.Client, rawURL s
 	githubDigestCache.Unlock()
 
 	if digest == "" {
-		return "", fmt.Errorf("GitHub release asset %s 未提供 digest，无法执行 SHA256 校验", assetName)
+		return "", fmt.Errorf("для ассета GitHub release %s не предоставлен digest, проверка SHA256 невозможна", assetName)
 	}
 
 	return digest, nil
@@ -114,7 +114,7 @@ func fetchGitHubReleaseDigests(ctx context.Context, client *http.Client, owner, 
 	}
 
 	if userAgent == "" {
-		userAgent = "GoclashZ/1.0"
+		userAgent = "Misetanibox/1.0"
 	}
 
 	req.Header.Set("User-Agent", userAgent)
@@ -127,7 +127,7 @@ func fetchGitHubReleaseDigests(ctx context.Context, client *http.Client, owner, 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("GitHub API 返回 HTTP %d", resp.StatusCode)
+		return nil, fmt.Errorf("GitHub API вернул HTTP %d", resp.StatusCode)
 	}
 
 	var release githubRelease

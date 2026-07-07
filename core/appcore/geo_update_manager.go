@@ -127,7 +127,7 @@ func (m *GeoUpdateManager) Cancel(key string) {
 func (m *GeoUpdateManager) runKey(ctx context.Context, key string) GeoResult {
 	state, _ := m.tasks.Get(key)
 	state.Key = key
-	state.Title = "更新 " + strings.ToUpper(key)
+	state.Title = "Обновление " + strings.ToUpper(key)
 	state.Status = "running"
 	state.Stage = "downloading"
 	if state.StartedAt == 0 {
@@ -144,7 +144,7 @@ func (m *GeoUpdateManager) runKey(ctx context.Context, key string) GeoResult {
 		result := GeoResult{Key: key, Err: ctx.Err()}
 		m.tasks.Set(key, UpdateTaskState{
 			Key:        key,
-			Title:      "更新 " + strings.ToUpper(key),
+			Title:      "Обновление " + strings.ToUpper(key),
 			Status:     "cancelled",
 			Error:      ctx.Err().Error(),
 			FinishedAt: time.Now().Unix(),
@@ -177,13 +177,13 @@ func (m *GeoUpdateManager) runKey(ctx context.Context, key string) GeoResult {
 		if !ok {
 			state = UpdateTaskState{
 				Key:   key,
-				Title: "更新 " + strings.ToUpper(key),
+				Title: "Обновление " + strings.ToUpper(key),
 			}
 		}
 
 		if isCanceled {
 			state.Status = "cancelled"
-			state.Error = "已暂停"
+			state.Error = "Приостановлено"
 		} else {
 			state.Status = "error"
 			state.Error = err.Error()
@@ -199,7 +199,7 @@ func (m *GeoUpdateManager) runKey(ctx context.Context, key string) GeoResult {
 	} else {
 		m.tasks.Set(key, UpdateTaskState{
 			Key:        key,
-			Title:      "更新 " + strings.ToUpper(key),
+			Title:      "Обновление " + strings.ToUpper(key),
 			Status:     "success",
 			Progress:   1.0,
 			FinishedAt: time.Now().Unix(),
@@ -212,7 +212,7 @@ func (m *GeoUpdateManager) runKey(ctx context.Context, key string) GeoResult {
 
 func (m *GeoUpdateManager) UpdateOneAsync(ctx context.Context, key string) {
 	if !isGeoKey(key) {
-		m.emit.Emit("geo-update-"+key+"-error", "未知库类型: "+key)
+		m.emit.Emit("geo-update-"+key+"-error", "Неизвестный тип базы: "+key)
 		return
 	}
 

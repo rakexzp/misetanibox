@@ -1,6 +1,6 @@
 <template>
   <aside class="sidebar">
-    <div class="sidebar-brand">GoclashZ</div>
+    <div class="sidebar-brand">Misetanibox</div>
     <nav class="nav-list">
       <TransitionGroup name="nav-slide">
         <div v-for="item in menu" :key="item.id"
@@ -17,26 +17,26 @@
       <div class="side-traffic">
         <div class="t-item">
           <span class="icon-box">↑</span>
-          <span class="t-label">上传</span>
+          <span class="t-label">Отдача</span>
           <span class="t-val">{{ traffic.up }}</span>
         </div>
         <div class="t-item">
           <span class="icon-box">↓</span>
-          <span class="t-label">下载</span>
+          <span class="t-label">Загрузка</span>
           <span class="t-val">{{ traffic.down }}</span>
         </div>
       </div>
 
       <div class="theme-switch-row" @click="toggleTheme">
         <span class="icon-box" v-html="globalState.theme === 'dark' ? icons.moon : icons.sun"></span>
-        <span class="label">{{ globalState.theme === 'dark' ? '黑色模式' : '白色模式' }}</span>
+        <span class="label">{{ globalState.theme === 'dark' ? 'Тёмная тема' : 'Светлая тема' }}</span>
       </div>
 
       <div class="status-indicator">
         <div class="icon-box">
           <div :class="['dot', { online: globalState.isRunning }]"></div>
         </div>
-        <span :class="['status-text', { online: globalState.isRunning }]">{{ globalState.isRunning ? '内核已启动' : '服务未运行' }}</span>
+        <span :class="['status-text', { online: globalState.isRunning }]">{{ globalState.isRunning ? 'Ядро запущено' : 'Служба не работает' }}</span>
       </div>
     </div>
   </aside>

@@ -62,7 +62,7 @@ var ruleTypeMeta = map[string]RuleTypeOption{
 		Label:        "DOMAIN",
 		NeedPayload:  true,
 		NeedPolicy:   true,
-		PayloadLabel: "域名",
+		PayloadLabel: "домен",
 		PayloadHint:  "example.com",
 		Example:      "DOMAIN,example.com,DIRECT",
 	},
@@ -71,7 +71,7 @@ var ruleTypeMeta = map[string]RuleTypeOption{
 		Label:        "DOMAIN-SUFFIX",
 		NeedPayload:  true,
 		NeedPolicy:   true,
-		PayloadLabel: "域名后缀",
+		PayloadLabel: "суффикс домена",
 		PayloadHint:  "example.com",
 		Example:      "DOMAIN-SUFFIX,example.com,DIRECT",
 	},
@@ -80,7 +80,7 @@ var ruleTypeMeta = map[string]RuleTypeOption{
 		Label:        "DOMAIN-KEYWORD",
 		NeedPayload:  true,
 		NeedPolicy:   true,
-		PayloadLabel: "关键词",
+		PayloadLabel: "ключевое слово",
 		PayloadHint:  "google",
 		Example:      "DOMAIN-KEYWORD,google,DIRECT",
 	},
@@ -89,7 +89,7 @@ var ruleTypeMeta = map[string]RuleTypeOption{
 		Label:        "GEOSITE",
 		NeedPayload:  true,
 		NeedPolicy:   true,
-		PayloadLabel: "规则集",
+		PayloadLabel: "набор правил",
 		PayloadHint:  "geolocation-cn",
 		Example:      "GEOSITE,geolocation-cn,DIRECT",
 	},
@@ -125,7 +125,7 @@ var ruleTypeMeta = map[string]RuleTypeOption{
 		Label:        "GEOIP",
 		NeedPayload:  true,
 		NeedPolicy:   true,
-		PayloadLabel: "国家/地区",
+		PayloadLabel: "страна/регион",
 		PayloadHint:  "CN",
 		Example:      "GEOIP,CN,DIRECT",
 	},
@@ -134,7 +134,7 @@ var ruleTypeMeta = map[string]RuleTypeOption{
 		Label:        "PROCESS-NAME",
 		NeedPayload:  true,
 		NeedPolicy:   true,
-		PayloadLabel: "进程名",
+		PayloadLabel: "имя процесса",
 		PayloadHint:  "chrome.exe",
 		Example:      "PROCESS-NAME,chrome.exe,DIRECT",
 	},
@@ -143,7 +143,7 @@ var ruleTypeMeta = map[string]RuleTypeOption{
 		Label:        "PROCESS-PATH",
 		NeedPayload:  true,
 		NeedPolicy:   true,
-		PayloadLabel: "进程路径",
+		PayloadLabel: "путь процесса",
 		PayloadHint:  "C:\\Program Files\\chrome.exe",
 		Example:      "PROCESS-PATH,C:\\Program Files\\chrome.exe,DIRECT",
 	},
@@ -152,7 +152,7 @@ var ruleTypeMeta = map[string]RuleTypeOption{
 		Label:        "PROCESS-PATH-REGEX",
 		NeedPayload:  true,
 		NeedPolicy:   true,
-		PayloadLabel: "路径正则",
+		PayloadLabel: "regex пути",
 		PayloadHint:  ".*chrome\\.exe",
 		Example:      "PROCESS-PATH-REGEX,.*chrome\\.exe,DIRECT",
 	},
@@ -161,7 +161,7 @@ var ruleTypeMeta = map[string]RuleTypeOption{
 		Label:        "DST-PORT",
 		NeedPayload:  true,
 		NeedPolicy:   true,
-		PayloadLabel: "端口",
+		PayloadLabel: "порт",
 		PayloadHint:  "443",
 		Example:      "DST-PORT,443,DIRECT",
 	},
@@ -170,7 +170,7 @@ var ruleTypeMeta = map[string]RuleTypeOption{
 		Label:        "SRC-PORT",
 		NeedPayload:  true,
 		NeedPolicy:   true,
-		PayloadLabel: "源端口",
+		PayloadLabel: "порт источника",
 		PayloadHint:  "7890",
 		Example:      "SRC-PORT,7890,DIRECT",
 	},
@@ -179,7 +179,7 @@ var ruleTypeMeta = map[string]RuleTypeOption{
 		Label:        "SRC-IP-CIDR",
 		NeedPayload:  true,
 		NeedPolicy:   true,
-		PayloadLabel: "源 IP",
+		PayloadLabel: "IP источника",
 		PayloadHint:  "192.168.1.0/24",
 		Example:      "SRC-IP-CIDR,192.168.1.0/24,DIRECT",
 	},
@@ -188,7 +188,7 @@ var ruleTypeMeta = map[string]RuleTypeOption{
 		Label:        "IN-PORT",
 		NeedPayload:  true,
 		NeedPolicy:   true,
-		PayloadLabel: "入站端口",
+		PayloadLabel: "порт инбаунда",
 		PayloadHint:  "7890",
 		Example:      "IN-PORT,7890,DIRECT",
 	},
@@ -197,7 +197,7 @@ var ruleTypeMeta = map[string]RuleTypeOption{
 		Label:        "IN-TYPE",
 		NeedPayload:  true,
 		NeedPolicy:   true,
-		PayloadLabel: "入站类型",
+		PayloadLabel: "тип инбаунда",
 		PayloadHint:  "SOCKS",
 		Example:      "IN-TYPE,SOCKS,DIRECT",
 	},
@@ -206,7 +206,7 @@ var ruleTypeMeta = map[string]RuleTypeOption{
 		Label:        "NETWORK",
 		NeedPayload:  true,
 		NeedPolicy:   true,
-		PayloadLabel: "网络类型",
+		PayloadLabel: "тип сети",
 		PayloadHint:  "tcp",
 		Example:      "NETWORK,tcp,DIRECT",
 	},
@@ -215,7 +215,7 @@ var ruleTypeMeta = map[string]RuleTypeOption{
 		Label:        "UID",
 		NeedPayload:  true,
 		NeedPolicy:   true,
-		PayloadLabel: "用户ID",
+		PayloadLabel: "ID пользователя",
 		PayloadHint:  "1000",
 		Example:      "UID,1000,DIRECT",
 	},
@@ -308,7 +308,7 @@ func BuildRuleFromForm(req BuildRuleRequest) (string, error) {
 		meta = RuleTypeOption{
 			NeedPayload:  true,
 			NeedPolicy:   true,
-			PayloadLabel: "内容",
+			PayloadLabel: "содержимое",
 		}
 	}
 
@@ -317,14 +317,14 @@ func BuildRuleFromForm(req BuildRuleRequest) (string, error) {
 
 	if meta.NeedPayload {
 		if payload == "" {
-			return "", fmt.Errorf("%s 不能为空", meta.PayloadLabel)
+			return "", fmt.Errorf("%s: значение не может быть пустым", meta.PayloadLabel)
 		}
 		parts = append(parts, payload)
 	}
 
 	if meta.NeedPolicy {
 		if policy == "" {
-			return "", fmt.Errorf("策略不能为空")
+			return "", fmt.Errorf("политика не может быть пустой")
 		}
 		parts = append(parts, policy)
 	}
@@ -377,7 +377,7 @@ func GetRuleFormOptionsData(id string) (RuleFormOptions, error) {
 					Count:        count,
 					NeedPayload:  true,
 					NeedPolicy:   true,
-					PayloadLabel: "内容",
+					PayloadLabel: "содержимое",
 					PayloadHint:  "",
 				})
 			}

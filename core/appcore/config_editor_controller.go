@@ -26,7 +26,7 @@ func (c *Controller) SaveConfigText(ctx context.Context, id string, content stri
 
 		if state.IsRunning || state.SystemProxy || state.Tun {
 			if err := c.RestartCoreWithReason(ctx, "config-save"); err != nil {
-				return fmt.Errorf("保存成功，但重载运行配置失败: %w", err)
+				return fmt.Errorf("Сохранено успешно, но не удалось перезагрузить рабочую конфигурацию: %w", err)
 			}
 		}
 

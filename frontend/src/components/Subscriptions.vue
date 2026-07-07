@@ -2,9 +2,9 @@
   <div class="subs-view" @click="activeMenu = null">
     <div class="page-header page-sticky-mask">
       <div class="header-text">
-        <h2 class="main-title">本地配置库</h2>
+        <h2 class="main-title">Локальные конфигурации</h2>
         <span class="sub-text">
-          {{ isSortingMode ? '排序模式：点击卡片左侧箭头上下移动' : '点击卡片应用该配置' }}
+          {{ isSortingMode ? 'Режим сортировки: перемещайте карточки стрелками слева' : 'Нажмите на карточку, чтобы применить конфигурацию' }}
         </span>
       </div>
       
@@ -15,14 +15,14 @@
           @click.stop="toggleSortMode"
         >
           <span class="btn-icon" v-html="ICONS.sort"></span> 
-          {{ isSortingMode ? '完成' : '排序' }}
+          {{ isSortingMode ? 'Готово' : 'Сортировка' }}
         </button>
         <button class="primary-btn header-action-btn" @click.stop="activeModal = 'import'">
-          <span class="btn-icon" v-html="ICONS.plus"></span> 导入配置
+          <span class="btn-icon" v-html="ICONS.plus"></span> Импорт конфигурации
         </button>
         <button class="primary-btn header-action-btn" @click="handleUpdateAll" :disabled="isUpdating">
           <span class="btn-icon" v-html="ICONS.refresh" :class="{ 'spin': isUpdating }"></span>
-          {{ isUpdating ? '更新中...' : '更新全部' }}
+          {{ isUpdating ? 'Обновление...' : 'Обновить все' }}
         </button>
       </div>
     </div>
@@ -30,7 +30,7 @@
     <!-- 列表过渡动画 -->
     <TransitionGroup name="list" tag="div" class="subs-list">
       <div v-if="localConfigs.length === 0" class="empty-state" key="empty">
-        暂无本地配置文件。
+        Нет локальных файлов конфигурации.
       </div>
 
       <div
@@ -54,7 +54,7 @@
           <div class="sub-status">
             <div v-if="isCurrentConfig(config.id)" class="status-badge-active">
               <div class="breathe-dot"></div>
-              <span>正在使用</span>
+              <span>Используется</span>
             </div>
           </div>
         </div>
@@ -64,27 +64,27 @@
             <div class="traffic-fill" :style="{ width: Math.min(100, ((config.upload + config.download) / config.total) * 100) + '%' }"></div>
           </div>
           <div class="traffic-text">
-            <span>已用 {{ formatBytes(config.upload + config.download) }}</span>
-            <span>总计 {{ formatBytes(config.total) }}</span>
+            <span>Использовано {{ formatBytes(config.upload + config.download) }}</span>
+            <span>Всего {{ formatBytes(config.total) }}</span>
           </div>
           <div v-if="config.expire > 0" class="expire-text">
-            到期时间: {{ formatDate(config.expire) }}
+            Истекает: {{ formatDate(config.expire) }}
           </div>
         </div>
 
         <div class="sub-footer" v-show="!isSortingMode">
-          <span class="sub-hint">点击应用此配置</span>
+          <span class="sub-hint">Нажмите, чтобы применить</span>
           <div class="sub-actions">
             <button class="icon-btn" @click.stop="toggleMenu(config.id)" v-html="ICONS.more"></button>
             <div v-if="activeMenu === config.id" class="menu-click-overlay" @click.stop="activeMenu = null"></div>
             <Transition name="dropdown">
               <div v-if="activeMenu === config.id" class="dropdown-menu card-panel">
-                <button v-if="config.type === 'remote'" class="menu-item" @click.stop="handleUpdateSingle(config)">更新订阅</button>
-                <button class="menu-item" @click.stop="openRenameModal(config)">重命名</button>
-                <button class="menu-item" @click.stop="handleEditFile(config)">编辑配置</button>
-                <button v-if="config.type === 'remote' && config.url" class="menu-item" @click.stop="handleShareLink(config)">分享链接</button>
-                <button class="menu-item" @click.stop="handleExport(config)">导出文件</button>
-                <button class="menu-item danger" @click.stop="openDeleteModal(config)">彻底删除</button>
+                <button v-if="config.type === 'remote'" class="menu-item" @click.stop="handleUpdateSingle(config)">Обновить подписку</button>
+                <button class="menu-item" @click.stop="openRenameModal(config)">Переименовать</button>
+                <button class="menu-item" @click.stop="handleEditFile(config)">Редактировать</button>
+                <button v-if="config.type === 'remote' && config.url" class="menu-item" @click.stop="handleShareLink(config)">Поделиться ссылкой</button>
+                <button class="menu-item" @click.stop="handleExport(config)">Экспорт файла</button>
+                <button class="menu-item danger" @click.stop="openDeleteModal(config)">Удалить навсегда</button>
               </div>
             </Transition>
           </div>
@@ -98,17 +98,17 @@
         <!-- 导入主入口弹窗 -->
         <div v-if="activeModal === 'import'" class="custom-modal-card" @click.stop>
           <div class="modal-header">
-            <h3>导入配置文件</h3>
+            <h3>Импорт файла конфигурации</h3>
           </div>
           <div class="modal-body">
-            <p class="global-modal-msg">通过订阅链接导入：</p>
+            <p class="global-modal-msg">Импорт по ссылке подписки:</p>
             <div style="display: flex; gap: 8px;">
               <input v-model="newSubUrl" placeholder="https://..." class="modal-input" style="flex: 1;" :disabled="isImporting" />
-              <button class="primary-btn mini-btn" style="height: 44px;" @click="handleDownload" :disabled="!newSubUrl.trim() || isImporting">导入</button>
+              <button class="primary-btn mini-btn" style="height: 44px;" @click="handleDownload" :disabled="!newSubUrl.trim() || isImporting">Импорт</button>
             </div>
-            <div class="divider-text">或者</div>
+            <div class="divider-text">или</div>
             <button class="action-btn w-full-btn hover-accent" @click="handlePickFile" :disabled="isImporting" style="height: 44px; margin-top: 4px;">
-              <span class="btn-icon" v-html="ICONS.folder" style="margin-right: 4px;"></span> 浏览本地 YAML 文件
+              <span class="btn-icon" v-html="ICONS.folder" style="margin-right: 4px;"></span> Выбрать локальный YAML-файл
             </button>
           </div>
         </div>
@@ -116,25 +116,25 @@
         <!-- 导入确认/命名弹窗 -->
         <div v-if="activeModal === 'import_confirm'" class="custom-modal-card" @click.stop>
           <div class="modal-header">
-            <h3>{{ isImportingRemote ? '导入链接订阅' : '导入本地配置' }}</h3>
+            <h3>{{ isImportingRemote ? 'Импорт подписки по ссылке' : 'Импорт локальной конфигурации' }}</h3>
           </div>
           <div class="modal-body">
             <p class="text-xs text-gray-500 mb-2 truncate" style="margin-bottom: 8px; opacity: 0.6; width: 100%; display: block;">
-              {{ isImportingRemote ? '链接:' : '文件:' }} {{ pendingImportPath }}
+              {{ isImportingRemote ? 'Ссылка:' : 'Файл:' }} {{ pendingImportPath }}
             </p>
-            <p class="global-modal-msg">设置配置显示名称：</p>
-            <input 
-              v-model="configNameInput" 
-              placeholder="请输入名称" 
+            <p class="global-modal-msg">Отображаемое имя конфигурации:</p>
+            <input
+              v-model="configNameInput"
+              placeholder="Введите имя"
               class="modal-input"
               @keyup.enter="confirmImport"
               :disabled="isImporting"
             />
             <div class="modal-footer">
-              <button class="action-btn flex-1" @click="activeModal = 'import'" :disabled="isImporting">返回</button>
+              <button class="action-btn flex-1" @click="activeModal = 'import'" :disabled="isImporting">Назад</button>
               <button class="primary-btn accent-btn flex-1" @click="confirmImport" :disabled="!configNameInput || isImporting">
                 <span v-if="isImporting" class="btn-icon spin" v-html="ICONS.refresh"></span>
-                {{ isImporting ? (isImportingRemote ? '下载中...' : '导入中...') : '确定' }}
+                {{ isImporting ? (isImportingRemote ? 'Загрузка...' : 'Импорт...') : 'ОК' }}
               </button>
             </div>
           </div>
@@ -143,14 +143,14 @@
         <!-- 重命名弹窗 -->
         <div v-if="activeModal === 'rename'" class="custom-modal-card" @click.stop>
           <div class="modal-header">
-            <h3>重命名配置文件</h3>
+            <h3>Переименовать конфигурацию</h3>
           </div>
           <div class="modal-body">
-            <p class="global-modal-msg">请输入新的配置显示名称：</p>
-            <input v-model="renameValue" class="modal-input" placeholder="例如: 我的订阅" @keyup.enter="confirmRename" :disabled="isRenaming" />
+            <p class="global-modal-msg">Введите новое отображаемое имя:</p>
+            <input v-model="renameValue" class="modal-input" placeholder="Например: Моя подписка" @keyup.enter="confirmRename" :disabled="isRenaming" />
             <div class="modal-footer">
-              <button class="action-btn flex-1" @click="closeAllModals" :disabled="isRenaming">取消</button>
-              <button class="primary-btn accent-btn flex-1" @click="confirmRename" :disabled="!renameValue || isRenaming">确定</button>
+              <button class="action-btn flex-1" @click="closeAllModals" :disabled="isRenaming">Отмена</button>
+              <button class="primary-btn accent-btn flex-1" @click="confirmRename" :disabled="!renameValue || isRenaming">ОК</button>
             </div>
           </div>
         </div>
@@ -158,17 +158,17 @@
         <!-- 删除确认弹窗 -->
         <div v-if="activeModal === 'delete'" class="custom-modal-card" @click.stop>
           <div class="modal-header">
-            <h3 class="danger-text">彻底删除</h3>
+            <h3 class="danger-text">Удалить навсегда</h3>
           </div>
           <div class="modal-body">
             <p v-if="isCurrentConfig(targetId)" class="modal-hint-text">
-              <strong>警告：</strong> "{{ targetName }}" 正在运行中。删除将强制停止所有代理服务。
+              <strong>Внимание:</strong> "{{ targetName }}" сейчас используется. Удаление принудительно остановит все прокси-службы.
             </p>
-            <p v-else class="modal-hint-text">确定要彻底删除 <strong>{{ targetName }}</strong> 吗？此操作不可撤销。</p>
+            <p v-else class="modal-hint-text">Удалить <strong>{{ targetName }}</strong> навсегда? Это действие необратимо.</p>
             <div class="modal-footer">
-              <button class="action-btn flex-1" @click="closeAllModals">取消</button>
+              <button class="action-btn flex-1" @click="closeAllModals">Отмена</button>
               <button class="primary-btn accent-btn red-text-btn flex-1" @click="confirmDelete" :disabled="isDeleting">
-                {{ isDeleting ? '删除中...' : '确定删除' }}
+                {{ isDeleting ? 'Удаление...' : 'Удалить' }}
               </button>
             </div>
           </div>
@@ -286,14 +286,14 @@ const handleSelectConfig = async (config: clash.SubIndexItem) => {
   // 仅当当前请求仍是最新的（没有被新点击覆盖）且失败时，才进行回滚和报错
   if (lastError && currentSelectionNonce === thisNonce) {
     globalState.activeConfigId = previousConfigId;
-    await showAlert("切换订阅失败: " + lastError, "错误");
+    await showAlert("Не удалось переключить подписку: " + lastError, "Ошибка");
   }
 };
 
 const handleUpdateAll = async () => {
   const remoteItems = localConfigs.value.filter(c => c.type === 'remote');
   if (remoteItems.length === 0) {
-    await showAlert("不存在链接订阅", "提示");
+    await showAlert("Нет подписок по ссылке", "Уведомление");
     return;
   }
 
@@ -308,9 +308,9 @@ const handleUpdateSingle = async (config: clash.SubIndexItem) => {
   try {
     await API.UpdateSingleSub(config.id);
     await fetchConfigs();
-    await showAlert("节点更新成功！\n\n自定义规则已保留。如需应用机场的最新规则，请前往「规则管理」页面手动同步。", "更新完毕");
+    await showAlert("Узлы успешно обновлены!\n\nПользовательские правила сохранены. Чтобы применить новые правила провайдера, синхронизируйте их вручную на странице «Правила».", "Обновление завершено");
   } catch (e) {
-    await showAlert(`更新失败: ${e}`, "发生错误");
+    await showAlert(`Не удалось обновить: ${e}`, "Ошибка");
   } finally {
     isUpdating.value = false;
   }
@@ -319,7 +319,7 @@ const handleUpdateSingle = async (config: clash.SubIndexItem) => {
 const handleDownload = () => {
   if (!newSubUrl.value.trim()) return;
   pendingImportPath.value = newSubUrl.value.trim();
-  configNameInput.value = "新订阅";
+  configNameInput.value = "Новая подписка";
   isImportingRemote.value = true;
   activeModal.value = 'import_confirm';
 };
@@ -342,7 +342,7 @@ const confirmImport = async () => {
   if (!pendingImportPath.value || !configNameInput.value) return;
   isImporting.value = true;
   try {
-    const finalName = configNameInput.value.trim() || (isImportingRemote.value ? "未命名订阅" : "未命名文件");
+    const finalName = configNameInput.value.trim() || (isImportingRemote.value ? "Подписка без имени" : "Файл без имени");
     if (isImportingRemote.value) {
       await API.UpdateSub(finalName, pendingImportPath.value);
     } else {
@@ -353,7 +353,7 @@ const confirmImport = async () => {
     newSubUrl.value = '';
   } catch (e) {
     console.error("导入失败:", e);
-    await showAlert("导入失败: " + e, "错误");
+    await showAlert("Не удалось импортировать: " + e, "Ошибка");
   } finally {
     isImporting.value = false;
   }
@@ -375,7 +375,7 @@ const confirmRename = async () => {
     closeAllModals();
   } catch (e) {
     console.error("重命名失败:", e);
-    await showAlert("重命名失败: " + e, "错误");
+    await showAlert("Не удалось переименовать: " + e, "Ошибка");
   } finally {
     isRenaming.value = false;
   }
@@ -392,13 +392,13 @@ const handleShareLink = async (config: clash.SubIndexItem) => {
   let status: string;
   try {
     await navigator.clipboard.writeText(config.url);
-    status = '链接已复制';
+    status = 'Ссылка скопирована';
   } catch {
-    status = '复制失败，请手动复制';
+    status = 'Не удалось скопировать, скопируйте вручную';
   }
   globalState.modal = {
     show: true,
-    title: '分享链接',
+    title: 'Поделиться ссылкой',
     message: status,
     detail: config.url,
     type: 'alert',
@@ -412,8 +412,8 @@ const handleExport = (config: clash.SubIndexItem) => {
   activeMenu.value = null;
   globalState.modal = {
     show: true,
-    title: '导出配置文件',
-    message: '是否在导出时使用自定义规则替换原始规则？',
+    title: 'Экспорт конфигурации',
+    message: 'Заменить исходные правила пользовательскими при экспорте?',
     detail: '',
     type: 'confirm',
     isDanger: false,
@@ -432,7 +432,7 @@ const doExport = async (id: string, useCustomRules: boolean) => {
   try {
     await API.ExportConfig(id, useCustomRules);
   } catch (e) {
-    await showAlert('导出失败: ' + e, '错误');
+    await showAlert('Не удалось экспортировать: ' + e, 'Ошибка');
   }
 };
 
@@ -459,7 +459,7 @@ const confirmDelete = async () => {
     closeAllModals();
   } catch (e) {
     console.error("删除失败:", e);
-    await showAlert("删除失败: " + e, "错误");
+    await showAlert("Не удалось удалить: " + e, "Ошибка");
   } finally {
     isDeleting.value = false;
   }
@@ -490,12 +490,12 @@ onMounted(() => {
   unsubSubsUpdateSuccess = EventsOn("subs-update-success", async () => {
     isUpdating.value = false;
     await fetchConfigs();
-    await showAlert("全部订阅更新完成！\n\n自定义规则已保留。如需应用机场的最新规则，请前往「规则管理」页面手动同步。", "更新成功");
+    await showAlert("Все подписки обновлены!\n\nПользовательские правила сохранены. Чтобы применить новые правила провайдера, синхронизируйте их вручную на странице «Правила».", "Обновление успешно");
   });
 
   unsubSubsUpdateError = EventsOn("subs-update-error", async (err: string) => {
     isUpdating.value = false;
-    await showAlert(`更新失败: ${err}`, "更新结果");
+    await showAlert(`Не удалось обновить: ${err}`, "Результат обновления");
   });
 
   unsubConfigChanged = EventsOn("config-changed", (newId: string) => {

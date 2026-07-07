@@ -210,7 +210,7 @@ func GetSettingsDir() string {
 func SanitizeFilename(name string) (string, error) {
 	safe := filepath.Base(filepath.Clean(name))
 	if safe == "." || safe == "/" || safe == "\\" {
-		return "", fmt.Errorf("非法的文件名拒绝访问")
+		return "", fmt.Errorf("недопустимое имя файла, доступ отклонён")
 	}
 	return safe, nil
 }

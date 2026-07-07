@@ -64,7 +64,7 @@ func SaveSetting[T any](fileName string, data *T) error {
 		return err
 	}
 	if safeName != fileName {
-		return fmt.Errorf("非法设置文件名: %q", fileName)
+		return fmt.Errorf("недопустимое имя файла настроек: %q", fileName)
 	}
 
 	userPath := filepath.Join(GetSettingsDir(), "user_"+safeName+".json")

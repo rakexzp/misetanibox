@@ -2,7 +2,7 @@
   <transition name="panel-fade">
     <div class="update-task-panel" v-if="tasks.length > 0">
       <div class="panel-header">
-        <h3>后台更新任务</h3>
+        <h3>Фоновые задачи обновления</h3>
       </div>
       <transition-group name="task-fade" tag="div" class="task-list">
         <UpdateTaskRow v-for="task in tasks" :key="task.key" :task="task" />

@@ -34,7 +34,7 @@ func (c *Controller) updateGeoDatabase(ctx context.Context, key string, onProgre
 	}
 
 	if url == "" {
-		return fmt.Errorf("下载链接未配置")
+		return fmt.Errorf("Ссылка для загрузки не настроена")
 	}
 
 	return clash.UpdateGeoDB(ctx, key, url, c.getDynamicStrategy, onProgress)
@@ -63,11 +63,11 @@ func (c *Controller) UpdateCoreComponentAsync(ctx context.Context) {
 	if !c.IsCoreBinWritable() {
 		helperStatus := sys.CheckHelperService()
 		if !helperStatus.Reachable {
-			errStr := "需要管理员权限进行内核更新 (组件被 Windows 安全策略保护)。请安装后台服务或以管理员身份重启软件后重试。"
+			errStr := "Для обновления ядра нужны права администратора (компонент защищён политикой безопасности Windows). Установите фоновую службу или перезапустите программу от имени администратора и повторите попытку."
 			c.setLastError(errStr)
 			c.UpdateTasks.Set("core-update", UpdateTaskState{
 				Key:    "core-update",
-				Title:  "Mihomo 内核更新",
+				Title:  "Обновление ядра Mihomo",
 				Status: "error",
 				Error:  errStr,
 			})
@@ -76,7 +76,7 @@ func (c *Controller) UpdateCoreComponentAsync(ctx context.Context) {
 	}
 
 	c.runComponentUpdateTransaction(ctx, "core-update", ComponentUpdateOptions{
-		Name:        "Mihomo 内核更新",
+		Name:        "Обновление ядра Mihomo",
 		StopCore:    true,
 		RestartCore: true,
 		Prepare: func(ctx context.Context, onProgress func(int64, int64, int64, int64)) (map[string]string, error) {
@@ -173,7 +173,7 @@ func (c *Controller) CheckCoreUpdateAsync(ctx context.Context) {
 
 func (c *Controller) InstallTunDriverAsync(ctx context.Context) {
 	c.runComponentUpdateTransaction(ctx, "driver-install", ComponentUpdateOptions{
-		Name:        "Wintun 重装",
+		Name:        "Переустановка Wintun",
 		StopCore:    true,
 		RestartCore: true,
 		Prepare: func(ctx context.Context, onProgress func(int64, int64, int64, int64)) (map[string]string, error) {
@@ -214,7 +214,7 @@ func (c *Controller) CheckAppUpdateAsync(ctx context.Context, currentVersion str
 		info, err := downloader.CheckAppUpdate(timeoutCtx, currentVersion, c.getDynamicStrategy)
 		if err != nil {
 			if manual {
-				c.events.Emit("app-update-error", "检查软件更新失败: "+err.Error())
+				c.events.Emit("app-update-error", "Не удалось проверить обновления программы: "+err.Error())
 			}
 			return nil
 		}
@@ -222,7 +222,7 @@ func (c *Controller) CheckAppUpdateAsync(ctx context.Context, currentVersion str
 		if info == nil || !info.HasUpdate {
 			if manual {
 				c.events.Emit("app-update-none", map[string]string{
-					"message": "当前已经是最新版本。",
+					"message": "Установлена последняя версия.",
 				})
 			}
 			return nil
@@ -231,7 +231,7 @@ func (c *Controller) CheckAppUpdateAsync(ctx context.Context, currentVersion str
 		if info.DownloadURL == "" {
 			if manual {
 				c.events.Emit("app-update-error", fmt.Sprintf(
-					"发现新版本 %s，但 Release 中没有匹配的软件本体安装包",
+					"Найдена новая версия %s, но в Release нет подходящего установочного пакета программы",
 					info.Version,
 				))
 			}
@@ -262,7 +262,7 @@ func (c *Controller) DownloadPendingAppUpdateAsync(ctx context.Context) {
 		c.mu.RUnlock()
 
 		if info == nil || !info.HasUpdate || info.DownloadURL == "" {
-			c.events.Emit("app-update-error", "没有可下载的软件更新，请重新检查更新。")
+			c.events.Emit("app-update-error", "Нет доступного обновления для загрузки, проверьте обновления заново.")
 			return nil
 		}
 
@@ -307,7 +307,7 @@ func (c *Controller) downloadAppUpdateWithInfo(ctx context.Context, info *downlo
 	// 🚀 这里只调用一次，底层的 DownloadLargeAssetAtomic 会通过 Strategy() 回调动态感知代理切换并自动进行内部无感断点续传！
 	path, err := downloader.DownloadAppUpdate(ctx, info, destDir, onProgress, c.getDynamicStrategy)
 	if err != nil {
-		logger.Errorf("软件更新下载失败: %v", err)
+		logger.Errorf("Не удалось загрузить обновление программы: %v", err)
 		c.events.Emit("app-update-error", userFacingAppUpdateDownloadError(err))
 		return err
 	}
@@ -337,7 +337,7 @@ func (c *Controller) getDynamicStrategy() downloader.DownloadStrategy {
 
 func userFacingAppUpdateDownloadError(err error) string {
 	if err == nil {
-		return "下载软件更新失败，请稍后重试。"
+		return "Не удалось загрузить обновление программы, повторите попытку позже."
 	}
 
 	msg := strings.ToLower(err.Error())
@@ -347,17 +347,17 @@ func userFacingAppUpdateDownloadError(err error) string {
 		strings.Contains(msg, "connection was aborted") ||
 		strings.Contains(msg, "timeout") ||
 		strings.Contains(msg, "context deadline exceeded") ||
-		strings.Contains(msg, "所有网络环境") ||
+		strings.Contains(msg, "все сетевые окружения") ||
 		strings.Contains(msg, "github") {
-		return "下载软件更新失败：当前网络无法连接下载地址，请检查网络或切换可用节点后重试。"
+		return "Не удалось загрузить обновление: текущая сеть не может подключиться к адресу загрузки. Проверьте сеть или переключитесь на рабочий узел и повторите попытку."
 	}
 
 	// 映射文件效验类错误
 	if strings.Contains(msg, "mz") ||
-		strings.Contains(msg, "不是有效的 windows 可执行文件") ||
-		strings.Contains(msg, "体积异常") {
-		return "下载的软件安装包无效，请稍后重新下载。"
+		strings.Contains(msg, "не является допустимым исполняемым файлом windows") ||
+		strings.Contains(msg, "аномальный размер") {
+		return "Загруженный установочный пакет повреждён, повторите загрузку позже."
 	}
 
-	return "下载软件更新失败，请稍后重试。"
+	return "Не удалось загрузить обновление программы, повторите попытку позже."
 }

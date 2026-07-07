@@ -87,7 +87,7 @@ func LoadRuleOverlay(id string) (RuleOverlay, error) {
 	if err := json.Unmarshal(data, &overlay); err != nil {
 		// If corrupted, backup and return error
 		_ = utils.WriteFileAtomic(path+".corrupt.bak", data, 0644)
-		return RuleOverlay{}, fmt.Errorf("规则附加配置损坏，已备份为 %s.corrupt.bak: %w", path, err)
+		return RuleOverlay{}, fmt.Errorf("overlay-конфигурация правил повреждена, резервная копия сохранена как %s.corrupt.bak: %w", path, err)
 	}
 
 	if overlay.Add == nil {
@@ -173,7 +173,7 @@ func ReadWorkingRootWithRecovery(id string) (map[string]interface{}, error) {
 
 	originRoot, originReadErr := ReadYamlRoot(originPath)
 	if originReadErr != nil {
-		return nil, fmt.Errorf("工作配置损坏且 origin 无法恢复: working=%v origin=%v", err, originReadErr)
+		return nil, fmt.Errorf("рабочая конфигурация повреждена, и восстановить её из origin не удалось: working=%v origin=%v", err, originReadErr)
 	}
 
 	originData, readErr := os.ReadFile(originPath)
@@ -182,7 +182,7 @@ func ReadWorkingRootWithRecovery(id string) (map[string]interface{}, error) {
 	}
 
 	if writeErr := utils.WriteFileAtomic(workingPath, originData, 0644); writeErr != nil {
-		return nil, fmt.Errorf("从 origin 恢复 working 失败: %w", writeErr)
+		return nil, fmt.Errorf("не удалось восстановить working из origin: %w", writeErr)
 	}
 
 	return originRoot, nil
@@ -253,7 +253,8 @@ func BuildRuntimeRules(id string, workingRoot map[string]interface{}) ([]string,
 
 	// 如果是 local 配置，直接返回 working 中的 rules
 	if item.Type != "remote" {
-		return baseRules, nil
+		ar, _ := LoadAppRouting(id)
+		return applyAppRouting(workingRoot, baseRules, ar), nil
 	}
 
 	// 远程配置读取 overlay，并在 working baseRules 上应用
@@ -262,5 +263,9 @@ func BuildRuntimeRules(id string, workingRoot map[string]interface{}) ([]string,
 		return nil, err
 	}
 
-	return ApplyRuleOverlay(baseRules, overlay), nil
+	rules := ApplyRuleOverlay(baseRules, overlay)
+
+	// 应用应用级分流 (app routing)：在 overlay 之上再包一层
+	ar, _ := LoadAppRouting(id)
+	return applyAppRouting(workingRoot, rules, ar), nil
 }

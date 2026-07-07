@@ -204,3 +204,21 @@ export function UpdateSingleSub(arg1:string):Promise<void>;
 export function UpdateSub(arg1:string,arg2:string):Promise<void>;
 
 export function ValidateConfigText(arg1:string):Promise<void>;
+
+export function ListInstalledApps():Promise<Array<sys.AppInfo>>;
+
+export function SelectAppExe():Promise<sys.AppInfo>;
+
+export function GetAppRouting(arg1:string):Promise<clash.AppRouting>;
+
+export function SetAppRouting(arg1:string,arg2:string,arg3:Array<string>):Promise<void>;
+
+export function AddSubViaDNS(arg1:string,arg2:string):Promise<string>;
+export function IsSmartCore():Promise<boolean>;
+export function InstallSmartCore():Promise<void>;
+export function RemoveSmartCore():Promise<void>;
+export function GetSmartRoute():Promise<boolean>;
+export function SetSmartRoute(arg1:boolean):Promise<void>;
+export function SetCardBg(arg1:string):Promise<string>;
+export function GetCardBgs():Promise<{[key: string]: string}>;
+export function ClearCardBg(arg1:string):Promise<void>;

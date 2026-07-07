@@ -61,12 +61,12 @@ func EnsureReady(ctx context.Context, req Requirement, mode RepairMode) (Runtime
 
 	if req.NeedCore && !status.CoreReady {
 		coreHealth := status.Assets[AssetCore]
-		return status, fmt.Errorf("内核仍不可用: %s (%s)", coreHealth.Error, coreHealth.Path)
+		return status, fmt.Errorf("ядро по-прежнему недоступно: %s (%s)", coreHealth.Error, coreHealth.Path)
 	}
 
 	if req.NeedWintun && !status.WintunReady {
 		wintunHealth := status.Assets[AssetWintun]
-		return status, fmt.Errorf("wintun 仍不可用: %s (%s)", wintunHealth.Error, wintunHealth.Path)
+		return status, fmt.Errorf("wintun по-прежнему недоступен: %s (%s)", wintunHealth.Error, wintunHealth.Path)
 	}
 
 	return status, nil

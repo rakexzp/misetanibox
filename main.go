@@ -37,7 +37,7 @@ func main() {
 	// 🚀 新增：恐慌恢复逻辑，确保程序因未知 Bug 崩溃时，能最后尝试清理一次代理
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Errorf("检测到程序 Panic: %v\n正在紧急清理系统代理...", r)
+			logger.Errorf("обнаружен Panic программы: %v\nэкстренно очищаем системный прокси...", r)
 			sys.ClearOwnedSystemProxy()
 			panic(r) // 继续抛出 Panic 以供日志记录
 		}
@@ -47,15 +47,15 @@ func main() {
 	// 在 Wails Dev 模式下，通常可执行文件路径包含临时目录或 wails-dev
 	exePath, _ := os.Executable()
 	isDebugMode := false
-	if filepath.Base(exePath) == "GoclashZ-dev.exe" || len(os.Getenv("WAILS_DEV_SERVER")) > 0 {
+	if filepath.Base(exePath) == "Misetanibox-dev.exe" || len(os.Getenv("WAILS_DEV_SERVER")) > 0 {
 		isDebugMode = true
-		logger.Infof("👉 Wails 开发模式，跳过单实例检查")
+		logger.Infof("👉 режим разработки Wails, проверка единственного экземпляра пропущена")
 	}
 
 	// 🚨 核心逻辑：数据目录稳定化及迁移
 	// 必须在加载任何行为/期望状态/核心之前执行。
 	if err := utils.MigrateLegacyAppDataToInstallData(); err != nil {
-		logger.Errorf("旧数据迁移失败: %v", err)
+		logger.Errorf("не удалось мигрировать старые данные: %v", err)
 	}
 
 	if hasFlag("--shutdown-existing") {
@@ -67,17 +67,17 @@ func main() {
 		if !sys.CheckAdmin() {
 			err := sys.RequestAdmin()
 			if err != nil {
-				logger.Errorf("请求管理员权限失败: %v", err)
+				logger.Errorf("не удалось запросить права администратора: %v", err)
 			}
 			os.Exit(0)
 		}
 
 		err := utils.RepairDataDirPermission()
 		if err != nil {
-			logger.Errorf("修复数据目录权限失败: %v", err)
+			logger.Errorf("не удалось исправить права каталога данных: %v", err)
 			os.Exit(1)
 		}
-		logger.Infof("✅ 成功修复数据目录权限")
+		logger.Infof("✅ права каталога данных успешно исправлены")
 		os.Exit(0)
 	}
 
@@ -85,7 +85,7 @@ func main() {
 		if !sys.CheckAdmin() {
 			err := sys.RequestAdmin()
 			if err != nil {
-				logger.Errorf("请求管理员权限失败: %v", err)
+				logger.Errorf("не удалось запросить права администратора: %v", err)
 			}
 			os.Exit(0)
 		}
@@ -93,10 +93,10 @@ func main() {
 		runtimeassets.MigrateLegacyAssets()
 		err := utils.RepairCoreBinPermission()
 		if err != nil {
-			logger.Errorf("修复内核目录权限失败: %v", err)
+			logger.Errorf("не удалось исправить права каталога ядра: %v", err)
 			os.Exit(1)
 		}
-		logger.Infof("✅ 成功修复内核布局及权限")
+		logger.Infof("✅ структура и права каталога ядра успешно исправлены")
 		os.Exit(0)
 	}
 
@@ -104,7 +104,7 @@ func main() {
 	if hasFlag("--install-helper") {
 		if !sys.CheckAdmin() {
 			if err := sys.RequestAdmin(); err != nil {
-				logger.Errorf("请求管理员权限失败: %v", err)
+				logger.Errorf("не удалось запросить права администратора: %v", err)
 			}
 			os.Exit(0)
 		}
@@ -120,45 +120,45 @@ func main() {
 
 		helperPath := filepath.Join(filepath.Dir(exePath), "GoclashZHelper.exe")
 		if err := sys.RecoverHelperServiceForUser(helperPath, allowedSid); err != nil {
-			logger.Errorf("修复 Helper 服务失败: %v", err)
+			logger.Errorf("не удалось исправить службу Helper: %v", err)
 			sys.WriteAdminTaskResult("install-helper", err)
 			os.Exit(1)
 		}
 
-		logger.Infof("✅ 成功安装/修复并启动 Helper 服务")
+		logger.Infof("✅ служба Helper успешно установлена/исправлена и запущена")
 		os.Exit(0)
 	}
 
 	if hasFlag("--uninstall-helper") {
 		if !sys.CheckAdmin() {
 			if err := sys.RequestAdmin(); err != nil {
-				logger.Errorf("请求管理员权限失败: %v", err)
+				logger.Errorf("не удалось запросить права администратора: %v", err)
 			}
 			os.Exit(0)
 		}
 		if err := sys.UninstallHelperService(); err != nil {
-			logger.Errorf("卸载 Helper 服务失败: %v", err)
+			logger.Errorf("не удалось удалить службу Helper: %v", err)
 			os.Exit(1)
 		}
-		logger.Infof("✅ 成功卸载 Helper 服务")
+		logger.Infof("✅ служба Helper успешно удалена")
 		os.Exit(0)
 	}
 
 	if hasFlag("--restart-helper") {
 		if !sys.CheckAdmin() {
 			if err := sys.RequestAdmin(); err != nil {
-				logger.Errorf("请求管理员权限失败: %v", err)
+				logger.Errorf("не удалось запросить права администратора: %v", err)
 			}
 			os.Exit(0)
 		}
 		if err := sys.StopHelperService(); err != nil {
-			logger.Warnf("停止 Helper 服务失败: %v", err)
+			logger.Warnf("не удалось остановить службу Helper: %v", err)
 		}
 		if err := sys.StartHelperService(); err != nil {
-			logger.Errorf("启动 Helper 服务失败: %v", err)
+			logger.Errorf("не удалось запустить службу Helper: %v", err)
 			os.Exit(1)
 		}
-		logger.Infof("✅ 成功重启 Helper 服务")
+		logger.Infof("✅ служба Helper успешно перезапущена")
 		os.Exit(0)
 	}
 
@@ -170,7 +170,7 @@ func main() {
 		// ✅ 核心修复：直接通过系统调用返回的 err 判断，切勿使用 GetLastError()
 		if err != nil {
 			if err == syswin.ERROR_ALREADY_EXISTS {
-				logger.Infof("⚠️ GoclashZ 已经在后台运行，正在唤醒已有窗口...")
+				logger.Infof("⚠️ Misetanibox уже запущен в фоне, активируем существующее окно...")
 
 				// 🚀 核心重构：调用统一的唤醒与闪烁函数 (由 core/sys 提供)
 				sys.FocusMainWindowAndFlashTwiceWin32Only()
@@ -181,7 +181,7 @@ func main() {
 				}
 				os.Exit(0)
 			} else {
-				logger.Errorf("创建互斥锁发生异常: %v", err)
+				logger.Errorf("ошибка при создании мьютекса: %v", err)
 			}
 		}
 
@@ -219,7 +219,7 @@ func main() {
 	}()
 
 	err := wails.Run(&options.App{
-		Title:     "GoclashZ",
+		Title:     "Misetanibox",
 		Width:     1024,
 		Height:    768,
 		MinWidth:  900,  // 👈 核心修复：限制最小宽度，防止 UI 布局挤压
@@ -258,14 +258,14 @@ func installEmergencyProxyCleanup() {
 
 	go func() {
 		<-sigCh
-		logger.Infof("检测到退出信号，正在清理 GoclashZ 设置的系统代理...")
+		logger.Infof("получен сигнал завершения, очищаем системный прокси, установленный Misetanibox...")
 		sys.ClearOwnedSystemProxy()
 		os.Exit(0)
 	}()
 
 	go func() {
 		sys.ListenForShutdownEvent()
-		logger.Infof("检测到安装器请求退出信号，正在紧急清理并退出...")
+		logger.Infof("получен сигнал завершения от установщика, экстренно очищаем и выходим...")
 		sys.ClearOwnedSystemProxy()
 		os.Exit(0)
 	}()

@@ -34,7 +34,7 @@ type ErrLongConnectionActive struct {
 }
 
 func (e ErrLongConnectionActive) Error() string {
-	return fmt.Sprintf("由于长连接活动而延迟 %s (检测到 %d 个连接: %s)", e.Reason, e.Count, strings.Join(e.Hosts, ", "))
+	return fmt.Sprintf("Отложено из-за длительных соединений: %s (обнаружено соединений: %d: %s)", e.Reason, e.Count, strings.Join(e.Hosts, ", "))
 }
 
 type PendingDisruptiveAction struct {
@@ -169,12 +169,12 @@ func (c *Controller) queuePendingDisruptiveAction(reason string) {
 				return
 			case now := <-ticker.C:
 				if now.After(action.Deadline) {
-					c.events.Emit("notify-error", fmt.Sprintf("由于长连接一直存在，已放弃延迟执行的重启任务 (%s)", action.Reason))
+					c.events.Emit("notify-error", fmt.Sprintf("Отложенный перезапуск отменён: длительные соединения так и не завершились (%s)", action.Reason))
 					return
 				}
 
 				if !c.HasActiveLongConnection() {
-					c.events.Emit("notify-success", fmt.Sprintf("长连接已结束，正在执行延迟的任务 (%s)", action.Reason))
+					c.events.Emit("notify-success", fmt.Sprintf("Длительные соединения завершены, выполняется отложенная задача (%s)", action.Reason))
 					_ = c.RestartCoreWithReason(c.ctx, action.Reason)
 					return
 				}
