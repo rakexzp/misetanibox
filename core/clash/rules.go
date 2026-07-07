@@ -56,7 +56,7 @@ func GetCustomRules(id string) ([]string, error) {
 	// 🛡️ 防御路径穿越：强行提取纯文件名
 	safeId := filepath.Base(filepath.Clean(id))
 	if safeId == "." || safeId == "/" || safeId == "\\" {
-		return nil, fmt.Errorf("非法的文件 ID 拒绝访问")
+		return nil, fmt.Errorf("недопустимый ID файла, доступ запрещён")
 	}
 
 	rulesMutex.RLock() // 加读锁
@@ -98,31 +98,31 @@ func SaveCustomRules(id string, rules []string) error {
 		for _, p := range parts {
 			trimmed := strings.TrimSpace(p)
 			if trimmed == "" {
-				return fmt.Errorf("格式拒绝：逗号之间不允许存在空缺值")
+				return fmt.Errorf("формат отклонён: пустые значения между запятыми не допускаются")
 			}
 			cleanedParts = append(cleanedParts, trimmed)
 		}
 
 		if len(cleanedParts) < 2 {
-			return fmt.Errorf("格式拒绝：缺少逗号分隔，且至少需要两段")
+			return fmt.Errorf("формат отклонён: нужен разделитель-запятая и минимум два сегмента")
 		}
 
 		// 🛡️ 终极防线 2：绝对白名单校验（自动容错用户的输入大小写，统一转为大写对比）
 		ruleType := strings.ToUpper(cleanedParts[0])
 		if !validRuleTypes[ruleType] {
-			return fmt.Errorf("格式拒绝：[%s] 不是合法的 Clash 规则类型。支持的类型如 DOMAIN, IP-CIDR, MATCH 等", cleanedParts[0])
+			return fmt.Errorf("формат отклонён: [%s] не является допустимым типом правила Clash. Поддерживаются типы вроде DOMAIN, IP-CIDR, MATCH", cleanedParts[0])
 		}
 
 		// 🛡️ 终极防线 3：动态语义段数校验
 		// MATCH 规则特殊，只有两段 (MATCH,DIRECT) 或带附加参数 (MATCH,DIRECT,no-resolve)
 		if ruleType == "MATCH" {
 			if len(cleanedParts) < 2 {
-				return fmt.Errorf("格式拒绝：MATCH 规则至少需要2段 (例如 MATCH,DIRECT)")
+				return fmt.Errorf("формат отклонён: правило MATCH требует минимум 2 сегмента (например MATCH,DIRECT)")
 			}
 		} else {
 			// 除 MATCH 以外的所有规则，绝大多数必须至少 3 段 (类型, 载荷, 策略)
 			if len(cleanedParts) < 3 {
-				return fmt.Errorf("格式拒绝：[%s] 规则至少需要3段 (类型,目标,策略)，例如 %s,example.com,DIRECT", ruleType, ruleType)
+				return fmt.Errorf("формат отклонён: правило [%s] требует минимум 3 сегмента (тип,цель,политика), например %s,example.com,DIRECT", ruleType, ruleType)
 			}
 		}
 
@@ -134,7 +134,7 @@ func SaveCustomRules(id string, rules []string) error {
 	// 🛡️ 防御路径穿越：强行提取纯文件名
 	safeId := filepath.Base(filepath.Clean(id))
 	if safeId == "." || safeId == "/" || safeId == "\\" {
-		return fmt.Errorf("非法的文件 ID 拒绝访问")
+		return fmt.Errorf("недопустимый ID файла, доступ запрещён")
 	}
 
 	path := filepath.Join(utils.GetSubscriptionsDir(), safeId+"_rules.json")
@@ -156,7 +156,7 @@ func GetOriginalRules(id string) ([]string, error) {
 	// 🛡️ 防御路径穿越：强行提取纯文件名
 	safeId := filepath.Base(filepath.Clean(id))
 	if safeId == "." || safeId == "/" || safeId == "\\" {
-		return nil, fmt.Errorf("非法的文件 ID 拒绝访问")
+		return nil, fmt.Errorf("недопустимый ID файла, доступ запрещён")
 	}
 
 	yamlPath := filepath.Join(utils.GetSubscriptionsDir(), safeId+".yaml")

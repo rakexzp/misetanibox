@@ -160,30 +160,30 @@ func RunElevatedWithArgsWait(args ...string) error {
 	r1, _, err := procShellExecuteEx.Call(uintptr(unsafe.Pointer(&sei)))
 	if r1 == 0 {
 		if err != nil && err != windows.ERROR_SUCCESS {
-			return fmt.Errorf("请求管理员权限失败或被取消: %w", err)
+			return fmt.Errorf("не удалось запросить права администратора или запрос отменён: %w", err)
 		}
-		return fmt.Errorf("请求管理员权限失败或被取消")
+		return fmt.Errorf("не удалось запросить права администратора или запрос отменён")
 	}
 	if sei.HProcess == 0 {
-		return fmt.Errorf("管理员子进程句柄为空")
+		return fmt.Errorf("пустой дескриптор административного подпроцесса")
 	}
 	defer windows.CloseHandle(sei.HProcess)
 
 	_, err = windows.WaitForSingleObject(sei.HProcess, windows.INFINITE)
 	if err != nil {
-		return fmt.Errorf("等待管理员子进程失败: %w", err)
+		return fmt.Errorf("не удалось дождаться административного подпроцесса: %w", err)
 	}
 
 	var exitCode uint32
 	if err := windows.GetExitCodeProcess(sei.HProcess, &exitCode); err != nil {
-		return fmt.Errorf("获取管理员子进程退出码失败: %w", err)
+		return fmt.Errorf("не удалось получить код выхода административного подпроцесса: %w", err)
 	}
 
 	if exitCode != 0 {
 		if msg := readAdminTaskError(); msg != "" {
-			return fmt.Errorf("管理员子进程执行失败: %s", msg)
+			return fmt.Errorf("административный подпроцесс завершился с ошибкой: %s", msg)
 		}
-		return fmt.Errorf("管理员子进程执行失败，退出码: %d", exitCode)
+		return fmt.Errorf("административный подпроцесс завершился с ошибкой, код выхода: %d", exitCode)
 	}
 
 	return nil

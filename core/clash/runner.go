@@ -127,13 +127,13 @@ func startCoreViaHelper(_ context.Context, exePath, binDir, runtimeConfig, _ str
 		RuntimeConfig: runtimeConfig,
 		Args:          []string{"-d", binDir, "-f", runtimeConfig},
 	}); err != nil {
-		return fmt.Errorf("通过 Helper 启动内核失败 (TUN 模式需要 Helper 服务): %w", err)
+		return fmt.Errorf("не удалось запустить ядро через Helper (режим TUN требует службу Helper): %w", err)
 	}
 
 	startedViaHelper.Store(true)
 	isRunning.Store(true)
 	isIntentionalStop.Store(false)
-	logger.Infof("内核已通过 Helper 服务启动 (TUN)")
+	logger.Infof("ядро запущено через службу Helper (TUN)")
 	return nil
 }
 
@@ -145,11 +145,11 @@ func startCoreDirect(ctx context.Context, exePath, binDir, runtimeConfig, pidFil
 	if err != nil {
 		if isAccessDenied(err) {
 			return fmt.Errorf(
-				"无法启动内核：Windows 拒绝执行 %s。可能原因：核心位于可写 data 目录、文件仍被安全软件扫描、或权限策略阻止: %w",
+				"не удалось запустить ядро: Windows отказала в выполнении %s. Возможные причины: ядро лежит в записываемом каталоге data, файл ещё сканируется антивирусом или заблокирован политикой прав: %w",
 				exePath, err,
 			)
 		}
-		return fmt.Errorf("无法启动内核: %w", err)
+		return fmt.Errorf("не удалось запустить ядро: %w", err)
 	}
 
 	clashCmd = cmd
@@ -175,7 +175,7 @@ func startCoreDirect(ctx context.Context, exePath, binDir, runtimeConfig, pidFil
 		close(ch)
 
 		if !isIntentionalStop.Load() && cb != nil {
-			cb(ExitEvent{Intentional: false, Message: "内核已异常退出"})
+			cb(ExitEvent{Intentional: false, Message: "ядро аварийно завершилось"})
 		}
 	}(cmd, localExitCh)
 
@@ -191,7 +191,7 @@ func Stop() error {
 		mu.Unlock()
 		client := sys.NewHelperClient()
 		if err := client.StopCore(); err != nil {
-			logger.Warnf("Helper 停止内核失败: %v", err)
+			logger.Warnf("не удалось остановить ядро через Helper: %v", err)
 		}
 		startedViaHelper.Store(false)
 		isRunning.Store(false)
@@ -213,7 +213,7 @@ func Stop() error {
 
 	if proc != nil {
 		if err := proc.Kill(); err != nil {
-			logger.Errorf("停止内核进程失败: %v", err)
+			logger.Errorf("не удалось остановить процесс ядра: %v", err)
 			if pid > 0 {
 				killProcessIfClash(pid, targetExeName)
 			}
@@ -266,7 +266,7 @@ func startCoreProcessWithRetry(ctx context.Context, exePath, binDir, runtimeConf
 		time.Sleep(time.Duration(250+i*250) * time.Millisecond)
 	}
 
-	return nil, fmt.Errorf("启动内核被系统拒绝，可能是文件仍被安全软件扫描或目录策略阻止: %w", lastErr)
+	return nil, fmt.Errorf("система отказала в запуске ядра: возможно, файл ещё сканируется антивирусом или заблокирован политикой каталога: %w", lastErr)
 }
 
 func isAccessDenied(err error) bool {

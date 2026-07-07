@@ -334,6 +334,21 @@ export namespace appcore {
 
 export namespace clash {
 	
+	export class AppRouting {
+	    mode: string;
+	    apps: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new AppRouting(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.mode = source["mode"];
+	        this.apps = source["apps"];
+	    }
+	}
+	
 	export class BuildRuleRequest {
 	    type: string;
 	    payload: string;
@@ -765,6 +780,25 @@ export namespace runtimeassets {
 }
 
 export namespace sys {
+	
+	export class AppInfo {
+	    name: string;
+	    exe: string;
+	    path: string;
+	    iconPng: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AppInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.exe = source["exe"];
+	        this.path = source["path"];
+	        this.iconPng = source["iconPng"];
+	    }
+	}
 	
 	export class DataDirInfo {
 	    appDir: string;

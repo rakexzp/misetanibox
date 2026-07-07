@@ -25,7 +25,7 @@ func NormalizeProfileID(id string) (string, error) {
 	}
 
 	if safeID != id {
-		return "", fmt.Errorf("非法配置 ID: %q", id)
+		return "", fmt.Errorf("недопустимый ID конфигурации: %q", id)
 	}
 
 	return safeID, nil
@@ -55,7 +55,7 @@ func ProfilePathByID(id string) (string, string, error) {
 
 	rel, err := filepath.Rel(baseAbs, targetAbs)
 	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
-		return "", "", fmt.Errorf("配置路径逃逸: %s", id)
+		return "", "", fmt.Errorf("путь конфигурации выходит за пределы каталога: %s", id)
 	}
 
 	return normalizedID, targetAbs, nil
@@ -82,7 +82,7 @@ func ProfilePathByIDStrict(id string) (string, string, error) {
 
 	if _, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
-			return "", "", fmt.Errorf("配置文件不存在: %s", id)
+			return "", "", fmt.Errorf("файл конфигурации не существует: %s", id)
 		}
 		return "", "", err
 	}

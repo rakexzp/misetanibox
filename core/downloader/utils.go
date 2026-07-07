@@ -40,13 +40,13 @@ func ReplaceFile(tmpPath, destPath string) error {
 
 	if _, err := os.Stat(destPath); err == nil {
 		if err := os.Rename(destPath, backupPath); err != nil {
-			return fmt.Errorf("备份旧文件失败: %w", err)
+			return fmt.Errorf("не удалось создать резервную копию старого файла: %w", err)
 		}
 	}
 
 	if err := os.Rename(tmpPath, destPath); err != nil {
 		_ = os.Rename(backupPath, destPath)
-		return fmt.Errorf("替换目标文件失败: %w", err)
+		return fmt.Errorf("не удалось заменить целевой файл: %w", err)
 	}
 
 	_ = os.Remove(backupPath)
@@ -69,7 +69,7 @@ func VerifySHA256(path string, expected string) error {
 	}
 	got := hex.EncodeToString(h.Sum(nil))
 	if !strings.EqualFold(got, expected) {
-		return fmt.Errorf("SHA256 不匹配")
+		return fmt.Errorf("SHA256 не совпадает")
 	}
 	return nil
 }

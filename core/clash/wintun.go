@@ -37,7 +37,7 @@ func PrepareWintunRuntime(ctx context.Context, strategy func() downloader.Downlo
 		DestPath:            zipPath,
 		Strategy:            strategy,
 		MaxBytes:            50 << 20,
-		UserAgent:           "GoclashZ-WintunUpdater",
+		UserAgent:           "Misetanibox-WintunUpdater",
 		AttemptsPerEndpoint: 3,
 		Validator: func(tmpPath string) error {
 			return validateWintunZip(tmpPath)
@@ -71,14 +71,14 @@ func CommitWintunRuntime(ctx context.Context, prepared map[string]string) (strin
 	destPath := prepared["destPath"]
 
 	if stagedDLL == "" || destPath == "" {
-		return "", fmt.Errorf("Wintun staging 信息缺失")
+		return "", fmt.Errorf("Wintun: отсутствует staging-информация")
 	}
 
 	// 如果 core\bin 不可写，通过 helper 服务替换
 	if !isDirWritable(filepath.Dir(destPath)) {
 		client := sys.NewHelperClient()
 		if err := client.InstallWintun(stagedDLL, destPath); err != nil {
-			return "", fmt.Errorf("通过 Helper 安装 Wintun 失败: %w", err)
+			return "", fmt.Errorf("не удалось установить Wintun через Helper: %w", err)
 		}
 	} else {
 		if err := WaitFileReleased(destPath, 5*time.Second); err != nil {
@@ -92,7 +92,7 @@ func CommitWintunRuntime(ctx context.Context, prepared map[string]string) (strin
 
 	version, err := sys.GetFileVersion(destPath)
 	if err != nil || strings.TrimSpace(version) == "" {
-		return "已安装，版本未知", nil
+		return "установлен, версия неизвестна", nil
 	}
 
 	return version, nil
@@ -112,7 +112,7 @@ func isDirWritable(dir string) bool {
 func validateWintunZip(path string) error {
 	r, err := zip.OpenReader(path)
 	if err != nil {
-		return fmt.Errorf("Wintun 压缩包无效: %w", err)
+		return fmt.Errorf("недопустимый архив Wintun: %w", err)
 	}
 	defer r.Close()
 
@@ -123,13 +123,13 @@ func validateWintunZip(path string) error {
 			strings.HasSuffix(name, "/x64/wintun.dll") ||
 			name == "wintun.dll" {
 			if f.UncompressedSize64 < 32*1024 {
-				return fmt.Errorf("wintun.dll 体积异常")
+				return fmt.Errorf("wintun.dll: аномальный размер")
 			}
 			return nil
 		}
 	}
 
-	return fmt.Errorf("压缩包中未找到 amd64 wintun.dll")
+	return fmt.Errorf("в архиве не найден amd64 wintun.dll")
 }
 
 func extractWintunDLL(zipPath, destPath string) error {
@@ -153,7 +153,7 @@ func extractWintunDLL(zipPath, destPath string) error {
 	}
 
 	if target == nil {
-		return fmt.Errorf("zip 中未找到 amd64 wintun.dll")
+		return fmt.Errorf("в zip не найден amd64 wintun.dll")
 	}
 
 	rc, err := target.Open()

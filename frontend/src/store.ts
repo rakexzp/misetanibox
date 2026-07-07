@@ -52,6 +52,7 @@ export function normalizeOutboundIP(raw: any): OutboundIPResult {
 // 1. 同步读取本地缓存（发生在 Vue 渲染前，绝对 0 延迟）
 const cachedHideLogs = localStorage.getItem('goclashz_hideLogs') === 'true';
 const cachedTheme = localStorage.getItem('goclashz_theme') || 'light';
+const cachedUiMode = (localStorage.getItem('goclashz_uiMode') as 'full' | 'lite') || 'lite';
 const cachedActiveConfigId = localStorage.getItem('goclashz_activeConfigId') || ''; // 👈 新增缓存预热
 const cachedOutboundIP = localStorage.getItem('goclashz_outboundIP');
 
@@ -92,6 +93,16 @@ export function setTunIntent(value: boolean) {
   persistControlIntent();
 }
 
+export function setUiMode(mode: 'full' | 'lite') {
+  globalState.uiMode = mode;
+  localStorage.setItem('goclashz_uiMode', mode);
+}
+
+export function setCardBg(key: string, dataUrl: string) {
+  if (dataUrl) globalState.cardBgs[key] = dataUrl;
+  else delete globalState.cardBgs[key];
+}
+
 const cachedIntent = readControlIntent();
 
 // 定义全局响应式状态
@@ -99,6 +110,8 @@ export const globalState = reactive({
   isRunning: false,
   mode: 'rule',
   theme: cachedTheme,
+  uiMode: cachedUiMode as 'full' | 'lite', // full = Про, lite = Happ-подобный простой режим
+  cardBgs: {} as Record<string, string>, // пер-карточные фоны (key → data-URI), грузятся с бэкенда
   hideLogs: cachedHideLogs,
   // UI intent：卡片唯一数据源
   systemProxy: cachedIntent?.systemProxy ?? false,
@@ -345,7 +358,7 @@ export function updateProxyDelay(
 }
 
 // 全局 Alert 提示框 (替代原生 alert)
-export function showAlert(message: string, title: string = '提示', isDanger: boolean = false): Promise<void> {
+export function showAlert(message: string, title: string = 'Уведомление', isDanger: boolean = false): Promise<void> {
   return new Promise((resolve) => {
     globalState.modal.type = 'alert';
     globalState.modal.title = title;
@@ -359,7 +372,7 @@ export function showAlert(message: string, title: string = '提示', isDanger: b
 }
 
 // 全局 Confirm 确认框 (替代原生 confirm)
-export function showConfirm(message: string, title: string = '操作确认', isDanger: boolean = false): Promise<boolean> {
+export function showConfirm(message: string, title: string = 'Подтверждение', isDanger: boolean = false): Promise<boolean> {
   return new Promise((resolve) => {
     globalState.modal.type = 'confirm';
     globalState.modal.title = title;
@@ -526,7 +539,7 @@ export async function refreshOutboundIP(options?: {
     if (seq !== ipDetectSeq) return;
 
     // 路由切换中：保留旧 IP，不覆盖
-    if (result?.message?.includes('路由切换中')) {
+    if (result?.message?.includes('Переключение маршрута')) {
       if (!options?.silent && seq === ipDetectSeq) {
         globalState.ipDetecting = false;
       }
@@ -551,7 +564,7 @@ export async function refreshOutboundIP(options?: {
           source: '',
           source4: '',
           source6: '',
-          message: result?.message || '检测失败',
+          message: result?.message || 'Ошибка проверки',
           message4: '',
           message6: '',
           complete: false,
@@ -573,7 +586,7 @@ export async function refreshOutboundIP(options?: {
           source: '',
           source4: '',
           source6: '',
-          message: '网络请求失败',
+          message: 'Ошибка сетевого запроса',
           message4: '',
           message6: '',
           complete: false,

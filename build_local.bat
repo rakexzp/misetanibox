@@ -1,9 +1,9 @@
 @echo off
 REM build_local.bat - 仅编译，不下载运行时资产
 
-echo === Building GoclashZ (local only) ===
+echo === Building Misetanibox (local only) ===
 
-echo [1/2] Building GoclashZ.exe (wails)...
+echo [1/2] Building Misetanibox.exe (wails)...
 wails build -platform windows/amd64
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Wails build failed

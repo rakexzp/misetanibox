@@ -292,7 +292,7 @@ func (m *DelayTestManager) testOneDuration(
 	case m.sem <- struct{}{}:
 		defer func() { <-m.sem }()
 	case <-ctx.Done():
-		return DelayResult{Name: name, Delay: 0, Status: "timeout", Err: ctx.Err(), Message: "任务取消"}
+		return DelayResult{Name: name, Delay: 0, Status: "timeout", Err: ctx.Err(), Message: "Задача отменена"}
 	}
 
 	return m.testOneDurationRaw(ctx, name, testURL, timeout, extra)
@@ -426,7 +426,7 @@ func (m *DelayTestManager) TestAllProxiesWithOptions(
 	m.waiters = make(map[string][]chan DelayResult)
 	m.mu.Unlock()
 
-	finishMsg := "测速完成"
+	finishMsg := "Тест задержки завершён"
 
 	defer func() {
 		cancel()
@@ -454,14 +454,14 @@ func (m *DelayTestManager) TestAllProxiesWithOptions(
 	// 🚀 核心接入：静默内核保障
 	cleanup, _, err := m.ctrl.EnsureDelayCore(ctx)
 	if err != nil {
-		finishMsg = "测速启动失败：" + err.Error()
+		finishMsg = "Не удалось запустить тест задержки: " + err.Error()
 		return
 	}
 	defer cleanup()
 
 	topo, err := buildDelayTopology()
 	if err != nil {
-		finishMsg = "读取代理拓扑失败：" + err.Error()
+		finishMsg = "Не удалось прочитать топологию прокси: " + err.Error()
 		return
 	}
 
@@ -473,7 +473,7 @@ func (m *DelayTestManager) TestAllProxiesWithOptions(
 	}
 
 	if len(targets) == 0 {
-		finishMsg = "没有可测速的有效节点"
+		finishMsg = "Нет узлов, доступных для теста задержки"
 		return
 	}
 
@@ -581,7 +581,7 @@ func (m *DelayTestManager) runBatch(
 	// 🚀 核心保护：如果正在下载更新，且 80% 以上节点超时，大概率是下载干扰，不覆盖旧结果
 	if opts.Source != DelaySourceManual && m.ctrl.isAppUpdateDownloading() && total > 0 {
 		if timeoutCount*100/total >= 80 {
-			logger.Warnf("检测到下载干扰导致大面积测速超时 (%d/%d)，放弃更新本次自动测速结果", timeoutCount, total)
+			logger.Warnf("Массовые таймауты теста задержки из-за активной загрузки (%d/%d), результаты этого автотеста отброшены", timeoutCount, total)
 			return
 		}
 	}

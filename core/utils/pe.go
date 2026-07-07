@@ -20,7 +20,7 @@ func ValidateWindowsPE(path string, minSize int64, maxSize int64) error {
 	}
 
 	if header[0] != 'M' || header[1] != 'Z' {
-		return fmt.Errorf("不是有效的 Windows PE 文件 (缺少 MZ 特征)")
+		return fmt.Errorf("не является допустимым PE-файлом Windows (нет сигнатуры MZ)")
 	}
 
 	info, err := f.Stat()
@@ -29,11 +29,11 @@ func ValidateWindowsPE(path string, minSize int64, maxSize int64) error {
 	}
 
 	if minSize > 0 && info.Size() < minSize {
-		return fmt.Errorf("文件体积过小: %d bytes (最小期望 %d bytes)", info.Size(), minSize)
+		return fmt.Errorf("файл слишком мал: %d байт (минимум %d байт)", info.Size(), minSize)
 	}
 
 	if maxSize > 0 && info.Size() > maxSize {
-		return fmt.Errorf("文件体积过大: %d bytes (最大期望 %d bytes)", info.Size(), maxSize)
+		return fmt.Errorf("файл слишком велик: %d байт (максимум %d байт)", info.Size(), maxSize)
 	}
 
 	return nil

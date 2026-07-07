@@ -421,9 +421,9 @@ func (t *TrayRuntime) addTrayIcon() error {
 	}
 
 	state := t.snapshot()
-	tip := "GoclashZ - 未选择配置"
+	tip := "Misetanibox — конфигурация не выбрана"
 	if state.ActiveConfigName != "" {
-		tip = "GoclashZ - " + state.ActiveConfigName
+		tip = "Misetanibox - " + state.ActiveConfigName
 	}
 	copy(nid.SzTip[:], windows.StringToUTF16(tip))
 
@@ -558,9 +558,9 @@ func (t *TrayRuntime) renderOnTrayThread(state appcore.AppState) {
 		return
 	}
 
-	tooltip := "GoclashZ - 未选择配置"
+	tooltip := "Misetanibox — конфигурация не выбрана"
 	if state.ActiveConfigName != "" {
-		tooltip = "GoclashZ - " + state.ActiveConfigName
+		tooltip = "Misetanibox - " + state.ActiveConfigName
 	}
 
 	t.updateTrayTooltip(tooltip)
@@ -576,29 +576,29 @@ func (t *TrayRuntime) showContextMenu() {
 	}
 	defer procDestroyMenu.Call(hMenu)
 
-	t.appendMenu(hMenu, idShow, "显示界面", false)
+	t.appendMenu(hMenu, idShow, "Показать окно", false)
 
 	procAppendMenuW.Call(hMenu, MF_SEPARATOR, 0, 0)
 
-	t.appendMenu(hMenu, idSysProxy, "系统代理", state.SystemProxy)
-	t.appendMenu(hMenu, idTun, "TUN 模式", state.Tun)
+	t.appendMenu(hMenu, idSysProxy, "Системный прокси", state.SystemProxy)
+	t.appendMenu(hMenu, idTun, "Режим TUN", state.Tun)
 
 	procAppendMenuW.Call(hMenu, MF_SEPARATOR, 0, 0)
 
 	hModeMenu, _, _ := procCreatePopupMenu.Call()
 	if hModeMenu != 0 {
-		t.appendMenu(hModeMenu, idModeRule, "规则 (Rule)", state.Mode == "rule")
-		t.appendMenu(hModeMenu, idModeGlobal, "全局 (Global)", state.Mode == "global")
-		t.appendMenu(hModeMenu, idModeDirect, "直连 (Direct)", state.Mode == "direct")
+		t.appendMenu(hModeMenu, idModeRule, "Правила (Rule)", state.Mode == "rule")
+		t.appendMenu(hModeMenu, idModeGlobal, "Глобальный (Global)", state.Mode == "global")
+		t.appendMenu(hModeMenu, idModeDirect, "Прямое (Direct)", state.Mode == "direct")
 
-		modeText, _ := windows.UTF16PtrFromString("出站模式")
+		modeText, _ := windows.UTF16PtrFromString("Режим исходящих")
 		procAppendMenuW.Call(hMenu, MF_POPUP, hModeMenu, uintptr(unsafe.Pointer(modeText)))
 	}
 
 	procAppendMenuW.Call(hMenu, MF_SEPARATOR, 0, 0)
 
-	t.appendMenu(hMenu, idRestart, "重启内核", false)
-	t.appendMenu(hMenu, idQuit, "退出程序", false)
+	t.appendMenu(hMenu, idRestart, "Перезапустить ядро", false)
+	t.appendMenu(hMenu, idQuit, "Выход", false)
 
 	var pt POINT
 	procGetCursorPos.Call(uintptr(unsafe.Pointer(&pt)))
@@ -674,7 +674,7 @@ func (t *TrayRuntime) reportTrayError(action string, err error) {
 		return
 	}
 	t.logf("error", "[Tray] %s failed: %v", action, err)
-	t.app.core.GetEvents().Emit("notify-error", fmt.Sprintf("%s失败: %v", action, err))
+	t.app.core.GetEvents().Emit("notify-error", fmt.Sprintf("Не удалось %s: %v", action, err))
 }
 
 // handleCommand executes a tray command
@@ -692,28 +692,28 @@ func (t *TrayRuntime) handleCommand(cmd TrayCommand) {
 	case TrayCmdToggleSystemProxy:
 		state := t.snapshot()
 		err := t.app.core.ToggleSystemProxy(t.ctx, !state.SystemProxy)
-		t.reportTrayError("切换系统代理", err)
+		t.reportTrayError("переключить системный прокси", err)
 
 	case TrayCmdToggleTun:
 		state := t.snapshot()
 		err := t.app.core.ToggleTunMode(t.ctx, !state.Tun)
-		t.reportTrayError("切换 TUN", err)
+		t.reportTrayError("переключить TUN", err)
 
 	case TrayCmdModeRule:
 		err := t.app.core.UpdateClashMode(t.ctx, "rule")
-		t.reportTrayError("切换模式", err)
+		t.reportTrayError("переключить режим", err)
 
 	case TrayCmdModeGlobal:
 		err := t.app.core.UpdateClashMode(t.ctx, "global")
-		t.reportTrayError("切换模式", err)
+		t.reportTrayError("переключить режим", err)
 
 	case TrayCmdModeDirect:
 		err := t.app.core.UpdateClashMode(t.ctx, "direct")
-		t.reportTrayError("切换模式", err)
+		t.reportTrayError("переключить режим", err)
 
 	case TrayCmdRestartCore:
 		err := t.app.core.RestartCoreWithReason(t.ctx, "manual")
-		t.reportTrayError("重启内核", err)
+		t.reportTrayError("перезапустить ядро", err)
 
 	case TrayCmdQuitApp:
 		t.app.safeQuit()

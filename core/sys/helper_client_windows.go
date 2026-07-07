@@ -195,7 +195,7 @@ func CheckHelperService() HelperStatusData {
 
 	installed, err := isServiceInstalled(HelperServiceName)
 	if err != nil {
-		status.Error = fmt.Sprintf("检查服务注册失败: %v", err)
+		status.Error = fmt.Sprintf("не удалось проверить регистрацию службы: %v", err)
 		return status
 	}
 	status.Installed = installed
@@ -206,7 +206,7 @@ func CheckHelperService() HelperStatusData {
 
 	running, err := isServiceRunning(HelperServiceName)
 	if err != nil {
-		status.Error = fmt.Sprintf("检查服务状态失败: %v", err)
+		status.Error = fmt.Sprintf("не удалось проверить состояние службы: %v", err)
 		return status
 	}
 	status.Running = running
@@ -217,7 +217,7 @@ func CheckHelperService() HelperStatusData {
 
 	client := NewHelperClient()
 	if err := client.Ping(); err != nil {
-		status.Error = fmt.Sprintf("服务可达性检查失败: %v", err)
+		status.Error = fmt.Sprintf("проверка доступности службы не удалась: %v", err)
 		return status
 	}
 	status.Reachable = true
@@ -251,14 +251,14 @@ func InstallOrRepairHelperServiceForUser(exePath string, userSID string) error {
 
 	if userSID != "" {
 		if err := writeAllowedSidToRegistry(userSID); err != nil {
-			return fmt.Errorf("写入 AllowedSids 注册表失败: %w", err)
+			return fmt.Errorf("не удалось записать AllowedSids в реестр: %w", err)
 		}
 
 		if err := grantServiceControlToUser(HelperServiceName, userSID); err != nil {
 			// 这里不要直接失败。
 			// 因为 f26c5ed 已经可能把旧服务 DACL 写坏，
 			// 但只要管理员进程能启动服务，Helper 仍可恢复工作。
-			logger.Warnf("设置服务 DACL 失败，继续尝试启动服务: %v", err)
+			logger.Warnf("не удалось задать DACL службы, продолжаем попытку запуска: %v", err)
 		}
 	}
 
@@ -268,17 +268,17 @@ func InstallOrRepairHelperServiceForUser(exePath string, userSID string) error {
 // RecoverHelperServiceForUser 强修复 Helper 服务
 func RecoverHelperServiceForUser(exePath string, userSID string) error {
 	if !CheckAdmin() {
-		return fmt.Errorf("需要管理员权限修复 Helper 服务")
+		return fmt.Errorf("для исправления службы Helper требуются права администратора")
 	}
 
 	if _, err := os.Stat(exePath); err != nil {
-		return fmt.Errorf("helper 程序不存在: %s: %w", exePath, err)
+		return fmt.Errorf("программа helper не найдена: %s: %w", exePath, err)
 	}
 
 	_ = StopHelperService()
 
 	if err := InstallOrRepairHelperServiceForUser(exePath, userSID); err != nil {
-		return fmt.Errorf("安装/修复 Helper 服务失败: %w", err)
+		return fmt.Errorf("не удалось установить/исправить службу Helper: %w", err)
 	}
 
 	if err := StartHelperService(); err != nil {
@@ -292,20 +292,20 @@ func RecoverHelperServiceForUser(exePath string, userSID string) error {
 				time.Sleep(1200 * time.Millisecond)
 
 				if rebuildErr := InstallOrRepairHelperServiceForUser(exePath, userSID); rebuildErr != nil {
-					return fmt.Errorf("重建 Helper 服务失败: startErr=%v retryErr=%v rebuildErr=%w", err, err2, rebuildErr)
+					return fmt.Errorf("не удалось пересоздать службу Helper: startErr=%v retryErr=%v rebuildErr=%w", err, err2, rebuildErr)
 				}
 
 				if startErr := StartHelperService(); startErr != nil {
-					return fmt.Errorf("重建后启动 Helper 服务失败: first=%v retry=%v final=%w", err, err2, startErr)
+					return fmt.Errorf("не удалось запустить службу Helper после пересоздания: first=%v retry=%v final=%w", err, err2, startErr)
 				}
 			} else {
-				return fmt.Errorf("启动 Helper 服务失败: first=%v retry=%v deleteErr=%w", err, err2, delErr)
+				return fmt.Errorf("не удалось запустить службу Helper: first=%v retry=%v deleteErr=%w", err, err2, delErr)
 			}
 		}
 	}
 
 	if err := WaitForHelperReady(30, 300*time.Millisecond); err != nil {
-		return fmt.Errorf("Helper 服务启动后不可达: %w", err)
+		return fmt.Errorf("служба Helper недоступна после запуска: %w", err)
 	}
 
 	return nil
@@ -316,12 +316,12 @@ func writeAllowedSidToRegistry(sid string) error {
 	if err != nil {
 		key, _, err = registry.CreateKey(registry.LOCAL_MACHINE, `SYSTEM\CurrentControlSet\Services\GoclashZHelper`, registry.SET_VALUE)
 		if err != nil {
-			return fmt.Errorf("打开/创建注册表项失败: %w", err)
+			return fmt.Errorf("не удалось открыть/создать раздел реестра: %w", err)
 		}
 	}
 	defer key.Close()
 	if err := key.SetStringValue("AllowedSids", sid); err != nil {
-		return fmt.Errorf("设置 AllowedSids 值失败: %w", err)
+		return fmt.Errorf("не удалось задать значение AllowedSids: %w", err)
 	}
 	return nil
 }
@@ -350,9 +350,9 @@ func WaitForHelperReady(maxRetries int, interval time.Duration) error {
 			time.Sleep(interval)
 		}
 		if err := client.Ping(); err == nil {
-			logger.Infof("helper 服务就绪 (attempt %d/%d)", i+1, maxRetries)
+			logger.Infof("служба helper готова (attempt %d/%d)", i+1, maxRetries)
 			return nil
 		}
 	}
-	return fmt.Errorf("helper 服务在 %d 次尝试后仍未就绪", maxRetries)
+	return fmt.Errorf("служба helper не готова после %d попыток", maxRetries)
 }

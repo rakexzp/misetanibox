@@ -2,10 +2,10 @@
 ; GoclashZ - 智能适配安装脚本 (适配 paths.go 逻辑)
 ; =========================================================
 
-#define MyAppName "GoclashZ"
+#define MyAppName "Misetanibox"
 #define MyAppVersion "1.2.2"
 #define MyAppPublisher "Zzz"
-#define MyAppExeName "GoclashZ.exe"
+#define MyAppExeName "Misetanibox.exe"
 
 [Setup]
 AppMutex=Global\GoclashZ_Single_Instance_Mutex
@@ -14,7 +14,7 @@ RestartApplications=no
 WizardStyle=modern dynamic includetitlebar
 VersionInfoVersion=1.2.2.0
 VersionInfoCompany=Zzz
-VersionInfoDescription=GoclashZ Installer
+VersionInfoDescription=Misetanibox Installer
 VersionInfoCopyright=Copyright (C) 2026 Zzz
 ; 基础信息
 AppName={#MyAppName}
@@ -36,13 +36,13 @@ PrivilegesRequired=lowest
 
 ; 输出设置
 OutputDir=.\build\installer
-OutputBaseFilename=GoclashZ_win_amd64_Setup
+OutputBaseFilename=Misetanibox_win_amd64_Setup
 SetupIconFile=.\build\windows\icon.ico
 Compression=lzma2/ultra64
 SolidCompression=yes
 
 [Languages]
-Name: "chinesesimp"; MessagesFile: "ChineseSimplified.isl"
+Name: "russian"; MessagesFile: "Russian.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
@@ -86,7 +86,7 @@ function IsDefaultInstallDir(): Boolean;
 var
   DefaultDir: string;
 begin
-  DefaultDir := ExpandConstant('{localappdata}\Programs\GoclashZ');
+  DefaultDir := ExpandConstant('{localappdata}\Programs\Misetanibox');
   Result := CompareText(RemoveBackslashUnlessRoot(WizardDirValue), RemoveBackslashUnlessRoot(DefaultDir)) = 0;
 end;
 
@@ -170,7 +170,7 @@ begin
 
     if not IsDefaultInstallDir() then begin
       if not IsDirWritable(WizardDirValue) then begin
-        MsgBox('当前自定义安装目录不可写。请选择普通用户可写目录，或使用默认安装目录。', mbError, MB_OK);
+        MsgBox('Выбранный каталог установки недоступен для записи. Выберите каталог, доступный обычному пользователю, или используйте каталог по умолчанию.', mbError, MB_OK);
         Result := False;
         Exit;
       end;

@@ -569,7 +569,7 @@ func installService(allowedSid string) {
 
 	s, err := m.CreateService(serviceName, exePath, mgr.Config{
 		DisplayName:  "GoclashZ Helper Service",
-		Description:  "为 GoclashZ 提供高权限能力：TUN 启动、Wintun 安装、核心文件替换、权限修复",
+		Description:  "Предоставляет GoclashZ привилегированные операции: запуск TUN, установка Wintun, замена файлов ядра, восстановление прав доступа",
 		StartType:    mgr.StartManual,
 		ErrorControl: mgr.ErrorNormal,
 	})

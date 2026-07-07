@@ -1,8 +1,11 @@
 <template>
   <div class="overview-layout">
-    <section class="hero-panel card-panel">
+    <section class="hero-panel card-panel" :class="{ 'card-has-bg': hasBg('hero') }" :style="cardStyle('hero')">
+      <span class="card-edit" @click.stop>
+        <button class="card-edit-btn" @click.stop="openCardEditor('hero')" title="Настроить картинку">✎</button>
+      </span>
       <div class="status-core">
-        <div class="restart-trigger" :class="{ 'is-loading': isRestarting }" @click="handleRestartCore" title="重启内核">
+        <div class="restart-trigger" :class="{ 'is-loading': isRestarting }" @click="handleRestartCore" title="Перезапуск ядра">
           <div class="orb-visual" v-show="!isRestarting">
             <div class="orb" :class="{ 'active': consoleServiceOn }"></div>
             <div class="orb-glow" v-if="consoleServiceOn"></div>
@@ -13,36 +16,42 @@
           </svg>
         </div>
         <div class="status-meta">
-          <span class="micro-title">服务状态</span>
+          <span class="micro-title">Статус службы</span>
           <h2 class="status-heading">{{ consoleServiceTitle }}</h2>
           <span class="version-tag">Mihomo {{ globalState.version || 'Core' }}</span>
         </div>
       </div>
       <div class="active-config-display">
-        <span class="micro-title">活动配置</span>
+        <span class="micro-title">Активная конфигурация</span>
         <div class="config-name truncate" :title="globalState.activeConfigName">
-          {{ globalState.activeConfigName || '未选定' }}
+          {{ globalState.activeConfigName || 'Не выбрана' }}
         </div>
       </div>
     </section>
 
     <section class="switch-row">
-      <div class="action-card" :class="{ 'on': sysProxyCardOn }" @click="toggleSysProxy">
+      <div class="action-card" :class="{ 'on': sysProxyCardOn, 'card-has-bg': hasBg('sysproxy') }" :style="cardStyle('sysproxy')" @click="toggleSysProxy">
+        <span class="card-edit" @click.stop>
+          <button class="card-edit-btn" @click.stop="openCardEditor('sysproxy')" title="Настроить картинку">✎</button>
+        </span>
         <div class="card-content">
           <div class="icon-ring" v-html="ICONS.sysProxy"></div>
           <div class="text-group">
-            <span class="card-title">系统代理</span>
+            <span class="card-title">Системный прокси</span>
             <span class="card-hint">{{ sysProxyLabel }}</span>
           </div>
         </div>
         <div class="status-node"></div>
       </div>
 
-      <div class="action-card" :class="{ 'on': tunCardOn }" @click="toggleTun">
+      <div class="action-card" :class="{ 'on': tunCardOn, 'card-has-bg': hasBg('tun') }" :style="cardStyle('tun')" @click="toggleTun">
+        <span class="card-edit" @click.stop>
+          <button class="card-edit-btn" @click.stop="openCardEditor('tun')" title="Настроить картинку">✎</button>
+        </span>
         <div class="card-content">
           <div class="icon-ring" v-html="ICONS.tun"></div>
           <div class="text-group">
-            <span class="card-title">虚拟网卡 (TUN)</span>
+            <span class="card-title">Режим TUN</span>
             <span class="card-hint">{{ tunLabel }}</span>
           </div>
         </div>
@@ -50,9 +59,12 @@
       </div>
     </section>
 
-    <section class="mode-section rules-card">
+    <section class="mode-section rules-card" :class="{ 'card-has-bg': hasBg('mode') }" :style="cardStyle('mode')">
+      <span class="card-edit" @click.stop>
+        <button class="card-edit-btn" @click.stop="openCardEditor('mode')" title="Настроить картинку">✎</button>
+      </span>
       <div class="rules-head">
-        <h3 class="section-heading">出站路由规则</h3>
+        <h3 class="section-heading">Режим маршрутизации</h3>
       </div>
       <div class="segmented-control">
         <div v-for="m in modes" :key="m.val" class="seg-item" :class="{ active: globalState.mode === m.val }" @click="handleModeChange(m.val)">
@@ -63,13 +75,136 @@
     </section>
 
     <TrafficCard :traffic="traffic" />
+
+    <!-- Редактор фона карточки -->
+    <Transition name="pop">
+      <div v-if="editingCard" class="modal-overlay" @click.self="editingCard = null">
+        <div class="bg-editor" @click.stop>
+          <h3>Картинка карточки</h3>
+
+          <div class="bg-editor-actions">
+            <button class="action-btn accent-btn" @click="pickCardImage(editingCard)">
+              {{ globalState.cardBgs[editingCard] ? 'Сменить картинку' : 'Своя картинка' }}
+            </button>
+            <button v-if="hasBg(editingCard)" class="action-btn" @click="clearCard(editingCard)">Убрать</button>
+          </div>
+
+          <div class="bg-presets-label">Пресеты</div>
+          <div class="bg-presets">
+            <button
+              v-for="p in BG_PRESETS"
+              :key="p.id"
+              class="bg-preset"
+              :class="{ active: cardPresets[editingCard] === p.css }"
+              :style="{ background: p.css }"
+              @click="applyPreset(editingCard, p.css)"
+              :title="p.id"
+            ></button>
+          </div>
+
+          <template v-if="globalState.cardBgs[editingCard]">
+            <label class="bg-row"><span>По горизонтали</span>
+              <input type="range" min="0" max="100" v-model.number="optsFor(editingCard).x" @input="saveCardBgOpts" />
+            </label>
+            <label class="bg-row"><span>По вертикали</span>
+              <input type="range" min="0" max="100" v-model.number="optsFor(editingCard).y" @input="saveCardBgOpts" />
+            </label>
+            <label class="bg-row"><span>Масштаб</span>
+              <input type="range" min="100" max="300" v-model.number="optsFor(editingCard).zoom" @input="saveCardBgOpts" />
+            </label>
+          </template>
+          <label v-if="hasBg(editingCard)" class="bg-row"><span>Затемнение</span>
+            <input type="range" min="0" max="90" v-model.number="optsFor(editingCard).scrim" @input="saveCardBgOpts" />
+          </label>
+
+          <div class="bg-editor-footer">
+            <button class="primary-btn accent-btn" @click="editingCard = null">Готово</button>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, reactive, computed, watch } from 'vue';
 import * as API from '../../wailsjs/go/main/App';
-import { globalState, showAlert, showConfirm, updateStateFromBackend, scheduleOutboundIPRefresh, setSystemProxyIntent, setTunIntent } from '../store';
+import { globalState, showAlert, showConfirm, updateStateFromBackend, scheduleOutboundIPRefresh, setSystemProxyIntent, setTunIntent, setCardBg } from '../store';
+
+// готовые пресеты-градиенты (без веса ассетов)
+const BG_PRESETS: { id: string; css: string }[] = [
+  { id: 'aurora', css: 'linear-gradient(135deg, #667eea, #764ba2)' },
+  { id: 'sunset', css: 'linear-gradient(135deg, #ff6a00, #ee0979)' },
+  { id: 'ocean',  css: 'linear-gradient(135deg, #2193b0, #6dd5ed)' },
+  { id: 'forest', css: 'linear-gradient(135deg, #11998e, #38ef7d)' },
+  { id: 'fire',   css: 'linear-gradient(135deg, #f12711, #f5af19)' },
+  { id: 'grape',  css: 'linear-gradient(135deg, #8e2de2, #4a00e0)' },
+  { id: 'night',  css: 'linear-gradient(135deg, #232526, #414345)' },
+  { id: 'steel',  css: 'linear-gradient(135deg, #485563, #29323c)' },
+];
+// выбранный пресет-градиент на карточку (когда нет загруженной картинки)
+const cardPresets = reactive<Record<string, string>>(
+  JSON.parse(localStorage.getItem('mise_cardPresets') || '{}')
+);
+const saveCardPresets = () => localStorage.setItem('mise_cardPresets', JSON.stringify(cardPresets));
+
+// пер-карточные настройки положения/масштаба/затемнения фона
+interface CardBgOpts { x: number; y: number; zoom: number; scrim: number }
+const defaultBgOpts = (): CardBgOpts => ({ x: 50, y: 50, zoom: 100, scrim: 45 });
+const cardBgOpts = reactive<Record<string, CardBgOpts>>(
+  JSON.parse(localStorage.getItem('mise_cardBgOpts') || '{}')
+);
+const saveCardBgOpts = () => localStorage.setItem('mise_cardBgOpts', JSON.stringify(cardBgOpts));
+const optsFor = (key: string): CardBgOpts => {
+  if (!cardBgOpts[key]) cardBgOpts[key] = defaultBgOpts();
+  return cardBgOpts[key];
+};
+
+const editingCard = ref<string | null>(null);
+const openCardEditor = (key: string) => { optsFor(key); editingCard.value = key; };
+
+const hasBg = (key: string) => !!(globalState.cardBgs[key] || cardPresets[key]);
+
+const cardStyle = (key: string) => {
+  const upload = globalState.cardBgs[key];
+  const preset = cardPresets[key];
+  if (!upload && !preset) return {};
+  const o = optsFor(key);
+  return {
+    // загруженная картинка → url(); пресет → сам градиент
+    backgroundImage: upload ? `url(${upload})` : preset,
+    backgroundPosition: `${o.x}% ${o.y}%`,
+    // 100 = cover (полностью покрывает карточку), выше = приближение (для градиентов не важно)
+    backgroundSize: o.zoom <= 100 ? 'cover' : `${o.zoom}%`,
+    '--card-scrim': String(o.scrim / 100),
+  } as any;
+};
+
+const pickCardImage = async (key: string) => {
+  try {
+    const url = await (API as any).SetCardBg(key);
+    if (url) {
+      // загруженная картинка заменяет пресет
+      delete cardPresets[key]; saveCardPresets();
+      setCardBg(key, url); optsFor(key);
+    }
+  } catch (e) {
+    await showAlert('Не удалось загрузить картинку: ' + e, 'Ошибка', true);
+  }
+};
+const applyPreset = async (key: string, css: string) => {
+  // пресет заменяет загруженную картинку
+  try { await (API as any).ClearCardBg(key); } catch { /* ignore */ }
+  setCardBg(key, '');
+  cardPresets[key] = css; saveCardPresets();
+  optsFor(key);
+};
+const clearCard = async (key: string) => {
+  try { await (API as any).ClearCardBg(key); } catch { /* ignore */ }
+  setCardBg(key, '');
+  delete cardPresets[key]; saveCardPresets();
+  editingCard.value = null;
+};
 import { ICONS } from '../utils/icons';
 import TrafficCard from './TrafficCard.vue';
 
@@ -87,9 +222,9 @@ defineProps<{
 }>();
 
 const modes = [
-  { label: '规则分流', val: 'rule' },
-  { label: '全局代理', val: 'global' },
-  { label: '直接连接', val: 'direct' }
+  { label: 'Правила', val: 'rule' },
+  { label: 'Глобальный', val: 'global' },
+  { label: 'Прямое соединение', val: 'direct' }
 ];
 
 const sliderStyle = computed(() => ({
@@ -103,27 +238,27 @@ const actualActive = computed(() => globalState.actualSystemProxy || globalState
 const consoleServiceOn = computed(() => desiredActive.value || actualActive.value);
 
 const consoleServiceTitle = computed(() => {
-  if (isRestarting.value) return '内核重启中...';
+  if (isRestarting.value) return 'Перезапуск ядра...';
   // TUN 开启时：用 actualTun 判断，与 IP 检测的 state.Tun 一致
-  if (globalState.tun && globalState.actualTun) return '接管中';
+  if (globalState.tun && globalState.actualTun) return 'Перехват активен';
   // 系统代理：用 isRunning 判断
-  if (globalState.systemProxy && globalState.isRunning) return '接管中';
-  if (actualActive.value) return '运行中';
-  return '服务停止';
+  if (globalState.systemProxy && globalState.isRunning) return 'Перехват активен';
+  if (actualActive.value) return 'Работает';
+  return 'Служба остановлена';
 });
 
 const handleRestartCore = async () => {
   if (isRestarting.value) return;
-  const ok = await showConfirm("确定要重新启动内核服务吗？这可能会导致短暂的网络中断。", "重启内核");
+  const ok = await showConfirm("Перезапустить службу ядра? Возможен кратковременный обрыв сети.", "Перезапуск ядра");
   if (!ok) return;
   isRestarting.value = true;
   try {
     await (API as any).RestartCore();
     isRestarting.value = false;
-    await showAlert("内核服务已成功重启", '成功');
+    await showAlert("Служба ядра успешно перезапущена", 'Успешно');
   } catch (e) {
     isRestarting.value = false;
-    await showAlert("重启失败: " + e, '错误');
+    await showAlert("Перезапуск не удался: " + e, 'Ошибка');
   }
 };
 
@@ -135,14 +270,14 @@ const tunCardOn = computed(() => globalState.tun);
 
 const sysProxyLabel = computed(() => {
   return sysProxyCardOn.value
-    ? '已修改系统网络层设置'
-    : '未接管系统 HTTP 流量';
+    ? 'Системные настройки сети изменены'
+    : 'HTTP-трафик не перехватывается';
 });
 
 const tunLabel = computed(() => {
   return tunCardOn.value
-    ? '高优先级虚拟设备已挂载'
-    : '透明代理驱动未加载';
+    ? 'Виртуальный адаптер подключён'
+    : 'Драйвер прозрачного прокси не загружен';
 });
 
 const toggleSysProxy = async () => {
@@ -164,9 +299,9 @@ const toggleSysProxy = async () => {
 
     const msg = String(err?.message || err || '');
     if (msg.includes('no active config selected') || msg.includes('ErrNoActiveConfig')) {
-      showAlert('尚未添加配置\n\n启用系统代理前，请先添加并应用一个配置文件。', '提示');
+      showAlert('Конфигурация не добавлена\n\nПеред включением системного прокси добавьте и примените конфигурацию.', 'Внимание');
     } else {
-      showAlert('系统代理启用失败: ' + msg, '错误', true);
+      showAlert('Не удалось включить системный прокси: ' + msg, 'Ошибка', true);
     }
   } finally {
     globalState.systemProxyPending = false;
@@ -191,8 +326,8 @@ const toggleTun = async () => {
 
     if (msg.includes('helper_install_required') || msg.includes('helper_repair_required')) {
       const confirmed = await showConfirm(
-        'TUN 模式需要初始化后台服务 (GoclashZHelper)\n\n此操作只需管理员确认一次，之后可无感启用 TUN 和开机恢复。',
-        '需要初始化后台服务'
+        'Режиму TUN нужна инициализация фоновой службы (GoclashZHelper)\n\nПодтверждение администратора требуется один раз, дальше TUN и автовосстановление работают без запросов.',
+        'Нужна фоновая служба'
       );
 
       if (confirmed) {
@@ -205,7 +340,7 @@ const toggleTun = async () => {
           return;
         } catch (e: any) {
           setTunIntent(previous);
-          showAlert('初始化后台服务失败: ' + String(e?.message || e), '错误', true);
+          showAlert('Не удалось инициализировать фоновую службу: ' + String(e?.message || e), 'Ошибка', true);
           return;
         }
       }
@@ -218,11 +353,11 @@ const toggleTun = async () => {
     setTunIntent(previous);
 
     if (msg.includes('no active config selected') || msg.includes('ErrNoActiveConfig')) {
-      showAlert('尚未添加配置\n\n启用虚拟网卡前，请先添加并应用一个配置文件。', '提示');
+      showAlert('Конфигурация не добавлена\n\nПеред включением режима TUN добавьте и примените конфигурацию.', 'Внимание');
     } else if (msg.includes('wintun_missing') || msg.includes('Wintun')) {
-      showAlert('缺少 Wintun 驱动，请在「组件与库更新」页面安装 Wintun 驱动。', '缺少依赖', true);
+      showAlert('Отсутствует драйвер Wintun. Установите его на странице «Обновление компонентов».', 'Нет зависимости', true);
     } else {
-      showAlert('虚拟网卡启用失败: ' + msg, '错误', true);
+      showAlert('Не удалось включить режим TUN: ' + msg, 'Ошибка', true);
     }
   } finally {
     globalState.tunPending = false;
@@ -274,7 +409,7 @@ const runModeWorker = async (targetMode: string) => {
     updateStateFromBackend(latest);
   } catch (err) {
     globalState.mode = previousMode;
-    await showAlert("模式切换失败: " + err, '错误');
+    await showAlert("Не удалось переключить режим: " + err, 'Ошибка');
   } finally {
     if (pendingModeTarget !== null && pendingModeTarget !== targetMode) {
       const next = pendingModeTarget;
@@ -289,7 +424,61 @@ const runModeWorker = async (targetMode: string) => {
 </script>
 
 <style scoped>
-.overview-layout { display: flex; flex-direction: column; gap: 24px; min-height: 100%; overflow: visible; }
+.overview-layout { display: flex; flex-direction: column; gap: 24px; min-height: 100%; overflow: visible; position: relative; }
+
+/* карточки — позиционирующий контекст для кнопок редактирования и скрима */
+.hero-panel, .action-card, .mode-section { position: relative; }
+
+/* пер-карточная картинка: фон карточки + затемняющий скрим для читаемости текста.
+   Размер/позицию задаёт инлайн-стиль из редактора — здесь БЕЗ !important, иначе перебьёт. */
+.card-has-bg { background-repeat: no-repeat; position: relative; }
+.card-has-bg > *:not(.card-edit) { position: relative; z-index: 1; }
+.card-has-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(0, 0, 0, var(--card-scrim, 0.45));
+  z-index: 0;
+}
+/* поверх картинки текст белый */
+.card-has-bg .card-title, .card-has-bg .card-hint, .card-has-bg .status-heading,
+.card-has-bg .micro-title, .card-has-bg .version-tag, .card-has-bg .section-heading,
+.card-has-bg .config-name { color: #fff !important; }
+
+/* кнопки редактирования картинки на карточке (появляются при наведении) */
+.card-edit {
+  position: absolute; top: 8px; right: 8px; z-index: 2;
+  display: flex; gap: 4px; opacity: 0; transition: opacity 0.15s;
+}
+.hero-panel:hover .card-edit, .action-card:hover .card-edit, .mode-section:hover .card-edit { opacity: 1; }
+.card-edit-btn {
+  width: 24px; height: 24px; border-radius: 7px; border: none; cursor: pointer;
+  background: rgba(0,0,0,0.45); color: #fff; font-size: 13px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+}
+.card-edit-btn:hover { background: rgba(0,0,0,0.7); }
+
+/* редактор фона карточки */
+.bg-editor {
+  width: 100%; max-width: 360px;
+  background: var(--surface); border: 1px solid var(--surface-hover);
+  border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 12px;
+}
+.bg-editor h3 { margin: 0; font-size: 1.05rem; color: var(--text-main); }
+.bg-editor-actions { display: flex; gap: 8px; }
+.bg-editor-actions .action-btn { flex: 1; }
+.bg-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 0.85rem; color: var(--text-sub); }
+.bg-row span { flex-shrink: 0; width: 110px; }
+.bg-row input[type="range"] { flex: 1; accent-color: var(--accent); }
+.bg-editor-footer { display: flex; justify-content: flex-end; margin-top: 4px; }
+.bg-presets-label { font-size: 0.78rem; color: var(--text-muted); }
+.bg-presets { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
+.bg-preset {
+  aspect-ratio: 1; border-radius: 8px; border: 2px solid transparent; cursor: pointer; padding: 0;
+}
+.bg-preset:hover { transform: scale(1.08); }
+.bg-preset.active { border-color: var(--text-main); box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent); }
 .hero-panel { padding: 28px 24px; background: var(--surface); border-radius: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: center; box-shadow: 0 4px 20px rgba(0,0,0,0.03); }
 .status-core { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; }
 .restart-trigger { position: absolute; left: 10px; width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 50%; transition: 0.3s; }
