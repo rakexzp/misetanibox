@@ -32,7 +32,7 @@ func Export(dataDir, destPath string, appVersion string) error {
 	// 1. 创建临时目录进行快照
 	stagingDir, err := os.MkdirTemp(filepath.Dir(dataDir), ".goclashz-export-*")
 	if err != nil {
-		return fmt.Errorf("创建临时导出目录失败: %v", err)
+		return fmt.Errorf("не удалось создать временный каталог экспорта: %v", err)
 	}
 	defer os.RemoveAll(stagingDir)
 
@@ -74,7 +74,7 @@ func Export(dataDir, destPath string, appVersion string) error {
 
 	// 3. 生成 manifest.json
 	manifest := Manifest{
-		App:           "GoclashZ",
+		App:           "Misetanibox",
 		BackupVersion: CurrentBackupVersion,
 		AppVersion:    appVersion,
 		CreatedAt:     time.Now().Unix(),
@@ -82,16 +82,16 @@ func Export(dataDir, destPath string, appVersion string) error {
 	}
 	mBytes, err := json.MarshalIndent(manifest, "", "  ")
 	if err != nil {
-		return fmt.Errorf("生成备份 manifest 失败: %w", err)
+		return fmt.Errorf("не удалось сформировать manifest резервной копии: %w", err)
 	}
 	if err := utils.WriteFileAtomic(filepath.Join(stagingDir, "manifest.json"), mBytes, 0644); err != nil {
-		return fmt.Errorf("写入备份 manifest 失败: %w", err)
+		return fmt.Errorf("не удалось записать manifest резервной копии: %w", err)
 	}
 
 	// 4. 执行压缩打包
 	f, err := os.Create(destPath)
 	if err != nil {
-		return fmt.Errorf("创建备份文件失败: %v", err)
+		return fmt.Errorf("не удалось создать файл резервной копии: %v", err)
 	}
 	defer f.Close()
 
@@ -153,14 +153,14 @@ func RestoreTransactional(ctx context.Context, dataDir, archivePath, mode string
 		if !stagingResult.HasIndex {
 			rebuilt, err := rebuildIndexFromSubscriptions(stagingDir)
 			if err != nil {
-				return fmt.Errorf("备份缺少 profiles/index.json，且无法从 Subscriptions 重建索引: %w", err)
+				return fmt.Errorf("в резервной копии отсутствует profiles/index.json, и восстановить индекс из Subscriptions не удалось: %w", err)
 			}
 			stagingResult.Index = rebuilt
 			stagingResult.HasIndex = true
 		}
 
 		if stagingResult.IndexErr != nil {
-			return fmt.Errorf("备份订阅索引解析失败: %v", stagingResult.IndexErr)
+			return fmt.Errorf("не удалось разобрать индекс подписок в резервной копии: %v", stagingResult.IndexErr)
 		}
 	}
 
@@ -179,7 +179,7 @@ func RestoreTransactional(ctx context.Context, dataDir, archivePath, mode string
 
 	// 6. 备份当前受影响的目标到 rollback 目录，用于失败回滚
 	if err := backupCurrentTargets(dataDir, plan, rollbackDir); err != nil {
-		return fmt.Errorf("备份当前数据失败，取消恢复: %v", err)
+		return fmt.Errorf("не удалось создать резервную копию текущих данных, восстановление отменено: %v", err)
 	}
 
 	if mode == "subs-merge" && len(stagingResult.Index) == 0 {
@@ -193,7 +193,7 @@ func RestoreTransactional(ctx context.Context, dataDir, archivePath, mode string
 	if err := applyRestorePlan(dataDir, stagingDir, plan, mode, stagingResult.Index); err != nil {
 		// 8. 执行失败，尝试从 rollback 目录恢复
 		_ = rollbackRestorePlan(dataDir, rollbackDir, plan)
-		return fmt.Errorf("恢复执行失败，已尝试自动回滚: %v", err)
+		return fmt.Errorf("восстановление не удалось, выполнен автоматический откат: %v", err)
 	}
 
 	return nil
@@ -238,7 +238,7 @@ func validateRestorePlanInputs(stagingDir string, plan *RestorePlan, mode string
 		}
 
 		if _, err := os.Stat(filepath.Join(stagingDir, target)); err != nil {
-			return fmt.Errorf("备份包缺少恢复模式 %s 所需目标: %s", mode, target)
+			return fmt.Errorf("в архиве резервной копии отсутствует цель, необходимая для режима восстановления %s: %s", mode, target)
 		}
 	}
 
@@ -307,16 +307,16 @@ func backupCurrentTargets(dataDir string, plan *RestorePlan, rollbackDir string)
 			continue
 		}
 		if err != nil {
-			return fmt.Errorf("读取当前目标失败 %s: %w", target, err)
+			return fmt.Errorf("не удалось прочитать текущую цель %s: %w", target, err)
 		}
 
 		if info.IsDir() {
 			if err := copyDir(src, dst); err != nil {
-				return fmt.Errorf("备份目录失败 %s: %w", target, err)
+				return fmt.Errorf("не удалось создать резервную копию каталога %s: %w", target, err)
 			}
 		} else {
 			if err := copyFile(src, dst); err != nil {
-				return fmt.Errorf("备份文件失败 %s: %w", target, err)
+				return fmt.Errorf("не удалось создать резервную копию файла %s: %w", target, err)
 			}
 		}
 	}
@@ -353,7 +353,7 @@ func validateRestoreMode(mode string) error {
 	case "all", "settings", "subs", "subs-merge":
 		return nil
 	default:
-		return fmt.Errorf("不支持的恢复模式: %s", mode)
+		return fmt.Errorf("неподдерживаемый режим восстановления: %s", mode)
 	}
 }
 
@@ -367,25 +367,25 @@ func validateManifest(stagingDir string) error {
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return fmt.Errorf("读取备份 manifest 失败: %w", err)
+		return fmt.Errorf("не удалось прочитать manifest резервной копии: %w", err)
 	}
 
 	var manifest Manifest
 	if err := json.Unmarshal(data, &manifest); err != nil {
-		return fmt.Errorf("备份 manifest 格式损坏: %w", err)
+		return fmt.Errorf("manifest резервной копии повреждён: %w", err)
 	}
 
-	if strings.TrimSpace(manifest.App) != "GoclashZ" {
-		return fmt.Errorf("备份文件校验失败: 归属应用不匹配 (%s)", manifest.App)
+	if app := strings.TrimSpace(manifest.App); app != "Misetanibox" && app != "GoclashZ" {
+		return fmt.Errorf("проверка файла резервной копии не пройдена: приложение не совпадает (%s)", manifest.App)
 	}
 
 	if manifest.BackupVersion <= 0 {
-		return fmt.Errorf("备份 manifest 缺少有效 backupVersion")
+		return fmt.Errorf("в manifest резервной копии нет корректного backupVersion")
 	}
 
 	if manifest.BackupVersion > CurrentBackupVersion {
 		return fmt.Errorf(
-			"备份版本过高，当前程序不支持: backupVersion=%d, supported=%d",
+			"версия резервной копии слишком новая, не поддерживается текущей программой: backupVersion=%d, supported=%d",
 			manifest.BackupVersion,
 			CurrentBackupVersion,
 		)
@@ -410,7 +410,7 @@ func extractAndNormalizeToStaging(archivePath, stagingDir string) (*BackupStagin
 	)
 
 	if len(zr.File) > maxRestoreFiles {
-		return nil, fmt.Errorf("备份包内文件过多")
+		return nil, fmt.Errorf("слишком много файлов в архиве резервной копии")
 	}
 
 	var totalUncompressed uint64
@@ -426,11 +426,11 @@ func extractAndNormalizeToStaging(archivePath, stagingDir string) (*BackupStagin
 		}
 
 		if f.UncompressedSize64 > maxRestoreSingle {
-			return nil, fmt.Errorf("文件过大: %s", f.Name)
+			return nil, fmt.Errorf("файл слишком большой: %s", f.Name)
 		}
 		totalUncompressed += f.UncompressedSize64
 		if totalUncompressed > maxRestoreTotal {
-			return nil, fmt.Errorf("备份包总体积超出限制")
+			return nil, fmt.Errorf("общий размер архива резервной копии превышает лимит")
 		}
 
 		// 提前解析索引文件
@@ -613,12 +613,12 @@ func safeJoinUnder(base, rel string) (string, error) {
 	rel = filepath.FromSlash(rel)
 
 	if filepath.IsAbs(rel) {
-		return "", fmt.Errorf("拒绝绝对路径: %s", rel)
+		return "", fmt.Errorf("абсолютный путь отклонён: %s", rel)
 	}
 
 	clean := filepath.Clean(rel)
 	if clean == "." || clean == ".." || strings.HasPrefix(clean, ".."+string(os.PathSeparator)) {
-		return "", fmt.Errorf("拒绝路径穿越: %s", rel)
+		return "", fmt.Errorf("обход пути (path traversal) отклонён: %s", rel)
 	}
 
 	baseAbs, err := filepath.Abs(base)
@@ -633,7 +633,7 @@ func safeJoinUnder(base, rel string) (string, error) {
 
 	backRel, err := filepath.Rel(baseAbs, targetAbs)
 	if err != nil || backRel == ".." || strings.HasPrefix(backRel, ".."+string(os.PathSeparator)) {
-		return "", fmt.Errorf("目标路径逃逸 staging: %s", rel)
+		return "", fmt.Errorf("целевой путь выходит за пределы staging: %s", rel)
 	}
 
 	return targetAbs, nil
@@ -713,7 +713,7 @@ func rebuildIndexFromSubscriptions(stagingDir string) ([]clash.SubIndexItem, err
 	}
 
 	if len(items) == 0 {
-		return nil, fmt.Errorf("备份中未找到可恢复的订阅配置文件")
+		return nil, fmt.Errorf("в резервной копии не найдено конфигураций подписок для восстановления")
 	}
 
 	return items, nil

@@ -19,7 +19,7 @@ func (c *Controller) ExportBackup(destPath string) error {
 // RestoreBackup 事务化业务恢复编排：停核 -> 事务还原文件 -> 重载状态 -> 重启或构建运行时配置
 func (c *Controller) RestoreBackup(ctx context.Context, selected string, mode string) error {
 	if selected == "" {
-		return fmt.Errorf("未选择有效的备份文件")
+		return fmt.Errorf("Не выбран корректный файл резервной копии")
 	}
 
 	// 1. 获取核心并发锁与运行状态锁
@@ -62,13 +62,13 @@ func (c *Controller) RestoreBackup(ctx context.Context, selected string, mode st
 
 	if err := clash.MigrateRuleStorageV2(); err != nil {
 		c.SyncState()
-		return fmt.Errorf("备份已恢复，但规则存储迁移失败: %w", err)
+		return fmt.Errorf("Резервная копия восстановлена, но не удалось перенести хранилище правил: %w", err)
 	}
 
 	// 热重载应用行为配置
 	if err := c.Behavior.Load(); err != nil {
 		c.SyncState()
-		return fmt.Errorf("配置文件还原成功但重载失败: %v", err)
+		return fmt.Errorf("Конфигурация восстановлена успешно, но не удалось её перезагрузить: %v", err)
 	}
 
 	// 5. 恢复运行态或重载配置
@@ -76,7 +76,7 @@ func (c *Controller) RestoreBackup(ctx context.Context, selected string, mode st
 		err := c.EnsureCoreRunning(ctx)
 		if err != nil {
 			c.SyncState()
-			return fmt.Errorf("还原成功但启动内核失败: %v", err)
+			return fmt.Errorf("Восстановление успешно, но не удалось запустить ядро: %v", err)
 		}
 	} else {
 		// 未运行时，仅静默更新一次 runtime config 以确保下一次启动使用的是新配置

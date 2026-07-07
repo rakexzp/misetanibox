@@ -16,10 +16,10 @@ import (
 
 func DownloadLargeAssetAtomic(ctx context.Context, opt Options) error {
 	if strings.TrimSpace(opt.DestPath) == "" {
-		return fmt.Errorf("DestPath 为空")
+		return fmt.Errorf("DestPath пуст")
 	}
 	if len(opt.URLs) == 0 {
-		return fmt.Errorf("下载地址为空")
+		return fmt.Errorf("адрес загрузки пуст")
 	}
 
 	unlock := lockDest(opt.DestPath)
@@ -37,7 +37,7 @@ func DownloadLargeAssetAtomic(ctx context.Context, opt Options) error {
 	var lastErr error
 	ua := opt.UserAgent
 	if ua == "" {
-		ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) GoclashZ/1.0"
+		ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Misetanibox/1.0"
 	}
 
 	attempts := opt.AttemptsPerEndpoint
@@ -149,7 +149,7 @@ func DownloadLargeAssetAtomic(ctx context.Context, opt Options) error {
 
 				if opt.MaxBytes > 0 && resp.BytesComplete() > opt.MaxBytes {
 					_ = os.Remove(tmpPath)
-					lastErr = fmt.Errorf("下载文件超过大小限制")
+					lastErr = fmt.Errorf("загруженный файл превышает лимит размера")
 					break
 				}
 
@@ -158,7 +158,7 @@ func DownloadLargeAssetAtomic(ctx context.Context, opt Options) error {
 					if err != nil {
 						if opt.RequireGitHubSHA {
 							_ = os.Remove(tmpPath)
-							lastErr = fmt.Errorf("获取 SHA256 失败: %v", err)
+							lastErr = fmt.Errorf("не удалось получить SHA256: %v", err)
 							break
 						}
 					} else if expectedSHA != "" {
@@ -173,7 +173,7 @@ func DownloadLargeAssetAtomic(ctx context.Context, opt Options) error {
 				if opt.Validator != nil {
 					if err := opt.Validator(tmpPath); err != nil {
 						_ = os.Remove(tmpPath)
-						lastErr = fmt.Errorf("安全校验失败: %v", err)
+						lastErr = fmt.Errorf("проверка безопасности не пройдена: %v", err)
 						break
 					}
 				}
@@ -204,7 +204,7 @@ func DownloadLargeAssetAtomic(ctx context.Context, opt Options) error {
 	}
 
 	if lastErr == nil {
-		lastErr = fmt.Errorf("下载失败")
+		lastErr = fmt.Errorf("загрузка не удалась")
 	}
 
 	return SanitizeDownloadError(lastErr)

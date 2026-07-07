@@ -1,3 +1,12 @@
+/* Twemoji Country Flags — Windows/Chromium не рисует эмодзи-флаги; этот шрифт содержит
+   только глифы флагов, поэтому используется браузером лишь для их кодпоинтов. */
+@font-face {
+    font-family: 'Twemoji Country Flags';
+    src: url('/webfonts/TwemojiCountryFlags.woff2') format('woff2');
+    font-display: swap;
+    unicode-range: U+1F1E6-1F1FF;
+}
+
 @font-face {
     font-family: 'JetBrains Mono';
     src: url('/webfonts/JetBrainsMono-Regular.woff2') format('woff2');
@@ -98,8 +107,8 @@ textarea,
 }
 
 :root {
-    --font-sans: 'JetBrains Mono', 'MiSans', 'Microsoft YaHei', sans-serif;
-    --font-mono: 'JetBrains Mono', 'MiSans', monospace;
+    --font-sans: 'Twemoji Country Flags', 'Segoe UI', 'MiSans', system-ui, 'Microsoft YaHei', sans-serif;
+    --font-mono: 'Twemoji Country Flags', 'JetBrains Mono', 'MiSans', monospace;
 
     /* 将侧边栏宽度从 180px 进一步缩减到 160px */
     --sidebar-width: 160px;

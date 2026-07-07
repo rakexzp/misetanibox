@@ -126,7 +126,7 @@ func CleanupLegacyAssets() {
 
 		if same {
 			if err := os.Remove(path); err == nil {
-				log.Printf("[runtimeassets] 成功清除旧同名残留文件: %s", path)
+				log.Printf("[runtimeassets] удалён устаревший остаточный файл с тем же именем: %s", path)
 				return
 			}
 		}
@@ -135,7 +135,7 @@ func CleanupLegacyAssets() {
 		_ = os.MkdirAll(backupDir, 0755)
 		backupPath := filepath.Join(backupDir, filepath.Base(path))
 		if err := os.Rename(path, backupPath); err == nil {
-			log.Printf("[runtimeassets] 备份并归档冲突旧资产: %s -> %s", path, backupPath)
+			log.Printf("[runtimeassets] конфликтующий старый ресурс перемещён в резервную копию: %s -> %s", path, backupPath)
 		} else {
 			_ = os.Remove(path) // 退而求其次，直接删掉
 		}

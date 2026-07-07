@@ -1,32 +1,37 @@
 <template>
   <div class="rules-view">
     <div v-if="!globalState.activeConfigId" class="empty-state-view">
-      <div class="empty-msg">请先在“订阅管理”中选择并启动一个配置文件</div>
+      <div class="empty-msg">Сначала выберите и запустите конфигурацию в разделе «Подписки»</div>
     </div>
     <template v-else>
       <div class="rules-header page-sticky-mask">
         <div v-if="isRemote" class="rules-tabs-viewport">
           <div class="rules-tabs-track" ref="tabsTrackRef">
-            <button :ref="(el) => { if (ruleTab === 'subscription') ruleTabEl = el as HTMLElement | null }" class="rules-tab-btn" :class="{ active: ruleTab === 'subscription' }" @click="ruleTab = 'subscription'" title="显示当前工作配置中的规则；如果你直接编辑配置文件 rules，这里会同步变化。">当前规则</button>
-            <button :ref="(el) => { if (ruleTab === 'add') ruleTabEl = el as HTMLElement | null }" class="rules-tab-btn" :class="{ active: ruleTab === 'add' }" @click="ruleTab = 'add'">附加规则</button>
-            <button :ref="(el) => { if (ruleTab === 'delete') ruleTabEl = el as HTMLElement | null }" class="rules-tab-btn" :class="{ active: ruleTab === 'delete' }" @click="ruleTab = 'delete'">附加删除</button>
+            <button :ref="(el) => { if (ruleTab === 'subscription') ruleTabEl = el as HTMLElement | null }" class="rules-tab-btn" :class="{ active: ruleTab === 'subscription' }" @click="ruleTab = 'subscription'" title="Правила текущей рабочей конфигурации; правки rules в файле отражаются здесь.">Текущие</button>
+            <button :ref="(el) => { if (ruleTab === 'add') ruleTabEl = el as HTMLElement | null }" class="rules-tab-btn" :class="{ active: ruleTab === 'add' }" @click="ruleTab = 'add'">Дополнительные</button>
+            <button :ref="(el) => { if (ruleTab === 'delete') ruleTabEl = el as HTMLElement | null }" class="rules-tab-btn" :class="{ active: ruleTab === 'delete' }" @click="ruleTab = 'delete'">Исключения</button>
+            <button :ref="(el) => { if (effectiveTab === 'apps') ruleTabEl = el as HTMLElement | null }" class="rules-tab-btn" :class="{ active: effectiveTab === 'apps' }" @click="ruleTab = 'apps'" title="Маршрутизация трафика по приложениям">Приложения</button>
             <div class="rules-tab-slider" :class="{ animated: ruleSliderReady }" v-show="ruleSliderVisible" :style="ruleSliderStyle"></div>
           </div>
         </div>
 
         <div v-if="isRemote" class="rules-header-spacer"></div>
 
-        <div class="search-bar" :class="{ compact: isRemote }">
-          <span v-html="ICONS.search"></span>
-          <input v-model="searchQuery" placeholder="搜索规则..." />
-        </div>
+        <template v-if="effectiveTab !== 'apps'">
+          <div class="search-bar" :class="{ compact: isRemote }">
+            <span v-html="ICONS.search"></span>
+            <input v-model="searchQuery" placeholder="Поиск правил..." />
+          </div>
 
-        <button class="primary-btn header-action-btn" @click="openAddModal" :disabled="loading">
-          <span class="btn-icon" v-html="ICONS.plus"></span> 添加规则
-        </button>
+          <button class="primary-btn header-action-btn" @click="openAddModal" :disabled="loading">
+            <span class="btn-icon" v-html="ICONS.plus"></span> Добавить правило
+          </button>
+        </template>
       </div>
 
-      <div class="rules-grid">
+      <AppRoutingPanel v-if="effectiveTab === 'apps'" :config-id="globalState.activeConfigId" />
+
+      <div v-else class="rules-grid">
         <div v-for="rule in paginatedRules" :key="rule.originalIndex" class="rule-card">
           <div class="rule-main">
             <div class="rule-type tag-primary">{{ rule.type }}</div>
@@ -41,20 +46,20 @@
         </div>
         
         <div v-if="!loading && !hasFilteredRules" class="loading-state">
-          {{ searchQuery ? '没有找到匹配的规则' : '暂无规则' }}
+          {{ searchQuery ? 'Правила не найдены' : 'Правил нет' }}
         </div>
       </div>
 
-      <div class="pagination-bar" v-if="hasFilteredRules">
-        <span class="page-info">共 {{ totalFilteredCount }} 条</span>
+      <div class="pagination-bar" v-if="effectiveTab !== 'apps' && hasFilteredRules">
+        <span class="page-info">Всего: {{ totalFilteredCount }}</span>
         
         <div class="pagination-controls">
-          <button class="page-btn" @click="currentPage--" :disabled="currentPage <= 1">&lt; 上一页</button>
+          <button class="page-btn" @click="currentPage--" :disabled="currentPage <= 1">&lt; Назад</button>
           <span class="page-status">{{ currentPage }} / {{ totalPages }}</span>
-          <button class="page-btn" @click="currentPage++" :disabled="currentPage >= totalPages">下一页 &gt;</button>
+          <button class="page-btn" @click="currentPage++" :disabled="currentPage >= totalPages">Вперёд &gt;</button>
         </div>
 
-        <div class="tip-text">新规则自动置于首位</div>
+        <div class="tip-text">Новые правила ставятся в начало</div>
       </div>
     </template>
 
@@ -66,7 +71,7 @@
           </div>
           <div class="modal-body rule-form-body">
             <div class="rule-form-row">
-              <label>类型</label>
+              <label>Тип</label>
               <ModernSelect
                 v-model="selectedRuleType"
                 :options="ruleTypeOptions"
@@ -75,7 +80,7 @@
             </div>
 
             <div v-if="needPayload" class="rule-form-row">
-              <label>{{ currentRuleTypeMeta?.payloadLabel || '内容' }}</label>
+              <label>{{ currentRuleTypeMeta?.payloadLabel || 'Значение' }}</label>
               <input
                 v-model="rulePayload"
                 class="modal-input compact-rule-input"
@@ -85,7 +90,7 @@
             </div>
 
             <div v-if="needPolicy" class="rule-form-row">
-              <label>策略</label>
+              <label>Политика</label>
               <ModernSelect
                 v-model="selectedPolicy"
                 :options="rulePolicyOptions"
@@ -94,13 +99,13 @@
             </div>
 
             <div class="rule-preview">
-              <span class="preview-label">预览</span>
+              <span class="preview-label">Предпросмотр</span>
               <code>{{ rulePreview }}</code>
             </div>
 
             <div class="modal-footer">
-              <button class="action-btn flex-1" @click="showAddModal = false">取消</button>
-              <button class="primary-btn accent-btn flex-1" @click="handleAddFromForm" :disabled="!canSubmitRule || loading">确定添加</button>
+              <button class="action-btn flex-1" @click="showAddModal = false">Отмена</button>
+              <button class="primary-btn accent-btn flex-1" @click="handleAddFromForm" :disabled="!canSubmitRule || loading">Добавить</button>
             </div>
           </div>
         </div>
@@ -115,10 +120,12 @@ import * as API from '../../wailsjs/go/main/App';
 import { showAlert, showConfirm, globalState } from '../store';
 import { ICONS } from '../utils/icons';
 import ModernSelect from './ModernSelect.vue';
+import AppRoutingPanel from './AppRoutingPanel.vue';
 
+type RuleTab = 'subscription' | 'add' | 'delete' | 'apps';
 const rulePageData = shallowRef<any>(null);
-const ruleTab = ref<'subscription' | 'add' | 'delete'>(
-  (localStorage.getItem('goclashz_ruleTab') as 'subscription' | 'add' | 'delete') || 'subscription'
+const ruleTab = ref<RuleTab>(
+  (localStorage.getItem('goclashz_ruleTab') as RuleTab) || 'subscription'
 );
 
 const tabsTrackRef = ref<HTMLElement | null>(null);
@@ -187,11 +194,11 @@ const rulePreview = computed(() => {
   const parts = [selectedRuleType.value];
 
   if (meta.needPayload) {
-    parts.push(rulePayload.value.trim() || `<${meta.payloadLabel || '内容'}>`);
+    parts.push(rulePayload.value.trim() || `<${meta.payloadLabel || 'значение'}>`);
   }
 
   if (meta.needPolicy) {
-    parts.push(selectedPolicy.value || '<策略>');
+    parts.push(selectedPolicy.value || '<политика>');
   }
 
   return parts.join(',');
@@ -222,7 +229,7 @@ const openAddModal = async () => {
     rulePayload.value = '';
     showAddModal.value = true;
   } catch (e) {
-    await showAlert(String(e), '加载规则选项失败');
+    await showAlert(String(e), 'Не удалось загрузить параметры правил');
   } finally {
     loading.value = false;
   }
@@ -232,21 +239,24 @@ const currentPage = ref(1);
 const pageSize = ref(42); 
 
 const isRemote = computed(() => globalState.activeConfigType === 'remote');
+// Вкладки показываются только для remote; для локальных конфигов «apps» недоступна,
+// поэтому эффективная вкладка откатывается к правилам, чтобы не залипнуть без табов.
+const effectiveTab = computed<RuleTab>(() => (isRemote.value ? ruleTab.value : 'subscription'));
 const isLocal = computed(() => globalState.activeConfigType === 'local' || !globalState.activeConfigType);
 
 const deleteBtnTitle = computed(() => {
-  if (isLocal.value) return '删除规则';
-  if (ruleTab.value === 'subscription') return '屏蔽此规则';
-  if (ruleTab.value === 'add') return '删除附加规则';
-  if (ruleTab.value === 'delete') return '取消屏蔽 (恢复)';
-  return '删除';
+  if (isLocal.value) return 'Удалить правило';
+  if (ruleTab.value === 'subscription') return 'Скрыть это правило';
+  if (ruleTab.value === 'add') return 'Удалить дополнительное правило';
+  if (ruleTab.value === 'delete') return 'Снять скрытие (восстановить)';
+  return 'Удалить';
 });
 
 const modalTitle = computed(() => {
-  if (isLocal.value) return '新增本地规则';
-  if (ruleTab.value === 'add') return '新增附加规则';
-  if (ruleTab.value === 'delete') return '新增要屏蔽的规则';
-  return '新增规则';
+  if (isLocal.value) return 'Новое локальное правило';
+  if (ruleTab.value === 'add') return 'Новое дополнительное правило';
+  if (ruleTab.value === 'delete') return 'Новое правило-исключение';
+  return 'Новое правило';
 });
 
 const currentRulesList = computed(() => {
@@ -395,23 +405,23 @@ const handleAddFromForm = async () => {
     showAddModal.value = false;
     searchQuery.value = '';
     currentPage.value = 1;
-    await showAlert("规则已添加", "提示");
+    await showAlert("Правило добавлено", "Готово");
   } catch (e) {
-    await showAlert(String(e), '添加失败');
+    await showAlert(String(e), 'Не удалось добавить');
   } finally {
     loading.value = false;
   }
 };
 
 const handleDelete = async (idx: number) => {
-  let promptMsg = '确定要删除这条规则吗？';
+  let promptMsg = 'Удалить это правило?';
   if (isRemote.value && ruleTab.value === 'subscription') {
-    promptMsg = '屏蔽这条规则？（屏蔽后可到"附加删除"中恢复）';
+    promptMsg = 'Скрыть это правило? (Восстановить можно во вкладке «Исключения»)';
   } else if (isRemote.value && ruleTab.value === 'delete') {
-    promptMsg = '取消屏蔽这条规则吗？';
+    promptMsg = 'Снять скрытие с этого правила?';
   }
 
-  const ok = await showConfirm(promptMsg, '操作确认', true);
+  const ok = await showConfirm(promptMsg, 'Подтверждение', true);
   if (ok && globalState.activeConfigId) {
     loading.value = true;
     try {
@@ -423,7 +433,7 @@ const handleDelete = async (idx: number) => {
       await API.DeleteRule(globalState.activeConfigId, targetSection, idx);
       await loadRules();
     } catch (e) {
-      await showAlert("操作失败: " + e, '错误');
+      await showAlert("Операция не удалась: " + e, 'Ошибка');
     } finally {
       loading.value = false;
     }

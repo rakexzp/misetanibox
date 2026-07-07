@@ -74,16 +74,16 @@ func (c *Controller) runComponentUpdateTransaction(
 
 			if isCanceled {
 				state.Status = "cancelled"
-				state.Error = "已暂停"
+				state.Error = "Приостановлено"
 			} else {
 				state.Status = "error"
-				state.Error = fmt.Sprintf("准备失败: %v", err)
+				state.Error = fmt.Sprintf("Ошибка подготовки: %v", err)
 			}
 			state.FinishedAt = time.Now().Unix()
 			c.UpdateTasks.Set(taskName, state)
 
 			c.events.Emit(taskName+"-error", err.Error())
-			return fmt.Errorf("%s准备失败: %w", opt.Name, err)
+			return fmt.Errorf("%s: ошибка подготовки: %w", opt.Name, err)
 		}
 
 		state, _ = c.UpdateTasks.Get(taskName)
@@ -128,11 +128,11 @@ func (c *Controller) runComponentUpdateTransaction(
 				Key:        taskName,
 				Title:      opt.Name,
 				Status:     "error",
-				Error:      fmt.Sprintf("提交失败: %v", err),
+				Error:      fmt.Sprintf("Ошибка применения: %v", err),
 				FinishedAt: time.Now().Unix(),
 			})
 			c.events.Emit(taskName+"-error", err.Error())
-			return fmt.Errorf("%s失败: %w", opt.Name, err)
+			return fmt.Errorf("%s: сбой: %w", opt.Name, err)
 		}
 
 		// 4. 更新成功后的回调
@@ -150,11 +150,11 @@ func (c *Controller) runComponentUpdateTransaction(
 					Key:        taskName,
 					Title:      opt.Name,
 					Status:     "error",
-					Error:      fmt.Sprintf("内核恢复失败: %v", err),
+					Error:      fmt.Sprintf("Не удалось восстановить запуск ядра: %v", err),
 					FinishedAt: time.Now().Unix(),
 				})
 				c.events.Emit(taskName+"-error", err.Error())
-				return fmt.Errorf("%s成功，但内核恢复启动失败: %w", opt.Name, err)
+				return fmt.Errorf("%s: успешно, но не удалось снова запустить ядро: %w", opt.Name, err)
 			}
 		}
 

@@ -17,12 +17,13 @@ type RequiredAssetDef struct {
 }
 
 var RequiredAssets = []RequiredAssetDef{
-	{Key: AssetCore, Name: "clash.exe", Label: "Mihomo 内核", Required: true},
-	{Key: AssetWintun, Name: "wintun.dll", Label: "Wintun 驱动 DLL", Required: true},
+	{Key: AssetCore, Name: "clash.exe", Label: "Ядро Mihomo", Required: true},
+	{Key: AssetWintun, Name: "wintun.dll", Label: "DLL драйвера Wintun", Required: true},
 	{Key: AssetGeoIP, Name: "geoip.metadb", Label: "GeoIP", Required: false},
 	{Key: AssetGeoSite, Name: "geosite.dat", Label: "GeoSite", Required: false},
 	{Key: AssetMMDB, Name: "country.mmdb", Label: "MMDB", Required: false},
 	{Key: AssetASN, Name: "asn.dat", Label: "ASN", Required: false},
+	// AssetSmartModel (Model.bin) — только для форк-ядра Smart; сейчас не поставляется.
 }
 
 func requiredAssetDefsFor(req Requirement) []RequiredAssetDef {
@@ -200,6 +201,8 @@ func canonicalAssetName(name string) string {
 		return "country.mmdb"
 	case "asn.dat", "geolite2-asn.mmdb":
 		return "asn.dat"
+	case "model.bin":
+		return "Model.bin"
 	default:
 		return ""
 	}

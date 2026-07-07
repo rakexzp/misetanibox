@@ -13,7 +13,7 @@ import (
 func ValidateClashReferencesBytes(data []byte) error {
 	var root map[string]interface{}
 	if err := yaml.Unmarshal(data, &root); err != nil {
-		return fmt.Errorf("YAML 格式错误: %v", err)
+		return fmt.Errorf("ошибка формата YAML: %v", err)
 	}
 	return ValidateClashReferences(root)
 }
@@ -85,7 +85,7 @@ func ValidateClashReferences(root map[string]interface{}) error {
 					for _, u := range useNode {
 						if providerName, ok := u.(string); ok {
 							if !proxyProviderNames[providerName] {
-								return fmt.Errorf("策略组 [%s] 的 use 引用了不存在的 provider: %s", groupName, providerName)
+								return fmt.Errorf("группа [%s]: use ссылается на несуществующий provider: %s", groupName, providerName)
 							}
 						}
 					}
@@ -96,7 +96,7 @@ func ValidateClashReferences(root map[string]interface{}) error {
 					for _, p := range pList {
 						if proxyName, ok := p.(string); ok {
 							if !isValidPolicyTarget(proxyName) {
-								return fmt.Errorf("策略组 [%s] 引用了不存在的节点/策略组: %s", groupName, proxyName)
+								return fmt.Errorf("группа [%s] ссылается на несуществующий узел/группу: %s", groupName, proxyName)
 							}
 						}
 					}
@@ -120,17 +120,17 @@ func ValidateClashReferences(root map[string]interface{}) error {
 					if ruleType == "MATCH" {
 						target := parts[1]
 						if !isValidPolicyTarget(target) {
-							return fmt.Errorf("规则 [%s] 引用了不存在的策略组/节点: %s", ruleStr, target)
+							return fmt.Errorf("правило [%s] ссылается на несуществующую группу/узел: %s", ruleStr, target)
 						}
 					} else if ruleType == "RULE-SET" {
 						if len(parts) >= 3 {
 							provider := parts[1]
 							target := parts[2]
 							if !ruleProviderNames[provider] {
-								return fmt.Errorf("规则 [%s] 引用了不存在的 rule-provider: %s", ruleStr, provider)
+								return fmt.Errorf("правило [%s] ссылается на несуществующий rule-provider: %s", ruleStr, provider)
 							}
 							if !isValidPolicyTarget(target) {
-								return fmt.Errorf("规则 [%s] 引用了不存在的策略组/节点: %s", ruleStr, target)
+								return fmt.Errorf("правило [%s] ссылается на несуществующую группу/узел: %s", ruleStr, target)
 							}
 						}
 					} else if ruleType == "AND" || ruleType == "OR" || ruleType == "NOT" || ruleType == "SUB-RULE" {
@@ -139,7 +139,7 @@ func ValidateClashReferences(root map[string]interface{}) error {
 					} else if len(parts) >= 3 {
 						target := parts[2]
 						if !isValidPolicyTarget(target) {
-							return fmt.Errorf("规则 [%s] 引用了不存在的策略组/节点: %s", ruleStr, target)
+							return fmt.Errorf("правило [%s] ссылается на несуществующую группу/узел: %s", ruleStr, target)
 						}
 					}
 				}
@@ -154,7 +154,7 @@ func ValidateClashReferences(root map[string]interface{}) error {
 func SanitizeRuleLine(rule string) (string, error) {
 	rule = NormalizeRule(rule)
 	if rule == "" {
-		return "", fmt.Errorf("规则不可为空")
+		return "", fmt.Errorf("правило не может быть пустым")
 	}
 
 	rawParts := strings.Split(rule, ",")
@@ -162,7 +162,7 @@ func SanitizeRuleLine(rule string) (string, error) {
 	for _, p := range rawParts {
 		p = strings.TrimSpace(p)
 		if p == "" {
-			return "", fmt.Errorf("规则格式无效，存在空段: %s", rule)
+			return "", fmt.Errorf("неверный формат правила, есть пустой сегмент: %s", rule)
 		}
 		parts = append(parts, p)
 	}
@@ -173,15 +173,15 @@ func SanitizeRuleLine(rule string) (string, error) {
 	switch ruleType {
 	case "MATCH":
 		if len(parts) != 2 {
-			return "", fmt.Errorf("MATCH 规则格式应为 MATCH,策略")
+			return "", fmt.Errorf("правило MATCH должно иметь вид MATCH,политика")
 		}
 	case "AND", "OR", "NOT", "SUB-RULE":
 		if len(parts) < 2 {
-			return "", fmt.Errorf("%s 规则结构不完整", ruleType)
+			return "", fmt.Errorf("%s: неполная структура правила", ruleType)
 		}
 	default:
 		if len(parts) < 3 {
-			return "", fmt.Errorf("%s 规则格式应至少为 类型,内容,策略", ruleType)
+			return "", fmt.Errorf("%s: формат правила должен быть минимум тип,содержимое,политика", ruleType)
 		}
 	}
 

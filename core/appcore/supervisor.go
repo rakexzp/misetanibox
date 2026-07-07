@@ -131,7 +131,7 @@ func (s *CoreSupervisor) Reconcile(ctx context.Context, reason string) error {
 
 	if desired.Tun {
 		if _, err := runtimeassets.EnsureReady(ctx, runtimeassets.RequireTun, runtimeassets.RepairInvalid); err != nil {
-			s.controller.setLastError("Wintun 不可用: " + err.Error())
+			s.controller.setLastError("Wintun недоступен: " + err.Error())
 			s.controller.SyncState()
 			return ErrWintunMissing
 		}

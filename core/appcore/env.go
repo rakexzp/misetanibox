@@ -40,10 +40,10 @@ func EnsureRuntimeAssets(ctx context.Context, behavior AppBehavior) error {
 			DestPath:            path,
 			Strategy:            func() downloader.DownloadStrategy { return downloader.DownloadStrategy{} },
 			MaxBytes:            200 << 20,
-			UserAgent:           "GoclashZ-EnvUpdater",
+			UserAgent:           "Misetanibox-EnvUpdater",
 			AttemptsPerEndpoint: 3,
 		}); err != nil {
-			return fmt.Errorf("下载 %s 失败: %w", item.Name, err)
+			return fmt.Errorf("Не удалось загрузить %s: %w", item.Name, err)
 		}
 	}
 

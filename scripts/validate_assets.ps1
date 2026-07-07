@@ -47,15 +47,15 @@ function Assert-NotHTML {
     return $true
 }
 
-Write-Host "===== GoclashZ 构建资产校验 =====" -ForegroundColor Cyan
+Write-Host "===== Misetanibox: проверка сборочных ассетов =====" -ForegroundColor Cyan
 Write-Host "资产目录: $AssetRoot"
 Write-Host ""
 
 # === 1. 二进制可执行文件校验 ===
 
 # 主程序
-if (Assert-FileExists ".\build\bin\GoclashZ.exe" "主程序") {
-    Assert-MZHeader ".\build\bin\GoclashZ.exe" "主程序" | Out-Null
+if (Assert-FileExists ".\build\bin\Misetanibox.exe" "主程序") {
+    Assert-MZHeader ".\build\bin\Misetanibox.exe" "主程序" | Out-Null
 }
 
 # Helper

@@ -84,9 +84,9 @@ func saveAssetState(state *AssetState) error {
 func labelForKey(key AssetKey) string {
 	switch key {
 	case AssetCore:
-		return "Mihomo 内核"
+		return "Ядро Mihomo"
 	case AssetWintun:
-		return "Wintun 驱动"
+		return "Драйвер Wintun"
 	case AssetGeoIP:
 		return "GeoIP"
 	case AssetGeoSite:
@@ -128,11 +128,11 @@ func RepairFromSeed(ctx context.Context, req Requirement, mode RepairMode) error
 		seedHealth := checkAssetByPath(ctx, key, def.Label, seedPath)
 		if !seedHealth.Ready {
 			if def.Required {
-				msg := fmt.Sprintf("seed 必需资产不可用: %s path=%s error=%s", name, seedPath, seedHealth.Error)
+				msg := fmt.Sprintf("обязательный seed-ресурс недоступен: %s path=%s error=%s", name, seedPath, seedHealth.Error)
 				errs = append(errs, msg)
 				log.Printf("[runtimeassets] %s", msg)
 			} else {
-				log.Printf("[runtimeassets] seed 可选资产不可用，跳过: %s path=%s error=%s", name, seedPath, seedHealth.Error)
+				log.Printf("[runtimeassets] необязательный seed-ресурс недоступен, пропуск: %s path=%s error=%s", name, seedPath, seedHealth.Error)
 			}
 			continue
 		}
@@ -160,11 +160,11 @@ func RepairFromSeed(ctx context.Context, req Requirement, mode RepairMode) error
 				if runtimeHealth.SHA256 == copied.SHA256 {
 					shouldCopy = true
 				} else {
-					log.Printf("[runtimeassets] 资产 %s 已被用户手动修改，升级时跳过覆盖", name)
+					log.Printf("[runtimeassets] ресурс %s изменён пользователем вручную, при обновлении перезапись пропущена", name)
 					shouldCopy = false
 				}
 			} else {
-				log.Printf("[runtimeassets] 资产 %s 无拷贝记录，从 seed 同步", name)
+				log.Printf("[runtimeassets] для ресурса %s нет записи о копировании, синхронизация из seed", name)
 				shouldCopy = true
 			}
 		}
@@ -176,11 +176,11 @@ func RepairFromSeed(ctx context.Context, req Requirement, mode RepairMode) error
 		_ = os.MkdirAll(filepath.Dir(runtimePath), 0755)
 
 		if err := utils.CopyFile(seedPath, runtimePath); err != nil {
-			errs = append(errs, fmt.Sprintf("复制 seed 资产失败: %s -> %s: %v", seedPath, runtimePath, err))
+			errs = append(errs, fmt.Sprintf("не удалось скопировать seed-ресурс: %s -> %s: %v", seedPath, runtimePath, err))
 			continue
 		}
 
-		log.Printf("[runtimeassets] seed 自修复成功: %s", name)
+		log.Printf("[runtimeassets] самовосстановление из seed успешно: %s", name)
 
 		// 优先用 manifest 元信息的 sha256，fallback 到 seed 实际 sha256
 		copySHA256 := seedHealth.SHA256
@@ -201,7 +201,7 @@ func RepairFromSeed(ctx context.Context, req Requirement, mode RepairMode) error
 	if changed || appUpdated {
 		state.SeedManifestSha256 = manifestHash
 		if err := saveAssetState(state); err != nil {
-			errs = append(errs, fmt.Sprintf("保存 asset-state 失败: %v", err))
+			errs = append(errs, fmt.Sprintf("не удалось сохранить asset-state: %v", err))
 		}
 	}
 

@@ -202,7 +202,7 @@ func (c *Controller) GetOutboundIPForRoute(force bool, expectedRoute string) (Ou
 	if expectedRoute != "" && expectedRoute != currentRoute {
 		return OutboundIPResult{
 			Mode:    currentRoute,
-			Message: fmt.Sprintf("路由切换中: expected=%s current=%s", expectedRoute, currentRoute),
+			Message: fmt.Sprintf("Переключение маршрута: expected=%s current=%s", expectedRoute, currentRoute),
 		}, nil
 	}
 
@@ -309,7 +309,7 @@ func (c *Controller) getOutboundIPInternal() (OutboundIPResult, error) {
 			}
 		case <-deadline.C:
 			count = 2 // Timeout, break the loop
-			result.Message = "检测超时"
+			result.Message = "Таймаут проверки"
 		}
 	}
 
@@ -322,11 +322,11 @@ func (c *Controller) getOutboundIPInternal() (OutboundIPResult, error) {
 	}
 
 	if result.Preferred == "" {
-		result.Message = "所有检测站点均不可达或检测超时"
+		result.Message = "Все проверочные сайты недоступны или проверка превысила таймаут"
 		if c.appLogger != nil {
 			c.appLogger.AddApp(logger.LogEntry{
 				Type:    "error",
-				Payload: "出站 IP 检测失败: " + result.Message,
+				Payload: "Ошибка определения исходящего IP: " + result.Message,
 			})
 		}
 	}

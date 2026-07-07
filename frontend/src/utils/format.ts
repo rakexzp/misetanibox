@@ -21,30 +21,30 @@ export const formatEtaTime = (seconds: number) => {
 };
 
 export const formatDurationCn = (seconds: number) => {
-  if (!Number.isFinite(seconds) || seconds <= 0) return '0秒';
+  if (!Number.isFinite(seconds) || seconds <= 0) return '0с';
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = Math.floor(seconds % 60);
   
   const parts = [];
-  if (h > 0) parts.push(`${h}小时`);
-  if (m > 0) parts.push(`${m}分`);
-  if (s > 0) parts.push(`${s}秒`);
-  
-  return parts.join('');
+  if (h > 0) parts.push(`${h}ч`);
+  if (m > 0) parts.push(`${m}мин`);
+  if (s > 0) parts.push(`${s}с`);
+
+  return parts.join(' ');
 };
 
 export const formatRelativeTime = (timestamp: number) => {
-  if (!timestamp) return '从未';
+  if (!timestamp) return 'Никогда';
   
   const now = new Date().getTime();
   // Ensure timestamp is in milliseconds
   const tsMs = timestamp > 9999999999 ? timestamp : timestamp * 1000;
   const diff = now - tsMs;
   
-  if (diff < 60000) return '刚刚';
-  if (diff < 3600000) return Math.floor(diff / 60000) + ' 分钟前';
-  if (diff < 86400000) return Math.floor(diff / 3600000) + ' 小时前';
-  if (diff < 2592000000) return Math.floor(diff / 86400000) + ' 天前';
+  if (diff < 60000) return 'только что';
+  if (diff < 3600000) return Math.floor(diff / 60000) + ' мин назад';
+  if (diff < 86400000) return Math.floor(diff / 3600000) + ' ч назад';
+  if (diff < 2592000000) return Math.floor(diff / 86400000) + ' д назад';
   return new Date(tsMs).toLocaleDateString();
 };
