@@ -35,3 +35,7 @@ build/windows/installer/tmp/
 # Temp/Misc
 webfonts/
 scratch/
+
+goclashz
+/mise-linux
+build/bin/
