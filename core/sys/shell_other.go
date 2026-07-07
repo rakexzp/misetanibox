@@ -2,8 +2,9 @@
 
 package sys
 
-import "fmt"
+import "os/exec"
 
+// ShellOpen открывает путь/URL в системном обработчике (Linux: xdg-open).
 func ShellOpen(path string) error {
-	return fmt.Errorf("ShellOpen unsupported on this platform")
+	return exec.Command("xdg-open", path).Start()
 }

@@ -79,8 +79,8 @@
     <!-- Редактор фона карточки -->
     <Transition name="pop">
       <div v-if="editingCard" class="modal-overlay" @click.self="editingCard = null">
-        <div class="bg-editor" @click.stop>
-          <h3>Картинка карточки</h3>
+        <div class="bg-editor" @click.stop :style="{ transform: `translate(${editorPos.x}px, ${editorPos.y}px)` }">
+          <h3 class="bg-editor-drag" @mousedown="startEditorDrag">Картинка карточки <span class="drag-hint">⠿</span></h3>
 
           <div class="bg-editor-actions">
             <button class="action-btn accent-btn" @click="pickCardImage(editingCard)">
@@ -161,7 +161,22 @@ const optsFor = (key: string): CardBgOpts => {
 };
 
 const editingCard = ref<string | null>(null);
-const openCardEditor = (key: string) => { optsFor(key); editingCard.value = key; };
+const editorPos = ref({ x: 0, y: 0 });
+const openCardEditor = (key: string) => { optsFor(key); editorPos.value = { x: 0, y: 0 }; editingCard.value = key; };
+
+// перетаскивание окна редактора за заголовок
+const startEditorDrag = (e: MouseEvent) => {
+  const start = { mx: e.clientX, my: e.clientY, x: editorPos.value.x, y: editorPos.value.y };
+  const move = (ev: MouseEvent) => {
+    editorPos.value = { x: start.x + (ev.clientX - start.mx), y: start.y + (ev.clientY - start.my) };
+  };
+  const up = () => {
+    window.removeEventListener('mousemove', move);
+    window.removeEventListener('mouseup', up);
+  };
+  window.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', up);
+};
 
 const hasBg = (key: string) => !!(globalState.cardBgs[key] || cardPresets[key]);
 
@@ -466,6 +481,8 @@ const runModeWorker = async (targetMode: string) => {
   border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 12px;
 }
 .bg-editor h3 { margin: 0; font-size: 1.05rem; color: var(--text-main); }
+.bg-editor-drag { cursor: move; user-select: none; display: flex; align-items: center; justify-content: space-between; }
+.bg-editor-drag .drag-hint { color: var(--text-muted); font-size: 1rem; opacity: 0.6; }
 .bg-editor-actions { display: flex; gap: 8px; }
 .bg-editor-actions .action-btn { flex: 1; }
 .bg-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 0.85rem; color: var(--text-sub); }
