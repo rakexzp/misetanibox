@@ -66,6 +66,7 @@
             @click="pick(s.name)"
           >
             <span class="lite-dot" :class="{ on: s.name === currentServer }"></span>
+            <img v-if="flagUrl(s.name)" :src="flagUrl(s.name)!" class="lite-flag" alt="" />
             <span class="lite-item-name truncate">{{ s.name }}</span>
             <span v-if="testingSet.has(s.name)" class="lite-ping-spin"></span>
             <span v-else class="lite-item-ping" :class="pingClass(delayOf(s.name))">
@@ -154,6 +155,7 @@ import {
   globalState, setUiMode, setTunIntent, showAlert, showConfirm, updateStateFromBackend,
 } from '../store';
 import { ICONS } from '../utils/icons';
+import { flagUrl } from '../utils/flags';
 
 defineProps<{ traffic: { up: string; down: string } }>();
 
@@ -617,4 +619,5 @@ onUnmounted(() => {
 
 .lite-expand-enter-active, .lite-expand-leave-active { transition: opacity 0.18s, transform 0.18s; }
 .lite-expand-enter-from, .lite-expand-leave-to { opacity: 0; transform: translateY(-6px); }
+.lite-flag { width: 20px; height: 15px; border-radius: 2px; flex-shrink: 0; object-fit: cover; }
 </style>
