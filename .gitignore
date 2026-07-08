@@ -41,6 +41,14 @@ goclashz
 build/bin/
 
 mobile/node_modules/
-mobile/android/
 
 mobile/core/mihomo.aar
+
+mobile/android/.gradle/
+mobile/android/build/
+mobile/android/app/build/
+mobile/android/app/libs/*.aar
+mobile/android/.idea/
+mobile/android/local.properties
+mobile/android/*.iml
+mobile/android/app/src/main/assets/public/
