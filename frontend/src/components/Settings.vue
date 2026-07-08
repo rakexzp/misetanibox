@@ -34,6 +34,37 @@
           </div>
 
           <div class="glass-card setting-group">
+            <h3>Оформление — цвета</h3>
+            <div class="color-row">
+              <label class="color-swatch" :style="{ background: colors.accent }">
+                <input type="color" v-model="colors.accent" @input="onColorInput" />
+              </label>
+              <div class="info"><h4>Акцент</h4><p>Выделения, активные элементы, индикаторы.</p></div>
+            </div>
+            <div class="color-row">
+              <label class="color-swatch" :style="{ background: colors.text }">
+                <input type="color" v-model="colors.text" @input="onColorInput" />
+              </label>
+              <div class="info"><h4>Текст (буквы)</h4><p>Основной цвет текста интерфейса.</p></div>
+            </div>
+            <div class="color-row">
+              <label class="color-swatch" :style="{ background: colors.bg }">
+                <input type="color" v-model="colors.bg" @input="onColorInput" />
+              </label>
+              <div class="info"><h4>Фон</h4><p>Фон приложения и панелей (оттенки выводятся автоматически).</p></div>
+            </div>
+            <div class="color-presets">
+              <button v-for="p in COLOR_PRESETS" :key="p.name" class="color-preset"
+                      :style="{ background: p.bg, color: p.text, borderColor: p.accent }"
+                      @click="applyColorPreset(p)">{{ p.name }}</button>
+            </div>
+            <div class="setting-item" style="border:none;padding-top:4px">
+              <div class="info"><p>Цвета применяются поверх светлой/тёмной темы. Скоро — публикация в Мастерскую.</p></div>
+              <button class="action-btn" @click="resetColors">Сбросить</button>
+            </div>
+          </div>
+
+          <div class="glass-card setting-group">
             <h3>Настройки приложения</h3>
 
             <div class="setting-item clickable" @click="view = 'behavior'">
@@ -1239,10 +1270,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
+import { ref, reactive, onMounted, onUnmounted, computed, watch } from 'vue';
 import * as API from '../../wailsjs/go/main/App';
 import { BrowserOpenURL, EventsOn } from '../../wailsjs/runtime/runtime';
 import { showAlert, showConfirm, globalState, setUiMode } from '../store';
+import { getSavedColors, saveColors, type CustomColors } from '../utils/colors';
 import { formatBytes, formatSpeed, formatEtaTime, formatRelativeTime } from '../utils/format';
 import { ICONS } from '../utils/icons';
 import appLogo from '../assets/logo.ico';
@@ -1253,6 +1285,29 @@ import ModernNumberInput from './ModernNumberInput.vue';
 
 const openLink = (url: string) => {
   BrowserOpenURL(url);
+};
+
+// --- редактор цветов (покраска букв/фона/акцента) ---
+const themeColorDefaults = (): CustomColors =>
+  globalState.theme === 'dark'
+    ? { accent: '#E8E8E8', text: '#E8E8E8', bg: '#111111' }
+    : { accent: '#1A1A1A', text: '#1A1A1A', bg: '#F0F0F0' };
+const colors = reactive<CustomColors>(getSavedColors() || themeColorDefaults());
+const COLOR_PRESETS = [
+  { name: 'Reaper', accent: '#C0392B', text: '#ECECEC', bg: '#0E0E10' },
+  { name: 'Nord', accent: '#88C0D0', text: '#ECEFF4', bg: '#2E3440' },
+  { name: 'Матрица', accent: '#39FF14', text: '#C8FFC8', bg: '#0A0F0A' },
+  { name: 'Сепия', accent: '#8B5E34', text: '#3B2F2F', bg: '#F4ECD8' },
+  { name: 'Океан', accent: '#2193B0', text: '#EAF6FA', bg: '#0B1E26' },
+];
+const onColorInput = () => saveColors({ ...colors });
+const applyColorPreset = (p: { accent: string; text: string; bg: string }) => {
+  colors.accent = p.accent; colors.text = p.text; colors.bg = p.bg;
+  saveColors({ ...colors });
+};
+const resetColors = () => {
+  saveColors(null);
+  Object.assign(colors, themeColorDefaults());
 };
 
 const showResetConfirm = ref(false);
@@ -2559,4 +2614,22 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+
+/* редактор цветов */
+.color-row { display: flex; align-items: center; gap: 14px; padding: 12px 0; }
+.color-swatch {
+  width: 40px; height: 40px; border-radius: 10px; flex: none; cursor: pointer;
+  border: 1px solid var(--surface-hover); position: relative; overflow: hidden;
+  box-shadow: inset 0 0 0 2px var(--surface-panel);
+}
+.color-swatch input[type="color"] {
+  position: absolute; inset: -4px; width: calc(100% + 8px); height: calc(100% + 8px);
+  border: none; padding: 0; opacity: 0; cursor: pointer;
+}
+.color-presets { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 0 4px; }
+.color-preset {
+  padding: 7px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 600;
+  border: 1.5px solid; cursor: pointer; transition: transform 0.12s;
+}
+.color-preset:hover { transform: translateY(-1px); }
 </style>

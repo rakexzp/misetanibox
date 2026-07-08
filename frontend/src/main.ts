@@ -2,6 +2,7 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import './style.css'
 import { initStore } from './store'
+import { initColors } from './utils/colors'
 import { EventsEmit } from '../wailsjs/runtime/runtime'
 
 const setupConsoleInterception = () => {
@@ -69,5 +70,6 @@ const setupConsoleInterception = () => {
 
 setupConsoleInterception();
 initStore(); // 启动全局监听
+initColors(); // применить пользовательскую покраску
 
 createApp(App).mount('#app')
