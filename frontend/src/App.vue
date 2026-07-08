@@ -106,6 +106,10 @@
               </div>
             </div>
 
+            <div v-else-if="currentTab === 'workshop'" key="workshop" class="view-transition-wrapper">
+              <Workshop />
+            </div>
+
             <div v-else-if="currentTab === 'settings'" key="settings" class="view-transition-wrapper view-settings">
               <Settings :initialView="targetSettingsView" />
             </div>
@@ -151,6 +155,7 @@ import { ICONS } from './utils/icons';
 import Sidebar from './components/Sidebar.vue';
 import LiteApp from './components/LiteApp.vue';
 import Overview from './components/Overview.vue';
+import Workshop from './components/Workshop.vue';
 import Proxies from './components/Proxies.vue';
 import Subscriptions from './components/Subscriptions.vue';
 import Connections from './components/Connections.vue';
@@ -304,6 +309,7 @@ const menu = [
   { id: 'logs', label: 'Журнал', icon: ICONS.logs },
   { id: 'rules', label: 'Правила', icon: ICONS.rules },
   { id: 'subs', label: 'Подписки', icon: ICONS.subs },
+  { id: 'workshop', label: 'Мастерская', icon: ICONS.zap },
   { id: 'settings', label: 'Настройки', icon: ICONS.settings }
 ];
 

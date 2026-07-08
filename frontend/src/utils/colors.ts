@@ -45,16 +45,25 @@ export function derivePalette(c: CustomColors): Record<string, string> {
   };
 }
 
-const VARS = Object.keys(derivePalette({ accent: '#000', text: '#000', bg: '#fff' }));
+const STYLE_ID = 'mise-custom-colors';
 
+// Тёмная тема живёт классом .dark на .app-shell, а он перебивает переменные с :root.
+// Поэтому инжектим <style> с !important на селекторы, которые реально совпадают
+// и со светлой (:root), и с тёмной (.app-shell.dark) темой.
 export function applyColors(c: CustomColors | null) {
-  const root = document.documentElement;
+  let el = document.getElementById(STYLE_ID) as HTMLStyleElement | null;
   if (!c) {
-    VARS.forEach((v) => root.style.removeProperty(v));
+    if (el) el.remove();
     return;
   }
+  if (!el) {
+    el = document.createElement('style');
+    el.id = STYLE_ID;
+    document.head.appendChild(el);
+  }
   const p = derivePalette(c);
-  Object.entries(p).forEach(([k, v]) => root.style.setProperty(k, v));
+  const decls = Object.entries(p).map(([k, v]) => `${k}:${v} !important;`).join('');
+  el.textContent = `:root, .app-shell, .app-shell.dark, body, #app { ${decls} }`;
 }
 
 export function getSavedColors(): CustomColors | null {

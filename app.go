@@ -11,6 +11,7 @@ import (
 	"goclashz/core/runtimeassets"
 	"goclashz/core/sys"
 	"goclashz/core/utils"
+	"goclashz/core/workshop"
 	"os"
 	"path/filepath"
 	"sort"
@@ -699,6 +700,44 @@ func (a *App) SetCardBg(key string) (string, error) {
 	return "data:" + mimeForExt(ext) + ";base64," + base64.StdEncoding.EncodeToString(data), nil
 }
 
+// SetCardBgData ставит фон карточки из data-URI (для применения темы из Мастерской).
+func (a *App) SetCardBgData(key, dataURI string) (string, error) {
+	key = sanitizeCardKey(key)
+	if key == "" {
+		return "", fmt.Errorf("пустой ключ карточки")
+	}
+	i := strings.Index(dataURI, ",")
+	if !strings.HasPrefix(dataURI, "data:") || i < 0 {
+		return "", fmt.Errorf("не data-URI")
+	}
+	meta := dataURI[5:i]
+	data, err := base64.StdEncoding.DecodeString(dataURI[i+1:])
+	if err != nil {
+		return "", err
+	}
+	if len(data) > 6*1024*1024 {
+		return "", fmt.Errorf("картинка больше 6 МБ")
+	}
+	ext := ".png"
+	if strings.Contains(meta, "jpeg") || strings.Contains(meta, "jpg") {
+		ext = ".jpg"
+	} else if strings.Contains(meta, "webp") {
+		ext = ".webp"
+	} else if strings.Contains(meta, "gif") {
+		ext = ".gif"
+	}
+	if old, _ := filepath.Glob(cardBgGlob(key)); old != nil {
+		for _, f := range old {
+			_ = os.Remove(f)
+		}
+	}
+	dest := filepath.Join(utils.GetDataDir(), "cardbg_"+key+ext)
+	if err := utils.WriteFileAtomic(dest, data, 0644); err != nil {
+		return "", err
+	}
+	return "data:" + mimeForExt(ext) + ";base64," + base64.StdEncoding.EncodeToString(data), nil
+}
+
 func (a *App) GetCardBgs() map[string]string {
 	out := map[string]string{}
 	matches, _ := filepath.Glob(filepath.Join(utils.GetDataDir(), "cardbg_*.*"))
@@ -834,6 +873,24 @@ func (a *App) DeleteFromGallery(galleryID string) []GalleryItem {
 	}
 	return a.GetGallery()
 }
+
+// --- Мастерская тем (каталог авторских тем) ---
+
+func (a *App) deviceHwid() string { return sys.GetDeviceInfo().HWID }
+
+func (a *App) WorkshopList(sort, q string, page int) (string, error) {
+	return workshop.List(a.deviceHwid(), sort, q, page)
+}
+func (a *App) WorkshopGet(id int) (string, error)      { return workshop.Get(a.deviceHwid(), id) }
+func (a *App) WorkshopDownload(id int) (string, error) { return workshop.Download(a.deviceHwid(), id) }
+func (a *App) WorkshopLike(id int) (string, error)     { return workshop.Like(a.deviceHwid(), id) }
+func (a *App) WorkshopReport(id int, reason string) (string, error) {
+	return workshop.Report(a.deviceHwid(), id, reason)
+}
+func (a *App) WorkshopPublish(manifestJSON string, imagesDataURI []string) (string, error) {
+	return workshop.Publish(a.deviceHwid(), manifestJSON, imagesDataURI)
+}
+func (a *App) WorkshopFetchImage(url string) (string, error) { return workshop.FetchImage(url) }
 
 func (a *App) RepairDataDirPermission() error {
 	if !sys.CheckAdmin() {

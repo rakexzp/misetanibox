@@ -469,3 +469,35 @@ export function ApplyGalleryToCard(arg1, arg2) {
 export function DeleteFromGallery(arg1) {
   return window['go']['main']['App']['DeleteFromGallery'](arg1);
 }
+
+export function WorkshopList(arg1, arg2, arg3) {
+  return window['go']['main']['App']['WorkshopList'](arg1, arg2, arg3);
+}
+
+export function WorkshopGet(arg1) {
+  return window['go']['main']['App']['WorkshopGet'](arg1);
+}
+
+export function WorkshopDownload(arg1) {
+  return window['go']['main']['App']['WorkshopDownload'](arg1);
+}
+
+export function WorkshopLike(arg1) {
+  return window['go']['main']['App']['WorkshopLike'](arg1);
+}
+
+export function WorkshopReport(arg1, arg2) {
+  return window['go']['main']['App']['WorkshopReport'](arg1, arg2);
+}
+
+export function WorkshopPublish(arg1, arg2) {
+  return window['go']['main']['App']['WorkshopPublish'](arg1, arg2);
+}
+
+export function WorkshopFetchImage(arg1) {
+  return window['go']['main']['App']['WorkshopFetchImage'](arg1);
+}
+
+export function SetCardBgData(arg1, arg2) {
+  return window['go']['main']['App']['SetCardBgData'](arg1, arg2);
+}
