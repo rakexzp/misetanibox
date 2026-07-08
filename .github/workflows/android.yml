@@ -57,11 +57,11 @@ jobs:
           mkdir -p ../android/app/libs
           cp mihomo.aar ../android/app/libs/mihomo.aar
 
-      - name: Sync web assets into android project
+      - name: Sync web assets + native plugin config into android project
         working-directory: mobile
         run: |
           npm install
-          npx cap copy android
+          npx cap sync android
 
       - name: Build debug APK
         working-directory: mobile/android
