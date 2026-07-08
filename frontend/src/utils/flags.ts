@@ -137,3 +137,19 @@ export function flagUrl(name: string): string | null {
   const code = countryCode(name);
   return code && NAME_TO_CODE.has(code) ? `/flags/${code}.svg` : null;
 }
+
+// Имя для показа: если рисуем SVG-флаг, убираем эмодзи-флаг из текста
+// (иначе на Windows он рендерится буквами «NL» и дублирует картинку).
+export function displayName(name: string): string {
+  if (!name) return name;
+  const cleaned = Array.from(name)
+    .filter((ch) => {
+      const cp = ch.codePointAt(0) || 0;
+      return !(cp >= 0x1f1e6 && cp <= 0x1f1ff); // regional indicators
+    })
+    .join('')
+    .replace(/[️‍]/g, '') // variation selector / ZWJ-хвосты
+    .replace(/^[\s|·・‧∙•\-–—_]+/, '') // висячие разделители в начале
+    .trim();
+  return cleaned || name;
+}

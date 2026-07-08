@@ -66,7 +66,7 @@
             <div class="node-main-area">
               <div class="node-info">
                 <img v-if="flagUrl(node.name)" :src="flagUrl(node.name)!" class="n-flag" alt="" />
-                <span class="n-name" :title="node.name">{{ node.name }}</span>
+                <span class="n-name" :title="node.name">{{ displayName(node.name) }}</span>
               </div>
               <div class="node-meta">
                 <span class="n-protocol">{{ node.type }}</span>
@@ -112,7 +112,7 @@ import * as API from '../../wailsjs/go/main/App';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
 import { showAlert, globalState, scheduleOutboundIPRefresh } from '../store';
 import { ICONS } from '../utils/icons';
-import { flagUrl } from '../utils/flags';
+import { flagUrl, displayName } from '../utils/flags';
 
 const localGroups = ref<any[]>([]);
 const currentGroup = ref<string>(localStorage.getItem('goclashz_proxyGroup') || '');

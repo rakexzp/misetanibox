@@ -30,7 +30,7 @@
             <div class="lite-server" @click="openServers = !openServers">
         <div class="lite-server-main">
           <span class="lite-server-label">Сервер</span>
-          <span class="lite-server-name truncate">{{ currentServer || 'Не выбран' }}</span>
+          <span class="lite-server-name truncate">{{ currentServer ? displayName(currentServer) : 'Не выбран' }}</span>
         </div>
         <span class="lite-server-ping" v-if="currentDelay != null" :class="pingClass(currentDelay)">
           {{ currentDelay > 0 ? currentDelay + ' мс' : '—' }}
@@ -67,7 +67,7 @@
           >
             <span class="lite-dot" :class="{ on: s.name === currentServer }"></span>
             <img v-if="flagUrl(s.name)" :src="flagUrl(s.name)!" class="lite-flag" alt="" />
-            <span class="lite-item-name truncate">{{ s.name }}</span>
+            <span class="lite-item-name truncate">{{ displayName(s.name) }}</span>
             <span v-if="testingSet.has(s.name)" class="lite-ping-spin"></span>
             <span v-else class="lite-item-ping" :class="pingClass(delayOf(s.name))">
               {{ delayLabel(s.name) }}
@@ -155,7 +155,7 @@ import {
   globalState, setUiMode, setTunIntent, showAlert, showConfirm, updateStateFromBackend,
 } from '../store';
 import { ICONS } from '../utils/icons';
-import { flagUrl } from '../utils/flags';
+import { flagUrl, displayName } from '../utils/flags';
 
 defineProps<{ traffic: { up: string; down: string } }>();
 
