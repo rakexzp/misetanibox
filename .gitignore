@@ -39,3 +39,6 @@ scratch/
 goclashz
 /mise-linux
 build/bin/
+
+mobile/node_modules/
+mobile/android/
