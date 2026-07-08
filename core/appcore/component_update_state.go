@@ -7,8 +7,8 @@ import (
 type UpdateTaskState struct {
 	Key        string  `json:"key"`
 	Title      string  `json:"title"`
-	Status     string  `json:"status"` // "running", "success", "error", "cancelled"
-	Stage      string  `json:"stage"`  // "downloading", "extracting", "verifying"
+	Status     string  `json:"status"`
+	Stage      string  `json:"stage"`
 	Progress   float64 `json:"progress"`
 	BytesDone  int64   `json:"bytesDone"`
 	BytesTotal int64   `json:"bytesTotal"`

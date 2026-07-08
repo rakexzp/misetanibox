@@ -5,6 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"goclashz/core/downloader"
+	"goclashz/core/runtimeassets"
+	"goclashz/core/sys"
+	"goclashz/core/utils"
 	"io"
 	"net/http"
 	"os"
@@ -15,13 +19,8 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"goclashz/core/downloader"
-	"goclashz/core/runtimeassets"
-	"goclashz/core/sys"
-	"goclashz/core/utils"
 )
 
-// PrepareEnv 检查内核并生成基础配置
 func PrepareEnv(ctx context.Context) error {
 	status, err := runtimeassets.EnsureReady(ctx, runtimeassets.RequireCoreOnly, runtimeassets.RepairInvalid)
 	if err != nil {
@@ -90,7 +89,6 @@ func getLocalCoreVersionLocked(ctx context.Context) string {
 	return version
 }
 
-// GetLocalCoreVersion 获取本地内核版本号
 func GetLocalCoreVersion(ctx context.Context) string {
 	coreBinaryMu.Lock()
 	defer coreBinaryMu.Unlock()
@@ -236,7 +234,6 @@ func CommitCoreUpdate(ctx context.Context, prepared map[string]string) (string, 
 		return "", fmt.Errorf("обновление ядра: отсутствует staging-информация")
 	}
 
-	// 如果 core\bin 不可写，通过 helper 服务替换
 	if !isDirWritable(filepath.Dir(exePath)) {
 		client := sys.NewHelperClient()
 		if err := client.ReplaceCoreFile(sys.ReplaceCoreFileParams{
@@ -358,7 +355,7 @@ func CompareCoreVersion(remote, local string) (int, error) {
 
 	l, err := parseVersionParts(local)
 	if err != nil {
-		// 本地版本未知、未安装或无法解析时，允许更新。
+
 		return 1, nil
 	}
 
@@ -382,7 +379,6 @@ func parseVersionParts(v string) ([3]int, error) {
 	v = strings.TrimPrefix(v, "v")
 	v = strings.TrimPrefix(v, "V")
 
-	// 去掉 prerelease/build metadata。
 	if idx := strings.IndexAny(v, "-+"); idx >= 0 {
 		v = v[:idx]
 	}
@@ -396,7 +392,6 @@ func parseVersionParts(v string) ([3]int, error) {
 		return out, fmt.Errorf("invalid version: %s", original)
 	}
 
-	// 如果部分缺失，则补 0
 	for i := 0; i < 3; i++ {
 		if i < len(parts) {
 			if parts[i] == "" {
@@ -459,7 +454,7 @@ func UpdateGeoDB(ctx context.Context, key string, url string, strategy func() do
 }
 
 func geoDBMaxBytes() int64 {
-	// 默认限制 200MB，防止异常重定向下载了巨大的错误页或二进制
+
 	return 200 << 20
 }
 
@@ -469,7 +464,6 @@ func ValidateGeoDBFile(key, tmpPath, destPath string) error {
 		return err
 	}
 
-	// 太小基本就是 HTML 错误页、空文件或下载失败
 	if info.Size() < 1024 {
 		return fmt.Errorf("%s: аномальный размер файла: %d bytes", key, info.Size())
 	}
@@ -480,7 +474,7 @@ func ValidateGeoDBFile(key, tmpPath, destPath string) error {
 			return fmt.Errorf("mmdb: некорректное расширение целевого пути: %s", destPath)
 		}
 	case "geoip", "geosite", "asn":
-		// dat/metadb 不强行解析格式，先做体积保护
+
 	default:
 		return fmt.Errorf("unknown geo database key: %s", key)
 	}

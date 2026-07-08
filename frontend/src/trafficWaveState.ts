@@ -1,8 +1,3 @@
-/**
- * 流量波形采样状态单例
- * 将波形数据提取到组件生命周期之外，确保切换页面时不会丢失历史波形。
- * TrafficCard.vue 仅读取/写入此模块的状态，不再自己维护 ref。
- */
 
 import { reactive } from 'vue';
 
@@ -71,7 +66,6 @@ const updateScale = (prevScale: number, value: number) => {
   return prevScale + (target - prevScale) * alpha;
 };
 
-// 5 点高斯核平滑（在采样循环中预计算，不在 computed 中重复分配）
 const SMOOTH_KERNEL = [0.06, 0.20, 0.48, 0.20, 0.06];
 const smoothSamples = (src: number[]): number[] => {
   const n = src.length;
@@ -87,14 +81,10 @@ const smoothSamples = (src: number[]): number[] => {
   return out;
 };
 
-// --- 持久化采样状态 ---
-
 export const waveState = reactive({
-  // 原始采样值（用于 scale 计算）
   uploadRatios: makeInitialSamples(),
   downloadRatios: makeInitialSamples(),
 
-  // 平滑后的值（直接用于路径构建，避免 computed 中重复计算）
   smoothedUploadRatios: makeInitialSamples(),
   smoothedDownloadRatios: makeInitialSamples(),
 
@@ -123,13 +113,11 @@ const pushVisualSamples = () => {
   s.uploadScale = updateScale(s.uploadScale, s.smoothedUpload);
   s.downloadScale = updateScale(s.downloadScale, s.smoothedDownload);
 
-  // 原地修改，避免 spread+slice 分配新数组
   s.uploadRatios.shift();
   s.uploadRatios.push(upRatio);
   s.downloadRatios.shift();
   s.downloadRatios.push(downRatio);
 
-  // 预计算平滑路径数据，buildMonotoneAreaPath 直接读取
   s.smoothedUploadRatios = smoothSamples(s.uploadRatios);
   s.smoothedDownloadRatios = smoothSamples(s.downloadRatios);
 };
@@ -167,8 +155,6 @@ export function resetWaveState() {
   waveState.uploadScale = WAVE.minScale;
   waveState.downloadScale = WAVE.minScale;
 }
-
-// --- 路径构建 ---
 
 export function buildMonotoneAreaPath(
   smoothedRatios: number[],

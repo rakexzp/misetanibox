@@ -57,7 +57,7 @@ func (c *Controller) IsCoreBinWritable() bool {
 }
 
 func (c *Controller) UpdateCoreComponentAsync(ctx context.Context) {
-	// 如果 core\bin 不可写，检查 helper 是否可用
+
 	if !c.IsCoreBinWritable() {
 		helperStatus := sys.CheckHelperService()
 		if !helperStatus.Reachable {
@@ -79,7 +79,7 @@ func (c *Controller) UpdateCoreComponentAsync(ctx context.Context) {
 		RestartCore: true,
 		Prepare: func(ctx context.Context, onProgress func(int64, int64, int64, int64)) (map[string]string, error) {
 			assetURL := ""
-			// 优先使用前端检查更新时缓存的下载地址
+
 			c.mu.RLock()
 			cachedURL := c.pendingCoreUpdateAssetURL
 			c.mu.RUnlock()
@@ -112,7 +112,6 @@ func (c *Controller) UpdateCoreComponentAsync(ctx context.Context) {
 				})
 			}
 
-			// 内核二进制更新后，连接和延迟状态不应沿用旧进程
 			c.events.Emit("delay-cache-clear", "core-update")
 
 			c.mu.Lock()
@@ -273,12 +272,12 @@ func (c *Controller) DownloadPendingAppUpdateAsync(ctx context.Context) {
 }
 
 func (c *Controller) CheckAndDownloadAppUpdateAsync(ctx context.Context, currentVersion string) {
-	// 兼容接口：现在改为仅检查
+
 	c.CheckAppUpdateAsync(ctx, currentVersion, true)
 }
 
 func (c *Controller) AutoCheckAndDownloadAppUpdateAsync(ctx context.Context, currentVersion string) {
-	// 启动自动检查也改为仅检查
+
 	c.CheckAppUpdateAsync(ctx, currentVersion, false)
 }
 
@@ -302,7 +301,6 @@ func (c *Controller) downloadAppUpdateWithInfo(ctx context.Context, info *downlo
 		})
 	}
 
-	// 🚀 这里只调用一次，底层的 DownloadLargeAssetAtomic 会通过 Strategy() 回调动态感知代理切换并自动进行内部无感断点续传！
 	path, err := downloader.DownloadAppUpdate(ctx, info, destDir, onProgress, c.getDynamicStrategy)
 	if err != nil {
 		logger.Errorf("Не удалось загрузить обновление программы: %v", err)
@@ -323,10 +321,6 @@ func (c *Controller) getDynamicStrategy() downloader.DownloadStrategy {
 	preferProxy := c.sysProxyActive || c.tunActive
 	c.mu.RUnlock()
 
-	// 注意：resolveLocalProxyURL() 只是获取格式化字符串，它不启动内核。
-	// 如果用户当前没有开启代理（preferProxy 为 false），且直连失败了，
-	// 下载机将会尝试走代理兜底。如果此时内核未启动，代理请求也会迅速失败（connection refused）。
-	// 这是合理的行为，因为我们不希望在用户完全没有开启代理时偷偷在后台启动内核耗电。
 	return downloader.DownloadStrategy{
 		ProxyURL:    resolveLocalProxyURL(),
 		PreferProxy: preferProxy,
@@ -340,7 +334,6 @@ func userFacingAppUpdateDownloadError(err error) string {
 
 	msg := strings.ToLower(err.Error())
 
-	// 映射网络类错误
 	if strings.Contains(msg, "wsarecv") ||
 		strings.Contains(msg, "connection was aborted") ||
 		strings.Contains(msg, "timeout") ||
@@ -350,7 +343,6 @@ func userFacingAppUpdateDownloadError(err error) string {
 		return "Не удалось загрузить обновление: текущая сеть не может подключиться к адресу загрузки. Проверьте сеть или переключитесь на рабочий узел и повторите попытку."
 	}
 
-	// 映射文件效验类错误
 	if strings.Contains(msg, "mz") ||
 		strings.Contains(msg, "не является допустимым исполняемым файлом windows") ||
 		strings.Contains(msg, "аномальный размер") {

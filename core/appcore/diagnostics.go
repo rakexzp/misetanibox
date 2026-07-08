@@ -54,7 +54,6 @@ func GetDiagnosticInfo() DiagnosticInfo {
 		IsAdmin:           sys.CheckAdmin(),
 	}
 
-	// Helper Service Status
 	status := sys.CheckHelperService()
 	info.HelperServiceStatus = status.Error
 	if status.Reachable {
@@ -69,7 +68,6 @@ func GetDiagnosticInfo() DiagnosticInfo {
 
 	info.HelperBinaryPath = filepath.Join(info.AppDir, "GoclashZHelper.exe")
 
-	// Assets
 	info.Assets.ClashExe = fileExists(filepath.Join(info.RuntimeCoreBinDir, "clash.exe"))
 	info.Assets.WintunDll = fileExists(filepath.Join(info.RuntimeCoreBinDir, "wintun.dll"))
 	info.Assets.Geoip = fileExists(filepath.Join(info.RuntimeCoreBinDir, "geoip.metadb"))

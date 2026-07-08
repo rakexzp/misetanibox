@@ -48,12 +48,10 @@ func DownloadLargeAssetAtomic(ctx context.Context, opt Options) error {
 		lastStrategy = opt.Strategy()
 	}
 
-	// 我们使用一个可中断的大循环来支持策略变更和失败重试
-	// 将尝试次数乘以 2，以便在代理切换时有足够的重试次数
 	maxAttempts := attempts * 2
 
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
-		// 每次重试前，都动态获取最新的策略
+
 		if opt.Strategy != nil {
 			lastStrategy = opt.Strategy()
 		}
@@ -100,11 +98,11 @@ func DownloadLargeAssetAtomic(ctx context.Context, opt Options) error {
 				for {
 					select {
 					case <-t.C:
-						// 🚀 核心机制：轮询下载进度时，实时检测代理策略是否发生改变
+
 						if opt.Strategy != nil {
 							currentStrategy := opt.Strategy()
 							if currentStrategy.PreferProxy != lastStrategy.PreferProxy || currentStrategy.ProxyURL != lastStrategy.ProxyURL {
-								// 代理状态或 URL 发生了改变，立刻中断当前的下载！
+
 								resp.Cancel()
 								lastStrategy = currentStrategy
 								strategyChanged = true
@@ -131,12 +129,10 @@ func DownloadLargeAssetAtomic(ctx context.Context, opt Options) error {
 				if err := resp.Err(); err != nil {
 					lastErr = err
 
-					// 如果是因为策略改变导致的取消，我们不需要等待，直接跳出双层循环，立即触发外层的全新 attempt！
 					if strategyChanged {
 						goto NEXT_ATTEMPT
 					}
 
-					// 正常的网络失败，等待后重试
 					select {
 					case <-time.After(time.Duration(attempt) * 800 * time.Millisecond):
 					case <-ctx.Done():
@@ -163,7 +159,7 @@ func DownloadLargeAssetAtomic(ctx context.Context, opt Options) error {
 						if err := VerifySHA256(tmpPath, expectedSHA); err != nil {
 							_ = os.Remove(tmpPath)
 							lastErr = err
-							continue // 校验失败允许重试
+							continue
 						}
 					}
 				}

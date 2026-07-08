@@ -40,13 +40,12 @@ func createOrderedClientsFromStrategy(opt Options, strategy DownloadStrategy) []
 	var clients []*http.Client
 
 	if strategy.PreferProxy && strategy.ProxyURL != "" {
-		// 代理优先模式：先尝试代理，失败后再直连
+
 		clients = append(clients, makeClient(strategy.ProxyURL))
 		clients = append(clients, makeClient(""))
 		return clients
 	}
 
-	// 默认模式：先尝试直连，失败后再尝试代理
 	clients = append(clients, makeClient(""))
 	if strategy.ProxyURL != "" {
 		clients = append(clients, makeClient(strategy.ProxyURL))
@@ -55,7 +54,6 @@ func createOrderedClientsFromStrategy(opt Options, strategy DownloadStrategy) []
 	return clients
 }
 
-// BuildOrderedClients 根据动态策略构建有序 HTTP 客户端列表（供 API 检查等轻量场景复用）
 func BuildOrderedClients(strategy func() DownloadStrategy, timeout time.Duration) []*http.Client {
 	directClient := &http.Client{Timeout: timeout}
 

@@ -15,9 +15,9 @@ import (
 )
 
 const (
-	tsActionExec     = 0 // TASK_ACTION_EXEC
-	tsTriggerLogon   = 9 // TASK_TRIGGER_LOGON
-	tsCreateOrUpdate = 6 // TASK_CREATE_OR_UPDATE
+	tsActionExec     = 0
+	tsTriggerLogon   = 9
+	tsCreateOrUpdate = 6
 )
 
 var clsidTaskScheduler = ole.NewGUID("{0F87369F-A4E5-4CFC-BD3E-73E6154572DD}")
@@ -47,14 +47,12 @@ type StartupTaskInfo struct {
 	IsHealthy       bool        `json:"isHealthy"`
 }
 
-// initCOM initializes COM and returns a cleanup function.
 func initCOM() (func(), error) {
 	err := ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED)
 	if err != nil {
 		if oleErr, ok := err.(*ole.OleError); ok {
 			code := oleErr.Code()
-			// 1 (S_FALSE) 表示已作为相同模式初始化
-			// 0x80010106 (RPC_E_CHANGED_MODE) 表示已作为不同模式初始化 (Wails 主线程)
+
 			if code == 1 || code == 0x80010106 {
 				return func() {}, nil
 			}
@@ -68,7 +66,6 @@ func initCOM() (func(), error) {
 	return ole.CoUninitialize, nil
 }
 
-// newTaskScheduler creates a Task Scheduler IDispatch connected to the local service.
 func newTaskScheduler() (*ole.IDispatch, error) {
 	unk, err := ole.CreateInstance(clsidTaskScheduler, nil)
 	if err != nil {
@@ -191,7 +188,7 @@ func CheckStartupTask() (StartupTaskInfo, error) {
 
 	taskV, err := root.CallMethod("GetTask", tsTaskName)
 	if err != nil {
-		// Task doesn't exist
+
 		info.Exists = false
 		info.Enabled = false
 		info.IsHealthy = false
@@ -202,7 +199,6 @@ func CheckStartupTask() (StartupTaskInfo, error) {
 	task := taskV.ToIDispatch()
 	defer task.Release()
 
-	// Check if enabled
 	enabledV, err := task.GetProperty("Enabled")
 	if err == nil {
 		if b, ok := enabledV.Value().(bool); ok {
@@ -210,13 +206,11 @@ func CheckStartupTask() (StartupTaskInfo, error) {
 		}
 	}
 
-	// Check definition
 	defV, err := task.GetProperty("Definition")
 	if err == nil {
 		def := defV.ToIDispatch()
 		defer def.Release()
 
-		// Get Principal for RunLevel
 		prinV, err := def.GetProperty("Principal")
 		if err == nil {
 			prin := prinV.ToIDispatch()
@@ -227,13 +221,12 @@ func CheckStartupTask() (StartupTaskInfo, error) {
 			prin.Release()
 		}
 
-		// Get Actions
 		actionsV, err := def.GetProperty("Actions")
 		if err == nil {
 			actions := actionsV.ToIDispatch()
 			actionCountV, err := actions.GetProperty("Count")
 			if err == nil && variantInt(actionCountV.Value()) > 0 {
-				actionV, err := actions.GetProperty("Item", 1) // 1-indexed in COM collections
+				actionV, err := actions.GetProperty("Item", 1)
 				if err == nil {
 					action := actionV.ToIDispatch()
 					pathV, err := action.GetProperty("Path")
@@ -252,7 +245,6 @@ func CheckStartupTask() (StartupTaskInfo, error) {
 
 		info.Mode = StartupNormal
 
-		// Validation
 		actualPath := strings.Trim(info.Path, "\"")
 		actualPath = strings.TrimSpace(actualPath)
 		actual, _ := filepath.Abs(actualPath)
@@ -278,7 +270,6 @@ func CheckStartupTask() (StartupTaskInfo, error) {
 		pathMismatch := !strings.EqualFold(filepath.Clean(actual), filepath.Clean(expected))
 		argsMismatch := !hasStartup || !hasSilent || dataDirMismatch
 
-		// 旧的 elevated 任务 (RunLevel=1) 视为不健康，需要修复为普通任务
 		if info.RunLevel == 1 {
 			info.LastError = "старая задача автозапуска с правами администратора больше не поддерживается, настройте автозапуск заново"
 			info.Enabled = false
@@ -364,7 +355,7 @@ func CreateStartupTask(exePath string) error {
 	}
 	trigger := triggerV.ToIDispatch()
 	trigger.PutProperty("Enabled", true)
-	// 统一延迟 15 秒以避开系统启动高峰，防止 explorer.exe 未加载完成导致托盘图标空白
+
 	trigger.PutProperty("Delay", "PT15S")
 	trigger.Release()
 
@@ -373,8 +364,8 @@ func CreateStartupTask(exePath string) error {
 		return fmt.Errorf("не удалось получить Principal: %w", err)
 	}
 	principal := principalV.ToIDispatch()
-	principal.PutProperty("LogonType", 3) // TASK_LOGON_TOKEN
-	principal.PutProperty("RunLevel", 0)  // TASK_RUNLEVEL_LUA (normal user)
+	principal.PutProperty("LogonType", 3)
+	principal.PutProperty("RunLevel", 0)
 	principal.Release()
 
 	def.PutProperty("DisplayName", tsTaskName)
@@ -387,14 +378,14 @@ func CreateStartupTask(exePath string) error {
 	root := rootV.ToIDispatch()
 	defer root.Release()
 
-	logonType := int32(3) // TASK_LOGON_TOKEN
+	logonType := int32(3)
 
 	_, err = root.CallMethod("RegisterTaskDefinition",
 		tsTaskName,
 		def,
 		tsCreateOrUpdate,
-		"",  // userId: current user
-		nil, // password
+		"",
+		nil,
 		logonType,
 	)
 	if err != nil {
@@ -404,8 +395,6 @@ func CreateStartupTask(exePath string) error {
 	return nil
 }
 
-// DeleteStartupTask removes the GoclashZ startup task.
-// Returns nil if the task does not exist.
 func DeleteStartupTask() error {
 	cleanup, err := initCOM()
 	if err != nil {
@@ -426,7 +415,6 @@ func DeleteStartupTask() error {
 	root := rootV.ToIDispatch()
 	defer root.Release()
 
-	// Ignore errors (task may not exist)
 	_, _ = root.CallMethod("DeleteTask", tsTaskName, 0)
 	return nil
 }

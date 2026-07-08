@@ -40,9 +40,6 @@ const (
 	MAX_PATH               = 260
 )
 
-// ⚠️ 修复1：使用 uintptr 代替 uint64。
-// 这样在 64 位系统下是 8 字节并自动产生 4 字节 Padding，
-// 在 32 位系统下是 4 字节无 Padding，完美对齐 C++ 中的 union 结构
 type INTERNET_PER_CONN_OPTION struct {
 	dwOption uint32
 	Value    uintptr
@@ -63,7 +60,6 @@ type RasEntryName struct {
 	szPhonebook [MAX_PATH + 1]uint16
 }
 
-// EnableSystemProxy 开启系统代理
 func EnableSystemProxy(host string, port int, bypassDomains string) error {
 	systemProxyMu.Lock()
 	defer systemProxyMu.Unlock()
@@ -71,7 +67,6 @@ func EnableSystemProxy(host string, port int, bypassDomains string) error {
 	return enableSystemProxyLocked(host, port, bypassDomains)
 }
 
-// enableSystemProxyLocked 内部实现，调用方必须持有 systemProxyMu
 func enableSystemProxyLocked(host string, port int, bypassDomains string) error {
 	serverStr := fmt.Sprintf("%s:%d", host, port)
 
@@ -86,12 +81,11 @@ func enableSystemProxyLocked(host string, port int, bypassDomains string) error 
 
 	list := INTERNET_PER_CONN_OPTION_LIST{
 		dwSize:        uint32(unsafe.Sizeof(INTERNET_PER_CONN_OPTION_LIST{})),
-		pszConnection: nil, // LAN
+		pszConnection: nil,
 		dwOptionCount: uint32(len(options)),
 		pOptions:      &options[0],
 	}
 
-	// 1. 设置局域网代理
 	ret, _, err := procInternetSetOption.Call(
 		0,
 		uintptr(INTERNET_OPTION_PER_CONNECTION_OPTION),
@@ -102,18 +96,14 @@ func enableSystemProxyLocked(host string, port int, bypassDomains string) error 
 		return fmt.Errorf("не удалось задать прокси для подключения по умолчанию: %v", err)
 	}
 
-	// 2. 设置 RAS 拨号/VPN 代理
 	setRasProxy(&list)
 
-	// 3. 全局广播，瞬间生效
 	refreshSystemProxyLocked()
 
-	// 标记代理所有权，用于异常崩溃后的精准自愈
 	markSystemProxyOwnedLocked(host, port)
 
 	logger.Infof("системный прокси успешно установлен: %s", serverStr)
 
-	// GC 护城河！必须保持这些变量在 Syscall 执行完毕前不被回收！
 	runtime.KeepAlive(serverPtr)
 	runtime.KeepAlive(bypassPtr)
 	runtime.KeepAlive(options)
@@ -122,7 +112,6 @@ func enableSystemProxyLocked(host string, port int, bypassDomains string) error 
 	return nil
 }
 
-// DisableSystemProxy 关闭系统代理
 func DisableSystemProxy() error {
 	systemProxyMu.Lock()
 	defer systemProxyMu.Unlock()
@@ -130,7 +119,6 @@ func DisableSystemProxy() error {
 	return disableSystemProxyLocked()
 }
 
-// disableSystemProxyLocked 内部实现，调用方必须持有 systemProxyMu
 func disableSystemProxyLocked() error {
 	options := []INTERNET_PER_CONN_OPTION{
 		{dwOption: INTERNET_PER_CONN_FLAGS, Value: uintptr(PROXY_TYPE_DIRECT)},
@@ -157,20 +145,16 @@ func disableSystemProxyLocked() error {
 
 	refreshSystemProxyLocked()
 
-	// 清理代理所有权标记
 	unmarkSystemProxyOwnedLocked()
 
 	logger.Infof("системный прокси отключён")
 
-	// 保护指针
 	runtime.KeepAlive(options)
 	runtime.KeepAlive(list)
 
 	return nil
 }
 
-// RefreshSystemProxy 向整个 Windows 系统广播代理状态变更
-// 通知 Chrome/Edge/IE 等浏览器立即拉取最新注册表设置
 func RefreshSystemProxy() {
 	systemProxyMu.Lock()
 	defer systemProxyMu.Unlock()
@@ -178,10 +162,8 @@ func RefreshSystemProxy() {
 	refreshSystemProxyLocked()
 }
 
-// refreshSystemProxyLocked 内部实现，调用方必须持有 systemProxyMu
 func refreshSystemProxyLocked() {
-	// 39 = INTERNET_OPTION_SETTINGS_CHANGED
-	// 37 = INTERNET_OPTION_REFRESH
+
 	procInternetSetOption.Call(0, uintptr(INTERNET_OPTION_SETTINGS_CHANGED), 0, 0)
 	procInternetSetOption.Call(0, uintptr(INTERNET_OPTION_REFRESH), 0, 0)
 }
@@ -222,18 +204,16 @@ func setRasProxy(list *INTERNET_PER_CONN_OPTION_LIST) {
 				)
 			}
 		}
-		// 保护 entries 切片不被回收
+
 		runtime.KeepAlive(entries)
 	}
 }
 
-// SystemProxyState 表示系统代理的当前状态
 type SystemProxyState struct {
 	Enabled bool
 	Server  string
 }
 
-// GetSystemProxyState 从注册表读取当前的系统代理配置
 func GetSystemProxyState() (SystemProxyState, error) {
 	key, err := registry.OpenKey(
 		registry.CURRENT_USER,

@@ -1,10 +1,5 @@
 //go:build !windows
 
-// Package sys: Linux-реализации и заглушки платформенных функций.
-// Зеркалит экспортируемые символы windows-файлов пакета (win.go, admin_win.go,
-// proxy_win.go, proxy_guard_win.go, hwid_windows.go, apps_windows.go,
-// startup_windows.go, uwp_win.go, shutdown_windows.go, helper_client_windows.go,
-// file_version_windows.go) с идентичными сигнатурами.
 package sys
 
 import (
@@ -22,11 +17,6 @@ import (
 	"goclashz/core/utils"
 )
 
-// =============================================================================
-// win.go — окна / фокус / мигание таскбара (на Linux — no-op)
-// =============================================================================
-
-// FLASHWINFO — заглушка win32-структуры (на Linux не используется).
 type FLASHWINFO struct {
 	CbSize    uint32
 	Hwnd      uintptr
@@ -42,7 +32,6 @@ type MainWindowState struct {
 	Foreground bool
 }
 
-// FindMainWindow на Linux всегда возвращает 0 (нет win32-хэндлов).
 func FindMainWindow() uintptr { return 0 }
 
 func GetMainWindowState() MainWindowState { return MainWindowState{} }
@@ -59,11 +48,6 @@ func WaitMainWindowHandle() uintptr { return 0 }
 
 func FocusMainWindowAndFlashTwiceWin32Only() {}
 
-// =============================================================================
-// admin_win.go — привилегии
-// =============================================================================
-
-// ShellExecuteInfo — заглушка win32-структуры (на Linux не используется).
 type ShellExecuteInfo struct {
 	CbSize       uint32
 	FMask        uint32
@@ -82,17 +66,14 @@ type ShellExecuteInfo struct {
 	HProcess     uintptr
 }
 
-// CheckAdmin проверяет, запущен ли процесс от root.
 func CheckAdmin() bool {
 	return os.Geteuid() == 0
 }
 
-// IsAdmin — алиас CheckAdmin.
 func IsAdmin() bool {
 	return CheckAdmin()
 }
 
-// RequestAdmin перезапускает программу от root через pkexec (если доступен).
 func RequestAdmin() error {
 	if CheckAdmin() {
 		return nil
@@ -100,7 +81,6 @@ func RequestAdmin() error {
 	return relaunchElevated(os.Args[1:]...)
 }
 
-// RequestAdminWithArgs перезапускает программу от root с указанной строкой аргументов.
 func RequestAdminWithArgs(extraArgs string) error {
 	if CheckAdmin() {
 		return nil
@@ -125,8 +105,6 @@ func relaunchElevated(args ...string) error {
 	return nil
 }
 
-// RunElevatedWithArgsWait запускает собственный бинарь от root (pkexec) с
-// указанными аргументами и ждёт завершения, не выходя из текущего процесса.
 func RunElevatedWithArgsWait(args ...string) error {
 	if CheckAdmin() {
 		return nil
@@ -144,7 +122,6 @@ func RunElevatedWithArgsWait(args ...string) error {
 	taskID := fmt.Sprintf("%d_%d", time.Now().UnixNano(), os.Getpid())
 	os.Setenv("GOCLASHZ_ADMIN_TASK_ID", taskID)
 
-	// pkexec чистит окружение — прокидываем ID задачи через env(1)
 	cmdArgs := append([]string{"env", "GOCLASHZ_ADMIN_TASK_ID=" + taskID, exe}, args...)
 	cmd := exec.Command(pkexec, cmdArgs...)
 	if err := cmd.Run(); err != nil {
@@ -173,7 +150,6 @@ func getAdminTaskResultPath() string {
 	return filepath.Join(os.TempDir(), fmt.Sprintf("goclashz_admin_task_%s.json", id))
 }
 
-// WriteAdminTaskResult записывает результат административной задачи.
 func WriteAdminTaskResult(operation string, err error) {
 	res := AdminTaskResult{
 		OK:        err == nil,
@@ -200,13 +176,8 @@ func readAdminTaskError() string {
 	return ""
 }
 
-// =============================================================================
-// proxy_win.go — системный прокси (Linux: gsettings / GNOME)
-// =============================================================================
-
 var systemProxyMu sync.Mutex
 
-// SystemProxyState представляет текущее состояние системного прокси.
 type SystemProxyState struct {
 	Enabled bool
 	Server  string
@@ -236,7 +207,6 @@ func gsettingsGet(gs string, args ...string) (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
-// EnableSystemProxy включает системный прокси (GNOME gsettings, best-effort).
 func EnableSystemProxy(host string, port int, bypassDomains string) error {
 	systemProxyMu.Lock()
 	defer systemProxyMu.Unlock()
@@ -247,7 +217,7 @@ func EnableSystemProxy(host string, port int, bypassDomains string) error {
 func enableSystemProxyLocked(host string, port int, bypassDomains string) error {
 	gs := gsettingsPath()
 	if gs == "" {
-		// Не GNOME-окружение: молча пропускаем, приложение работает без системного прокси.
+
 		markSystemProxyOwnedLocked(host, port)
 		return nil
 	}
@@ -278,7 +248,6 @@ func enableSystemProxyLocked(host string, port int, bypassDomains string) error 
 	return nil
 }
 
-// bypassToIgnoreHosts конвертирует windows-стиль "a;b;<local>" в gsettings-массив.
 func bypassToIgnoreHosts(bypass string) string {
 	var items []string
 	for _, part := range strings.FieldsFunc(bypass, func(r rune) bool { return r == ';' || r == ',' }) {
@@ -297,7 +266,6 @@ func bypassToIgnoreHosts(bypass string) string {
 	return "[" + strings.Join(items, ", ") + "]"
 }
 
-// DisableSystemProxy выключает системный прокси.
 func DisableSystemProxy() error {
 	systemProxyMu.Lock()
 	defer systemProxyMu.Unlock()
@@ -315,10 +283,8 @@ func disableSystemProxyLocked() error {
 	return gsettingsSet(gs, "org.gnome.system.proxy", "mode", "none")
 }
 
-// RefreshSystemProxy на Linux не требуется (gsettings применяется мгновенно).
 func RefreshSystemProxy() {}
 
-// GetSystemProxyState читает текущее состояние системного прокси из gsettings.
 func GetSystemProxyState() (SystemProxyState, error) {
 	gs := gsettingsPath()
 	if gs == "" {
@@ -345,10 +311,6 @@ func GetSystemProxyState() (SystemProxyState, error) {
 	return SystemProxyState{Enabled: true, Server: server}, nil
 }
 
-// =============================================================================
-// proxy_guard_win.go — владение системным прокси (самолечение после падения)
-// =============================================================================
-
 type ownedProxyState struct {
 	Host      string `json:"host"`
 	Port      int    `json:"port"`
@@ -359,7 +321,6 @@ func proxyStatePath() string {
 	return filepath.Join(utils.GetDataDir(), "system_proxy_state.json")
 }
 
-// MarkSystemProxyOwned помечает системный прокси как установленный нами.
 func MarkSystemProxyOwned(host string, port int) {
 	systemProxyMu.Lock()
 	defer systemProxyMu.Unlock()
@@ -382,7 +343,6 @@ func markSystemProxyOwnedLocked(host string, port int) {
 	_ = utils.WriteFileAtomic(proxyStatePath(), data, 0644)
 }
 
-// UnmarkSystemProxyOwned снимает пометку владения прокси.
 func UnmarkSystemProxyOwned() {
 	systemProxyMu.Lock()
 	defer systemProxyMu.Unlock()
@@ -420,7 +380,6 @@ func currentProxyMatches(host string, port int) bool {
 	return strings.Contains(state.Server, fmt.Sprintf("%s:%d", host, port))
 }
 
-// ClearOwnedSystemProxy чистит прокси, только если он всё ещё наш.
 func ClearOwnedSystemProxy() {
 	systemProxyMu.Lock()
 	defer systemProxyMu.Unlock()
@@ -437,16 +396,11 @@ func ClearOwnedSystemProxy() {
 	unmarkSystemProxyOwnedLocked()
 }
 
-// =============================================================================
-// hwid_windows.go — идентификация устройства
-// =============================================================================
-
-// DeviceInfo — идентификация устройства для заголовков подписки.
 type DeviceInfo struct {
-	HWID  string // x-hwid: стабильный идентификатор машины
-	OS    string // x-device-os
-	OSVer string // x-ver-os
-	Model string // x-device-model
+	HWID  string
+	OS    string
+	OSVer string
+	Model string
 }
 
 var (
@@ -454,7 +408,6 @@ var (
 	cachedDeviceInfo DeviceInfo
 )
 
-// GetDeviceInfo возвращает закешированную идентификацию устройства.
 func GetDeviceInfo() DeviceInfo {
 	deviceInfoOnce.Do(func() {
 		cachedDeviceInfo = DeviceInfo{
@@ -467,8 +420,6 @@ func GetDeviceInfo() DeviceInfo {
 	return cachedDeviceInfo
 }
 
-// SubscriptionHeaders — HTTP-заголовки для запроса подписки, чтобы сервер
-// подписки мог различать устройства по HWID.
 func SubscriptionHeaders() map[string]string {
 	info := GetDeviceInfo()
 	h := map[string]string{}
@@ -549,20 +500,13 @@ func readDeviceModel() string {
 	}
 }
 
-// =============================================================================
-// apps_windows.go — сканер установленных приложений (.desktop-файлы)
-// =============================================================================
-
-// AppInfo describes one installed application for the UI app picker.
 type AppInfo struct {
-	Name    string `json:"name"`    // человекочитаемое имя (Name= из .desktop)
-	Exe     string `json:"exe"`     // basename бинаря в нижнем регистре — для правила PROCESS-NAME
-	Path    string `json:"path"`    // путь/команда исполняемого файла
-	IconPNG string `json:"iconPng"` // PNG-иконка в base64; на Linux не извлекается ("")
+	Name    string `json:"name"`
+	Exe     string `json:"exe"`
+	Path    string `json:"path"`
+	IconPNG string `json:"iconPng"`
 }
 
-// ListInstalledApps сканирует .desktop-файлы (системные и пользовательские),
-// дедуплицирует по Path и возвращает отсортированный по Name список.
 func ListInstalledApps() ([]AppInfo, error) {
 	dirs := []string{
 		"/usr/share/applications",
@@ -607,7 +551,6 @@ func ListInstalledApps() ([]AppInfo, error) {
 	return apps, nil
 }
 
-// parseDesktopFile извлекает Name/Exec из секции [Desktop Entry].
 func parseDesktopFile(path string) (AppInfo, bool) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -667,12 +610,11 @@ func parseDesktopFile(path string) (AppInfo, bool) {
 	}, true
 }
 
-// firstExecToken возвращает команду из Exec= (без %U/%F-флагов и env-обвязки).
 func firstExecToken(execLine string) string {
 	tokens := splitExecLine(execLine)
 
 	i := 0
-	// пропускаем env VAR=val ... перед реальной командой
+
 	for i < len(tokens) {
 		t := tokens[i]
 		if t == "env" || strings.Contains(t, "=") {
@@ -691,7 +633,6 @@ func firstExecToken(execLine string) string {
 	return cmd
 }
 
-// splitExecLine — простой токенизатор Exec= с поддержкой кавычек.
 func splitExecLine(s string) []string {
 	var tokens []string
 	var cur strings.Builder
@@ -703,7 +644,7 @@ func splitExecLine(s string) []string {
 		if t == "" {
 			return
 		}
-		// выбрасываем field codes (%U, %F, %i, ...)
+
 		if len(t) == 2 && t[0] == '%' {
 			return
 		}
@@ -725,7 +666,6 @@ func splitExecLine(s string) []string {
 	return tokens
 }
 
-// AppInfoForExe строит AppInfo для произвольного пути к бинарю (ручной выбор).
 func AppInfoForExe(path string) AppInfo {
 	path = strings.TrimSpace(path)
 	if path != "" {
@@ -738,10 +678,6 @@ func AppInfoForExe(path string) AppInfo {
 		Path: path,
 	}
 }
-
-// =============================================================================
-// startup_windows.go — автозапуск (Linux: ~/.config/autostart/*.desktop)
-// =============================================================================
 
 type StartupMode string
 
@@ -774,7 +710,6 @@ func autostartDesktopPath() (string, error) {
 	return filepath.Join(home, ".config", "autostart", "misetanibox.desktop"), nil
 }
 
-// CheckStartupTask проверяет autostart-файл и его соответствие текущему бинарю.
 func CheckStartupTask() (StartupTaskInfo, error) {
 	exe, _ := os.Executable()
 	expected, _ := filepath.Abs(exe)
@@ -852,7 +787,6 @@ func CheckStartupTask() (StartupTaskInfo, error) {
 	return info, nil
 }
 
-// CreateStartupTask создаёт autostart .desktop-файл.
 func CreateStartupTask(exePath string) error {
 	absPath, err := filepath.Abs(exePath)
 	if err != nil {
@@ -885,7 +819,6 @@ X-GNOME-Autostart-enabled=true
 	return nil
 }
 
-// DeleteStartupTask удаляет autostart-файл. Отсутствие файла — не ошибка.
 func DeleteStartupTask() error {
 	desktopPath, err := autostartDesktopPath()
 	if err != nil {
@@ -897,96 +830,57 @@ func DeleteStartupTask() error {
 	return nil
 }
 
-// =============================================================================
-// file_version_windows.go — версия файла (на Linux нет VERSIONINFO)
-// =============================================================================
-
-// GetFileVersion на Linux всегда возвращает пустую версию без ошибки.
 func GetFileVersion(path string) (string, error) {
 	return "", nil
 }
 
-// =============================================================================
-// shutdown_windows.go — межпроцессный сигнал завершения
-// =============================================================================
-
-// RequestExistingInstanceQuit — заглушка (на Linux глобального события нет).
 func RequestExistingInstanceQuit() {}
 
-// ListenForShutdownEvent блокируется навсегда: вызывающий код после возврата
-// делает экстренную очистку и os.Exit, поэтому возвращаться нельзя.
 func ListenForShutdownEvent() {
 	select {}
 }
 
-// =============================================================================
-// helper_client_windows.go / helper_scm_windows.go — helper-служба
-// (на Linux helper не используется, всё — no-op)
-// =============================================================================
-
-// HelperClient — заглушка клиента helper-службы (на Linux службы нет).
 type HelperClient struct{}
 
-// NewHelperClient создаёт заглушку helper-клиента.
 func NewHelperClient() *HelperClient {
 	return &HelperClient{}
 }
 
-// Ping — no-op (helper на Linux не нужен).
 func (c *HelperClient) Ping() error { return nil }
 
-// Shutdown — no-op (helper на Linux не нужен).
 func (c *HelperClient) Shutdown() error { return nil }
 
-// StartCore — no-op (helper на Linux не нужен).
 func (c *HelperClient) StartCore(params StartCoreParams) error { return nil }
 
-// StopCore — no-op (helper на Linux не нужен).
 func (c *HelperClient) StopCore() error { return nil }
 
-// CoreStatus — no-op (helper на Linux не нужен).
 func (c *HelperClient) CoreStatus() (CoreStatusData, error) {
 	return CoreStatusData{}, nil
 }
 
-// RepairPermission — no-op (helper на Linux не нужен).
 func (c *HelperClient) RepairPermission(dataDir string) error { return nil }
 
-// ReplaceCoreFile — no-op (helper на Linux не нужен).
 func (c *HelperClient) ReplaceCoreFile(params ReplaceCoreFileParams) error { return nil }
 
-// InstallWintun — no-op (Wintun на Linux не существует).
 func (c *HelperClient) InstallWintun(source, target string) error { return nil }
 
-// CheckHelperService на Linux всегда сообщает «не установлена».
 func CheckHelperService() HelperStatusData {
 	return HelperStatusData{}
 }
 
-// InstallHelperService — заглушка (helper на Linux не нужен).
 func InstallHelperService(exePath string) error { return nil }
 
-// InstallOrRepairHelperServiceForUser — заглушка (helper на Linux не нужен).
 func InstallOrRepairHelperServiceForUser(exePath string, userSID string) error { return nil }
 
-// RecoverHelperServiceForUser — заглушка (helper на Linux не нужен).
 func RecoverHelperServiceForUser(exePath string, userSID string) error { return nil }
 
-// UninstallHelperService — заглушка (helper на Linux не нужен).
 func UninstallHelperService() error { return nil }
 
-// StartHelperService — заглушка (helper на Linux не нужен).
 func StartHelperService() error { return nil }
 
-// StopHelperService — заглушка (helper на Linux не нужен).
 func StopHelperService() error { return nil }
 
-// WaitForHelperReady — заглушка (helper на Linux не нужен).
 func WaitForHelperReady(maxRetries int, interval time.Duration) error { return nil }
-
-// =============================================================================
-// uwp_win.go — UWP loopback-исключения (на Linux не существуют)
-// =============================================================================
 
 type UwpApp struct {
 	DisplayName       string `json:"displayName"`
@@ -995,11 +889,8 @@ type UwpApp struct {
 	IsEnabled         bool   `json:"isEnabled"`
 }
 
-// GetUwpAppList — заглушка (UWP на Linux не существует).
 func GetUwpAppList() ([]UwpApp, error) { return nil, nil }
 
-// SaveUwpExemptions — заглушка (UWP на Linux не существует).
 func SaveUwpExemptions(targetSids []string) error { return nil }
 
-// ExemptAllUWP — заглушка (UWP на Linux не существует).
 func ExemptAllUWP() error { return nil }

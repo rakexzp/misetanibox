@@ -6,7 +6,6 @@ import (
 	"os"
 )
 
-// ValidateWindowsPE 校验路径上的文件是否为有效的 Windows 可执行文件或 DLL
 func ValidateWindowsPE(path string, minSize int64, maxSize int64) error {
 	f, err := os.Open(path)
 	if err != nil {

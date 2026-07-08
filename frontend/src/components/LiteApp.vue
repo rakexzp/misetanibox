@@ -1,8 +1,7 @@
 <template>
   <div class="lite-root">
     <div class="lite-phone">
-      <!-- Шапка -->
-      <header class="lite-head">
+            <header class="lite-head">
         <div class="lite-brand">Misetanibox</div>
         <div class="lite-head-actions">
           <button class="lite-icon-btn" title="Про-режим" @click="switchToPro">
@@ -11,8 +10,7 @@
         </div>
       </header>
 
-      <!-- Центр: кнопка подключения -->
-      <div class="lite-center">
+            <div class="lite-center">
         <button
           class="lite-orb"
           :class="statusClass"
@@ -29,8 +27,7 @@
         </div>
       </div>
 
-      <!-- Выбор сервера -->
-      <div class="lite-server" @click="openServers = !openServers">
+            <div class="lite-server" @click="openServers = !openServers">
         <div class="lite-server-main">
           <span class="lite-server-label">Сервер</span>
           <span class="lite-server-name truncate">{{ currentServer || 'Не выбран' }}</span>
@@ -41,8 +38,7 @@
         <span class="lite-chev" :class="{ open: openServers }" v-html="ICONS.chevronRight"></span>
       </div>
 
-      <!-- Список серверов -->
-      <Transition name="lite-expand">
+            <Transition name="lite-expand">
         <div v-if="openServers" class="lite-server-list">
           <div class="lite-list-toolbar">
             <span>{{ servers.length }} серверов</span>
@@ -50,9 +46,7 @@
               {{ testing ? 'Проверка…' : 'Проверить' }}
             </button>
           </div>
-          <!-- Смарт: ядро само выбирает лучший узел по истории задержек/успешности.
-               Требует форк-ядра vernesong — скрыто, пока используется стабильное ядро. -->
-          <button
+                    <button
             v-if="SMART_ENABLED"
             class="lite-server-item lite-smart-item"
             :class="{ active: currentServer === SMART_NAME }"
@@ -81,8 +75,7 @@
         </div>
       </Transition>
 
-      <!-- Список конфигураций (если их несколько) -->
-      <Transition name="lite-expand">
+            <Transition name="lite-expand">
         <div v-if="showConfigs" class="lite-config-list">
           <button
             v-for="c in configs"
@@ -97,8 +90,7 @@
         </div>
       </Transition>
 
-      <!-- Низ: конфигурация + добавление -->
-      <footer class="lite-foot">
+            <footer class="lite-foot">
         <button
           class="lite-config-current truncate"
           :class="{ clickable: configs.length > 1 }"
@@ -113,8 +105,7 @@
       </footer>
     </div>
 
-    <!-- Модалка добавления подписки -->
-    <Transition name="lite-fade">
+        <Transition name="lite-fade">
       <div v-if="showAddSub" class="lite-modal-overlay" @click.self="closeAddSub">
         <div class="lite-modal">
           <h3>Добавить подписку</h3>
@@ -184,7 +175,6 @@ const subName = ref('');
 const adding = ref(false);
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 
-// id активной конфигурации, а если её нет — первой доступной подписки
 const resolvedId = computed(() => globalState.activeConfigId || configs.value[0]?.id || '');
 const resolvedName = computed(() =>
   globalState.activeConfigName
@@ -205,20 +195,15 @@ async function loadConfigs() {
     }
     configs.value = (await API.GetLocalConfigs()) || [];
   } catch (e) {
-    // тихо
   }
 }
 
-// Делает конфигурацию активной БЕЗ запуска ядра — тогда список серверов подтягивается
-// из YAML офлайн (GetOfflineData), а сам процесс mihomo стартует только при подключении.
-// Так Lite не держит ядро в памяти, пока ты не нажал «Подключиться».
 async function ensureLoaded() {
   if (resolvedId.value && globalState.activeConfigId !== resolvedId.value) {
     try {
       await API.SelectLocalConfig(resolvedId.value);
       globalState.activeConfigId = resolvedId.value;
     } catch (e) {
-      // тихо
     }
   }
   await loadServers();
@@ -266,7 +251,6 @@ function pingClass(d: number | null): string {
   return 'ping-bad';
 }
 
-// Типы, которые НЕ являются реальными серверами (группы-селекторы и служебные аутбаунды).
 const NON_SERVER_TYPES = new Set([
   'Selector', 'URLTest', 'Fallback', 'LoadBalance', 'Relay',
   'Direct', 'Reject', 'RejectDrop', 'Compatible', 'Pass', 'Dns',
@@ -280,7 +264,6 @@ async function loadServers() {
     if (g) {
       currentServer.value = g.now || '';
       const all: string[] = g.all || [];
-      // оставляем только реальные узлы: не сам GLOBAL и не группы/служебные типы
       servers.value = all
         .filter((n) => n !== 'GLOBAL')
         .filter((n) => {
@@ -290,7 +273,6 @@ async function loadServers() {
         .map((n) => ({ name: n }));
     }
   } catch (e) {
-    // тихо: список подтянется при следующем поллинге
   }
 }
 
@@ -305,8 +287,6 @@ async function pick(name: string) {
   }
 }
 
-// Выбор Смарт-группы: если ядро уже работает — применяем сразу, иначе подключаемся
-// (smart применится в toggleConnect после старта ядра).
 async function pickSmart() {
   wantSmart.value = true;
   openServers.value = false;
@@ -335,19 +315,16 @@ async function toggleConnect() {
   busy.value = true;
   try {
     if (connected.value) {
-      // Отключение: выключаем TUN
       setTunIntent(false);
       await API.ToggleTunMode(false);
       await syncState();
     } else {
-      // Подключение: Lite = глобальный режим + TUN (полный перехват, как VPN)
       if (!globalState.isRunning) {
         await API.StartClash(resolvedId.value);
       }
       await API.UpdateClashMode('global').catch(() => {});
       setTunIntent(true);
       await enableTun();
-      // если выбран Смарт — применяем группу после старта ядра
       if (wantSmart.value) {
         await API.SelectProxy('GLOBAL', SMART_NAME).catch(() => {});
         currentServer.value = SMART_NAME;
@@ -361,7 +338,6 @@ async function toggleConnect() {
   }
 }
 
-// enableTun повторяет флоу полного UI: при отсутствии фоновой службы предлагает её установить.
 async function enableTun() {
   try {
     await API.ToggleTunMode(true);
@@ -399,10 +375,8 @@ async function pingAll() {
   try {
     await API.TestAllProxies(servers.value.map((s) => s.name));
   } catch (e) {
-    // задержки обновятся через событие/поллинг
   } finally {
     testing.value = false;
-    // страховка: снять спиннеры с узлов, что не ответили (мёртвые) через 12с
     setTimeout(() => testingSet.clear(), 12000);
   }
 }
@@ -424,10 +398,8 @@ async function addSub() {
   adding.value = true;
   try {
     if (addMode.value === 'dns') {
-      // домен → бэкенд резолвит TXT через DoH и импортирует ссылку/конфиг
       await API.AddSubViaDNS(input, subName.value.trim());
     } else {
-      // имя не задано → бэкенд возьмёт его из заголовков подписки
       await API.UpdateSub(subName.value.trim(), input);
     }
     await loadConfigs();
@@ -448,12 +420,10 @@ let unsubUpdate: (() => void) | null = null;
 
 onMounted(async () => {
   try { SMART_ENABLED.value = await API.IsSmartCore(); } catch { SMART_ENABLED.value = false; }
-  // анимация замера: узел начал тестироваться → крутим спиннер; пришёл результат → снимаем
   unsubStart = EventsOn('proxy-test-start', (name: string) => { testingSet.add(name); });
   unsubUpdate = EventsOn('proxy-delay-update', (data: any) => { if (data?.name) testingSet.delete(data.name); });
   await loadConfigs();
   await ensureLoaded();
-  // поллим только когда ядро запущено (живые задержки/выбор); офлайн список статичен — не тратим CPU
   pollTimer = setInterval(() => { if (globalState.isRunning) loadServers(); }, 5000);
 });
 onUnmounted(() => {

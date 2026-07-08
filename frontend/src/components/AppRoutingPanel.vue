@@ -1,7 +1,6 @@
 <template>
   <div class="app-routing">
-    <!-- Режим -->
-    <div class="ar-modes">
+        <div class="ar-modes">
       <button
         v-for="m in modeOptions"
         :key="m.value"
@@ -14,8 +13,7 @@
       </button>
     </div>
 
-    <!-- Панель списка (скрыта в режиме Выкл) -->
-    <template v-if="mode !== 'off'">
+        <template v-if="mode !== 'off'">
       <div class="ar-toolbar">
         <div class="search-bar compact">
           <span v-html="ICONS.search"></span>
@@ -100,7 +98,6 @@ const filteredApps = computed(() => {
   const list = q
     ? apps.value.filter(a => a.name.toLowerCase().includes(q) || a.exe.includes(q))
     : apps.value;
-  // отмеченные — наверх, дальше по имени
   return [...list].sort((a, b) => {
     const sa = selected.has(a.exe) ? 0 : 1;
     const sb = selected.has(b.exe) ? 0 : 1;
@@ -125,7 +122,6 @@ async function loadApps() {
     apps.value = (installed || []).map((a: any) => ({
       name: a.name, exe: a.exe, path: a.path, iconPng: a.iconPng,
     }));
-    // отмеченные, которых нет в списке установленных (выбраны вручную ранее) — добавить заглушкой
     selected.forEach(exe => {
       if (!apps.value.some(a => a.exe === exe)) {
         apps.value.push({ name: exe, exe, path: '', iconPng: '' });
@@ -178,7 +174,6 @@ onMounted(async () => {
   await loadApps();
 });
 
-// при первом переключении в непустой режим — подгрузить список, если ещё не загружен
 watch(mode, (m) => {
   if (m !== 'off' && !apps.value.length && !loading.value) loadApps();
 });
@@ -202,7 +197,6 @@ watch(mode, (m) => {
 .ar-toolbar { display: flex; gap: 10px; align-items: center; }
 .ar-browse { white-space: nowrap; }
 
-/* .search-bar объявлен scoped в Rules.vue и на дочерний компонент не распространяется — дублируем здесь */
 .search-bar { display: flex; align-items: center; background: var(--surface); border: 1px solid var(--surface-hover); border-radius: 8px; padding: 8px 12px; flex: 1; }
 .search-bar :deep(svg) { width: 16px; height: 16px; flex-shrink: 0; color: var(--text-muted); }
 .search-bar input { border: none; background: transparent; color: var(--text-main); outline: none; margin-left: 8px; width: 100%; font-size: 0.9rem; }

@@ -1,8 +1,5 @@
 //go:build windows
 
-// Package sys: installed-application scanner for the app-picker UI.
-// Scans Start Menu shortcuts (.lnk), resolves them to .exe targets via COM
-// (IShellLinkW/IPersistFile) and extracts PNG icons for display.
 package sys
 
 import (
@@ -27,12 +24,11 @@ import (
 	"goclashz/core/logger"
 )
 
-// AppInfo describes one installed application for the UI app picker.
 type AppInfo struct {
-	Name    string `json:"name"`    // человекочитаемое имя (из имени ярлыка)
-	Exe     string `json:"exe"`     // basename экзешника в нижнем регистре, напр. "telegram.exe" — для правила PROCESS-NAME
-	Path    string `json:"path"`    // полный путь к .exe
-	IconPNG string `json:"iconPng"` // PNG-иконка в base64 (без префикса data:), "" если не удалось извлечь
+	Name    string `json:"name"`
+	Exe     string `json:"exe"`
+	Path    string `json:"path"`
+	IconPNG string `json:"iconPng"`
 }
 
 var (
@@ -57,23 +53,21 @@ var (
 )
 
 const (
-	hrSFalse         = 0x00000001 // S_FALSE
-	hrRPCChangedMode = 0x80010106 // RPC_E_CHANGED_MODE
-	slgpRawPath      = 0x4        // SLGP_RAWPATH
-	stgmRead         = 0x0        // STGM_READ
-	shgfiIcon        = 0x100      // SHGFI_ICON
-	shgfiLargeIcon   = 0x0        // SHGFI_LARGEICON
-	biRGB            = 0          // BI_RGB
-	dibRGBColors     = 0          // DIB_RGB_COLORS
+	hrSFalse         = 0x00000001
+	hrRPCChangedMode = 0x80010106
+	slgpRawPath      = 0x4
+	stgmRead         = 0x0
+	shgfiIcon        = 0x100
+	shgfiLargeIcon   = 0x0
+	biRGB            = 0
+	dibRGBColors     = 0
 	appsMaxPath      = 260
 	maxIconDim       = 1024
-	vtblSlotRelease  = 2 // IUnknown::Release
-	vtblSlotGetPath  = 3 // IShellLinkW::GetPath
-	vtblSlotLoad     = 5 // IPersistFile::Load
+	vtblSlotRelease  = 2
+	vtblSlotGetPath  = 3
+	vtblSlotLoad     = 5
 )
 
-// ListInstalledApps сканирует ярлыки меню Пуск (для всех пользователей и текущего),
-// резолвит их в .exe, дедуплицирует по Path, возвращает отсортированный по Name список.
 func ListInstalledApps() ([]AppInfo, error) {
 	var roots []string
 	if pd := os.Getenv("ProgramData"); pd != "" {
@@ -86,12 +80,11 @@ func ListInstalledApps() ([]AppInfo, error) {
 		return nil, errors.New("apps: neither ProgramData nor APPDATA is set")
 	}
 
-	// Collect .lnk files first (no COM needed for the walk).
 	var lnks []string
 	for _, root := range roots {
 		err := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
 			if err != nil {
-				return nil // skip unreadable entries
+				return nil
 			}
 			if d.IsDir() {
 				return nil
@@ -122,7 +115,7 @@ func ListInstalledApps() ([]AppInfo, error) {
 		for _, lnk := range lnks {
 			target, err := res.resolve(lnk)
 			if err != nil {
-				continue // broken / non-file shortcut
+				continue
 			}
 			target = expandEnvWin(strings.TrimSpace(target))
 			if target == "" || !strings.EqualFold(filepath.Ext(target), ".exe") {
@@ -141,7 +134,7 @@ func ListInstalledApps() ([]AppInfo, error) {
 				continue
 			}
 			if st, err := os.Stat(target); err != nil || st.IsDir() {
-				continue // stale shortcut
+				continue
 			}
 			seen[key] = struct{}{}
 
@@ -168,7 +161,6 @@ func ListInstalledApps() ([]AppInfo, error) {
 	return apps, nil
 }
 
-// AppInfoForExe строит AppInfo для произвольного пути к .exe (кнопка "выбрать вручную").
 func AppInfoForExe(path string) AppInfo {
 	path = expandEnvWin(strings.TrimSpace(path))
 	if path != "" {
@@ -186,10 +178,6 @@ func AppInfoForExe(path string) AppInfo {
 	return info
 }
 
-// --- COM plumbing -----------------------------------------------------------
-
-// runOnComThread runs fn on a dedicated OS thread with COM initialized
-// (apartment-threaded) and waits for completion.
 func runOnComThread(fn func()) {
 	done := make(chan struct{})
 	go func() {
@@ -203,9 +191,9 @@ func runOnComThread(fn func()) {
 			if errors.As(err, &oleErr) {
 				switch oleErr.Code() {
 				case hrSFalse:
-					// already initialized on this thread: still balance with CoUninitialize
+
 				case hrRPCChangedMode:
-					needUninit = false // initialized in another mode: usable, do not uninit
+					needUninit = false
 				default:
 					logger.Warnf("apps: CoInitializeEx: %v", err)
 					needUninit = false
@@ -230,7 +218,6 @@ func runOnComThread(fn func()) {
 	<-done
 }
 
-// comCall invokes a method on a raw COM interface pointer by vtable slot.
 func comCall(obj unsafe.Pointer, slot int, args ...uintptr) uintptr {
 	vtbl := *(**[64]uintptr)(obj)
 	callArgs := make([]uintptr, 0, len(args)+1)
@@ -253,11 +240,9 @@ type win32FindDataW struct {
 	AlternateFileName [14]uint16
 }
 
-// lnkResolver wraps a reusable ShellLink COM object.
-// Must only be used on the thread that created it (STA).
 type lnkResolver struct {
-	link    *ole.IUnknown  // IShellLinkW
-	persist unsafe.Pointer // IPersistFile
+	link    *ole.IUnknown
+	persist unsafe.Pointer
 }
 
 func newLnkResolver() (*lnkResolver, error) {
@@ -270,8 +255,7 @@ func newLnkResolver() (*lnkResolver, error) {
 		unk.Release()
 		return nil, err
 	}
-	// pf is typed *ole.IDispatch but is really a raw IPersistFile pointer;
-	// only its address (vtable) is used below.
+
 	return &lnkResolver{link: unk, persist: unsafe.Pointer(pf)}, nil
 }
 
@@ -286,7 +270,6 @@ func (r *lnkResolver) release() {
 	}
 }
 
-// resolve loads a .lnk file and returns its raw target path.
 func (r *lnkResolver) resolve(lnkPath string) (string, error) {
 	wpath, err := windows.UTF16PtrFromString(lnkPath)
 	if err != nil {
@@ -302,15 +285,12 @@ func (r *lnkResolver) resolve(lnkPath string) (string, error) {
 	hr := comCall(unsafe.Pointer(r.link), vtblSlotGetPath,
 		uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)),
 		uintptr(unsafe.Pointer(&fd)), slgpRawPath)
-	if hr != 0 { // S_FALSE: shortcut has no file-system target (UWP, URL, CLSID...)
+	if hr != 0 {
 		return "", fmt.Errorf("IShellLinkW.GetPath(%s): hr=0x%08x", lnkPath, hr)
 	}
 	return windows.UTF16ToString(buf[:]), nil
 }
 
-// --- path helpers -----------------------------------------------------------
-
-// expandEnvWin expands %VAR% references using the Windows API.
 func expandEnvWin(s string) string {
 	if !strings.Contains(s, "%") {
 		return s
@@ -334,7 +314,6 @@ func expandEnvWin(s string) string {
 	return windows.UTF16ToString(buf)
 }
 
-// isSystem32Path reports whether p resides under %WINDIR%\System32.
 func isSystem32Path(p string) bool {
 	windir := os.Getenv("WINDIR")
 	if windir == "" {
@@ -347,8 +326,6 @@ func isSystem32Path(p string) bool {
 	return strings.HasPrefix(strings.ToLower(filepath.Clean(p))+string(filepath.Separator), sys32) ||
 		strings.HasPrefix(strings.ToLower(filepath.Clean(p)), sys32)
 }
-
-// --- icon extraction --------------------------------------------------------
 
 type shFileInfoW struct {
 	HIcon       windows.Handle
@@ -390,8 +367,6 @@ type bitmapInfoHeader struct {
 	ClrImportant  uint32
 }
 
-// iconPNGBase64 extracts the large icon of an executable and encodes it as
-// base64 PNG. Best effort: any failure returns "".
 func iconPNGBase64(exePath string) (out string) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -429,7 +404,6 @@ func iconPNGBase64(exePath string) (out string) {
 	return base64.StdEncoding.EncodeToString(buf.Bytes())
 }
 
-// iconToImage converts an HICON into an image via GetIconInfo + GetDIBits.
 func iconToImage(hIcon windows.Handle) (image.Image, error) {
 	var ii appsIconInfo
 	ret, _, _ := procGetIconInfo.Call(uintptr(hIcon), uintptr(unsafe.Pointer(&ii)))
@@ -443,7 +417,7 @@ func iconToImage(hIcon windows.Handle) (image.Image, error) {
 		defer procDeleteObject.Call(uintptr(ii.HbmColor))
 	}
 	if ii.HbmColor == 0 {
-		// Monochrome icon (mask holds stacked AND/XOR planes) — not worth supporting.
+
 		return nil, errors.New("monochrome icon not supported")
 	}
 
@@ -467,7 +441,7 @@ func iconToImage(hIcon windows.Handle) (image.Image, error) {
 		bih := bitmapInfoHeader{
 			Size:        uint32(unsafe.Sizeof(bitmapInfoHeader{})),
 			Width:       int32(w),
-			Height:      -int32(h), // negative = top-down
+			Height:      -int32(h),
 			Planes:      1,
 			BitCount:    32,
 			Compression: biRGB,
@@ -481,13 +455,13 @@ func iconToImage(hIcon windows.Handle) (image.Image, error) {
 		return buf, nil
 	}
 
-	pix, err := getBits(ii.HbmColor) // BGRA rows, top-down
+	pix, err := getBits(ii.HbmColor)
 	if err != nil {
 		return nil, err
 	}
 
 	hasAlpha := false
-	premultiplied := true // stays true only if every channel <= alpha
+	premultiplied := true
 	for i := 0; i < len(pix); i += 4 {
 		a := pix[i+3]
 		if a != 0 {
@@ -500,8 +474,7 @@ func iconToImage(hIcon windows.Handle) (image.Image, error) {
 
 	var maskPix []byte
 	if !hasAlpha && ii.HbmMask != 0 {
-		// 32bpp icon without alpha channel: transparency lives in the AND mask
-		// (converted by GetDIBits to 32bpp: white = transparent).
+
 		if mp, err := getBits(ii.HbmMask); err == nil {
 			maskPix = mp
 		}
@@ -513,10 +486,10 @@ func iconToImage(hIcon windows.Handle) (image.Image, error) {
 		if !hasAlpha {
 			a = 0xFF
 			if maskPix != nil && (maskPix[i*4] != 0 || maskPix[i*4+1] != 0 || maskPix[i*4+2] != 0) {
-				a = 0 // masked out => transparent
+				a = 0
 			}
 		} else if premultiplied && a != 0 && a != 0xFF {
-			// un-premultiply back to straight alpha for NRGBA
+
 			b = uint8(uint32(b) * 0xFF / uint32(a))
 			g = uint8(uint32(g) * 0xFF / uint32(a))
 			r = uint8(uint32(r) * 0xFF / uint32(a))

@@ -239,8 +239,6 @@ const currentPage = ref(1);
 const pageSize = ref(42); 
 
 const isRemote = computed(() => globalState.activeConfigType === 'remote');
-// Вкладки показываются только для remote; для локальных конфигов «apps» недоступна,
-// поэтому эффективная вкладка откатывается к правилам, чтобы не залипнуть без табов.
 const effectiveTab = computed<RuleTab>(() => (isRemote.value ? ruleTab.value : 'subscription'));
 const isLocal = computed(() => globalState.activeConfigType === 'local' || !globalState.activeConfigType);
 
@@ -302,9 +300,7 @@ watch(() => globalState.activeConfigId, (newId, oldId) => {
     searchQuery.value = '';
     debouncedQuery.value = '';
     currentPage.value = 1;
-    // 只有在切换到不同的配置文件时，才重置规则分类，否则保持用户记忆
     if (newId !== oldId && !oldId) {
-       // First load
     }
     loadRules();
   } else {
@@ -470,7 +466,6 @@ onActivated(() => {
   background: transparent;
 }
 
-/* 选项卡样式 */
 .rules-tabs-viewport {
   flex: 0 0 auto;
   min-width: 0;
@@ -681,8 +676,6 @@ onActivated(() => {
   color: var(--text-sub);
   font-weight: 700;
 }
-
-
 
 .compact-rule-input {
   height: 38px;

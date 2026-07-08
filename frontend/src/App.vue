@@ -114,8 +114,7 @@
       </main>
     </div>
 
-    <!-- 全局模态框提示系统 -->
-    <Transition name="pop">
+        <Transition name="pop">
       <div v-if="globalState.modal.show" class="modal-overlay" @click.self="handleModalCancel">
         <div class="custom-modal-card" @click.stop>
           <div class="modal-header">
@@ -241,7 +240,6 @@ const filteredLogLines = computed(() => {
       return entryRank >= rankOf(globalState.appLogLevel);
     }
 
-    // 未知 source 默认按 app 处理，避免噪声过大
     return entryRank >= rankOf(globalState.appLogLevel);
   });
 });
@@ -352,7 +350,6 @@ const handleResize = async () => {
 
 const handleToggleMaximise = async () => {
 	WindowToggleMaximise();
-	// 延迟检查，确保状态已同步
 	setTimeout(handleResize, 50);
 };
 
@@ -369,7 +366,6 @@ const toggleUiMode = () => {
   setUiMode(globalState.uiMode === 'lite' ? 'full' : 'lite');
 };
 
-// Размеры окна под режим: Lite — узкое «телефонное», Про — обычное десктопное.
 const LITE_W = 400, LITE_H = 720;
 const PRO_MIN_W = 900, PRO_MIN_H = 600;
 let savedProSize: { w: number; h: number } | null = null;
@@ -389,15 +385,12 @@ const applyWindowForMode = async (mode: 'full' | 'lite') => {
       WindowCenter();
     }
   } catch (e) {
-    // окно недоступно — игнорируем
   }
 };
 
 watch(() => globalState.uiMode, (mode) => {
   applyWindowForMode(mode);
 
-  // Lite всегда работает в global; чтобы это не затирало режим Про («по правилам» и т.п.),
-  // при входе в Lite запоминаем режим Про, при возврате — восстанавливаем.
   if (mode === 'lite') {
     if (globalState.mode && globalState.mode !== 'global') {
       localStorage.setItem('mise_proMode', globalState.mode);
@@ -436,12 +429,10 @@ const watchTheme = watch(() => globalState.theme, (val) => {
 onMounted(async () => {
   initStore();
 
-  // если приложение запущено сразу в Lite — сжать окно под телефонный вид
   if (globalState.uiMode === 'lite') {
     setTimeout(() => applyWindowForMode('lite'), 100);
   }
 
-  // подгрузить пользовательские фоны карточек Консоли
   (API as any).GetCardBgs().then((m: Record<string, string>) => { globalState.cardBgs = m || {}; }).catch(() => {});
 
   try {
@@ -662,18 +653,13 @@ const resetViewScroller = () => {
 </script>
 
 <style scoped>
-/* ================================== */
-/* 窗口控制按钮 (右上角)               */
-/* ================================== */
 
-/* 🚀 1. 锁死最外层动作区容器 */
 .top-actions { 
   display: flex; 
   align-items: center; 
   flex-shrink: 0; 
 }
 
-/* 🚀 2. 锁死按钮包裹区 */
 .window-controls { 
   display: flex; 
   align-items: center; 
@@ -683,7 +669,6 @@ const resetViewScroller = () => {
   min-width: max-content; /* 强制占据所需宽度，绝不参与外部宽度挤压 */
 }
 
-/* 🚀 3. 完美还原视觉并双重锁死按钮盒子 */
 .ctrl-btn { 
   background: transparent;
   border: none;
@@ -702,7 +687,6 @@ const resetViewScroller = () => {
   flex-shrink: 0; 
 }
 
-/* Переключатель Lite/Про в верхней панели */
 .mode-switch-btn {
   width: auto;
   min-width: max-content;
@@ -730,7 +714,6 @@ const resetViewScroller = () => {
 }
 .mode-switch-label { line-height: 1; }
 
-/* 🚀 4. 彻底锁死 SVG 的内部渲染框 */
 .ctrl-btn :deep(svg) {
   width: 12px !important;      /* 恢复图标大小 */
   height: 12px !important;
@@ -740,7 +723,6 @@ const resetViewScroller = () => {
   flex-shrink: 0;
 }
 
-/* 保留对 "X" 视觉膨胀感的精细微调 */
 .close-btn :deep(svg) {
   width: 11.5px !important; 
   height: 11.5px !important;
@@ -753,14 +735,12 @@ const resetViewScroller = () => {
   color: var(--text-main); 
 }
 
-/* 还原更好看的 Windows 红色 */
 .close-btn:hover { 
   background: #E81123 !important; 
   color: #FFFFFF !important; 
 }
 
 .app-shell { 
-  /* ❌ 删除了这里的变量，因为已经移交给了全局 style.css */
   display: flex; flex-direction: column; height: 100vh; color: var(--text-main); 
 }
 .drag-bar { height: 42px; display: flex; align-items: center; justify-content: flex-end; padding: 0 8px; }
@@ -783,7 +763,6 @@ const resetViewScroller = () => {
 }
 
 .content-header {
-  /* 绝对对称：直接使用全局变量 */
   padding: 0 var(--content-px);
 }
 .content-header h1 { 
@@ -828,7 +807,6 @@ const resetViewScroller = () => {
 
 .view-settings { display: flex; flex-direction: column; }
 
-/* 页面切换动画：淡入并向上微移 8px */
 .page-fade-enter-active,
 .page-fade-leave-active {
   transition: opacity 0.22s ease, transform 0.22s ease;

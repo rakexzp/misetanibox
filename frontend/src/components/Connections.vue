@@ -147,14 +147,12 @@ watch(filterMode, (v) => { localStorage.setItem('goclashz_connFilter', v); nextT
 const isMonitoring = ref(false); // 增加一个状态锁，防止重复注册监听
 const isLoading = ref(true); // 🚀 新增：控制初始加载状态
 
-// 🚀 新增：保存专属退订函数
 let unsubMonitor: (() => void) | null = null; 
 
 const startMonitor = async () => {
   if (isMonitoring.value) return;
   isMonitoring.value = true;
   
-  // ✅ 修改后：接住返回的专属销毁函数
   unsubMonitor = EventsOn("connections-update", (data: any) => {
     if (isPaused.value) return;
 
@@ -173,7 +171,6 @@ const startMonitor = async () => {
   try {
     isLoading.value = true;
     
-    // 🚀 核心修复：在建立监听后，立即主动请求一次连接快照，消除初始延迟
     const initData = await API.GetConnections();
     if (initData && Array.isArray(initData.connections)) {
       connections.value = initData.connections;
@@ -191,7 +188,6 @@ const stopMonitor = () => {
   if (!isMonitoring.value) return;
   isMonitoring.value = false;
   
-  // ✅ 修改后：精准狙击，只销毁当前组件刚注册的那个监听器
   if (unsubMonitor) {
     unsubMonitor();
     unsubMonitor = null;
@@ -200,7 +196,6 @@ const stopMonitor = () => {
   API.StopConnectionMonitor();
 };
 
-// 配合 KeepAlive 的生命周期控制
 const titleTargetReady = ref(false);
 
 const refreshTitleTarget = async () => {
@@ -321,7 +316,6 @@ const closeSingleConnection = async (id: string) => {
 }
 .global-actions { display: flex; gap: 12px; }
 
-/* 注入到大标题右侧的计数器样式 (被 Teleport 使用) */
 .conn-title-count {
   font-size: 0.95rem;
   font-weight: 500;
@@ -330,7 +324,6 @@ const closeSingleConnection = async (id: string) => {
   transform: translateY(-1px);
 }
 
-/* 选项卡样式 (移植自 Proxies.vue) */
 .conn-tabs-viewport {
   flex: 1;
   min-width: 0;
@@ -417,7 +410,6 @@ const closeSingleConnection = async (id: string) => {
 .dark .tag-proxy { color: var(--text-sub); }
 .tag-rule { background: var(--surface-hover); color: var(--text-muted); }
 
-/* --- 全新底部排版 --- */
 .conn-footer { 
   display: flex; 
   justify-content: space-between; 
@@ -450,7 +442,6 @@ const closeSingleConnection = async (id: string) => {
   font-size: 0.8rem;
 }
 
-/* 统一字色，保持纯净感 */
 .up, .down { color: var(--text-main); }
 
 .icon-svg { 
@@ -463,7 +454,6 @@ const closeSingleConnection = async (id: string) => {
 
 .empty-state { height: 200px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-style: italic; }
 
-/* --- 详情子页样式 --- */
 .detail-page { 
   display: flex; 
   flex-direction: column; 
@@ -474,7 +464,6 @@ const closeSingleConnection = async (id: string) => {
   overflow: visible;
 }
 
-/* 详情头部排版：左标题右按钮 */
 .detail-header { 
   display: flex; 
   justify-content: space-between; 

@@ -10,7 +10,6 @@ import (
 	"time"
 )
 
-// ConnectionDataCallback 连接数据回调类型
 type ConnectionDataCallback func(vos []traffic.ConnectionVO)
 
 var (
@@ -20,14 +19,12 @@ var (
 	connCallback ConnectionDataCallback
 )
 
-// SetConnectionCallback 设置连接数据的回调（由 app 层在启动时注册）
 func SetConnectionCallback(cb ConnectionDataCallback) {
 	connMutex.Lock()
 	defer connMutex.Unlock()
 	connCallback = cb
 }
 
-// StartConnectionMonitor 启动连接监控（REST 轮询 + 回调推送）
 func StartConnectionMonitor(ctx context.Context) error {
 	if !connActive.CompareAndSwap(false, true) {
 		return nil
@@ -83,7 +80,6 @@ func StartConnectionMonitor(ctx context.Context) error {
 	return nil
 }
 
-// StopConnectionMonitor 停止连接监控
 func StopConnectionMonitor() {
 	if connActive.CompareAndSwap(true, false) {
 		connMutex.Lock()

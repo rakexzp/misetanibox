@@ -6,7 +6,6 @@ import (
 	"time"
 )
 
-// EventSink abstracts event emission
 type EventSink interface {
 	Emit(name string, args ...any)
 }
@@ -45,7 +44,7 @@ func (m *Manager) Run(parentCtx context.Context, name string, autoSuccess bool, 
 		err := fn(taskCtx)
 
 		m.mu.Lock()
-		// 🚀 核心修复：基于 ID 的精确清理，防止新任务覆盖后旧任务误删
+
 		if handle, ok := m.tasks[name]; ok && handle.id == currentID {
 			delete(m.tasks, name)
 		}

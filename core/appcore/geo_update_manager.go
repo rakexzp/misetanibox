@@ -66,7 +66,7 @@ func (m *GeoUpdateManager) beginOrJoin(key string) (wait <-chan GeoResult, owner
 
 	m.active[key] = &geoJob{
 		waiters: make([]chan GeoResult, 0),
-		cancel:  nil, // populated later
+		cancel:  nil,
 	}
 	return nil, true
 }
@@ -216,13 +216,11 @@ func (m *GeoUpdateManager) UpdateOneAsync(ctx context.Context, key string) {
 
 	wait, owner := m.beginOrJoin(key)
 
-	// beginOrJoin 后再同步真实 active 状态
 	m.emitActiveSnapshot()
 
 	if !owner {
 		m.emit.Emit("geo-update-" + key + "-busy")
 
-		// 后台等待结果，但不重复发 success/error，避免前端重复提示
 		go func() {
 			select {
 			case <-wait:
@@ -262,11 +260,10 @@ func (m *GeoUpdateManager) UpdateAllAsync(ctx context.Context) {
 
 			wait, owner := m.beginOrJoin(key)
 
-			// beginOrJoin 后再同步真实 active 状态
 			m.emitActiveSnapshot()
 
 			if !owner {
-				// 已经有单项任务在跑，等待它的结果，避免重复下载
+
 				wg.Add(1)
 				go func() {
 					defer wg.Done()

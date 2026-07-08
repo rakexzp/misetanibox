@@ -24,23 +24,20 @@ const (
 )
 
 const (
-	// 单点测速硬保护超时 (14s)，防止 UI 无限等待
 	SingleOuterTimeout = 14 * time.Second
-	// 单点排队超时 (3s)，并发槽位满时快速返回 busy
+
 	SingleQueueTimeout = 3 * time.Second
-	// 单点测速 API 超时 (8s)
+
 	SingleDelayTimeout = 8 * time.Second
-	// 单点 Context 宽限时长
+
 	SingleCtxGrace = 800 * time.Millisecond
 
-	// 冷启动预热探测超时
 	ColdStartProbeTimeout = 2500 * time.Millisecond
-	// 冷启动重试超时
+
 	ColdStartRetryTimeout = 6500 * time.Millisecond
-	// 冷启动重试宽限
+
 	ColdStartRetryGrace = 600 * time.Millisecond
 
-	// 批量测速 API 超时
 	ManualBatchDelayTimeout = 8000
 	AutoBatchDelayTimeout   = 8000
 )
@@ -53,7 +50,6 @@ type DelayResult struct {
 	Message string
 }
 
-// ProxyNodeMeta 代理节点元数据，用于拓扑解析
 type ProxyNodeMeta struct {
 	Name    string
 	Type    string
@@ -62,11 +58,10 @@ type ProxyNodeMeta struct {
 	IsGroup bool
 }
 
-// DelayTopology 测速拓扑结构，用于归一化目标与结果分发
 type DelayTopology struct {
 	Nodes                map[string]ProxyNodeMeta
-	SelectedLeafByGroup  map[string]string   // 策略组 -> 当前选中的叶子节点
-	GroupsBySelectedLeaf map[string][]string // 叶子节点 -> 选中该叶子的策略组列表
+	SelectedLeafByGroup  map[string]string
+	GroupsBySelectedLeaf map[string][]string
 }
 
 func isProxyGroupType(t string) bool {
@@ -97,17 +92,16 @@ const (
 	DelayRunning   DelayRunState = "running"
 )
 
-// DelayTestOptions 测速策略配置
 type DelayTestOptions struct {
-	Source         DelaySource   // 测速来源
-	SilentUI       bool          // 为 true 时，不发送 proxy-test-start/finished
-	RetryFailed    bool          // 失败后是否补测 (仅限深度/后台模式)
-	TotalTimeout   time.Duration // 测速总超时
-	StopSilentCore bool          // 结束后是否尝试关闭内核
+	Source         DelaySource
+	SilentUI       bool
+	RetryFailed    bool
+	TotalTimeout   time.Duration
+	StopSilentCore bool
 
-	ProbeTimeout time.Duration // 单次测速 Mihomo 超时
-	ProbeExtra   time.Duration // Context 宽限时长
-	Concurrency  int           // 并发数
+	ProbeTimeout time.Duration
+	ProbeExtra   time.Duration
+	Concurrency  int
 }
 
 func manualDelayOptions() DelayTestOptions {
@@ -125,16 +119,16 @@ func manualDelayOptions() DelayTestOptions {
 
 func (c *Controller) autoDelayOptions(source DelaySource) DelayTestOptions {
 	if c.isAppUpdateDownloading() {
-		// 🚀 核心抗干扰模式：下载中降低压测强度
+
 		return DelayTestOptions{
 			Source:         source,
 			SilentUI:       true,
 			RetryFailed:    false,
 			TotalTimeout:   90 * time.Second,
 			StopSilentCore: true,
-			ProbeTimeout:   12 * time.Second, // 放宽超时至 12s
+			ProbeTimeout:   12 * time.Second,
 			ProbeExtra:     1200 * time.Millisecond,
-			Concurrency:    2, // 极大降低并发压力
+			Concurrency:    2,
 		}
 	}
 
@@ -212,7 +206,7 @@ func (m *DelayTestManager) releaseDelaySlot() {
 
 func (m *DelayTestManager) cancelAutoBatchAndWait(ctx context.Context, maxWait time.Duration) bool {
 	m.mu.Lock()
-	// 如果不是自动任务在跑，或者没任务，直接返回
+
 	if m.state == DelayIdle || m.batchSource == DelaySourceManual || m.batchCancel == nil || m.batchDone == nil {
 		m.mu.Unlock()
 		return true
@@ -259,14 +253,12 @@ func classifyDelayError(err error) string {
 
 	msg := strings.ToLower(err.Error())
 
-	// 1. 超时分类
 	if strings.Contains(msg, "deadline") ||
 		strings.Contains(msg, "timeout") ||
 		strings.Contains(msg, "context canceled") {
 		return "timeout"
 	}
 
-	// 2. 网络连接/协议分类
 	if strings.Contains(msg, "tls") ||
 		strings.Contains(msg, "handshake") ||
 		strings.Contains(msg, "connect error") ||
@@ -275,7 +267,6 @@ func classifyDelayError(err error) string {
 		return "connect-error"
 	}
 
-	// 3. 其他错误 (如 HTTP 非 200, 格式错误等)
 	return "test-error"
 }
 
@@ -376,7 +367,7 @@ func (m *DelayTestManager) endSingleNode(name string) {
 }
 
 func (m *DelayTestManager) TestAllProxies(ctx context.Context, nodeNames []string) {
-	// 用户手动测速，优先取消自动测速
+
 	m.cancelAutoBatchAndWait(ctx, 500*time.Millisecond)
 
 	m.TestAllProxiesWithOptions(ctx, nodeNames, manualDelayOptions())
@@ -449,7 +440,6 @@ func (m *DelayTestManager) TestAllProxiesWithOptions(
 		close(done)
 	}()
 
-	// 🚀 核心接入：静默内核保障
 	cleanup, _, err := m.ctrl.EnsureDelayCore(ctx)
 	if err != nil {
 		finishMsg = "Не удалось запустить тест задержки: " + err.Error()
@@ -514,7 +504,6 @@ func (m *DelayTestManager) runBatch(
 
 	var wg sync.WaitGroup
 
-	// Worker 协程池
 	for i := 0; i < workerCount; i++ {
 		wg.Add(1)
 		go func() {
@@ -543,7 +532,6 @@ func (m *DelayTestManager) runBatch(
 		}()
 	}
 
-	// 任务分发
 	go func() {
 		defer close(jobs)
 		for _, name := range nodeNames {
@@ -555,7 +543,6 @@ func (m *DelayTestManager) runBatch(
 		}
 	}()
 
-	// 等待完成并关闭结果通道
 	go func() {
 		wg.Wait()
 		close(results)
@@ -567,7 +554,6 @@ func (m *DelayTestManager) runBatch(
 	var timeoutCount int
 	var buffered []DelayResult
 
-	// 收集结果
 	for res := range results {
 		total++
 		if res.Status == "timeout" {
@@ -576,7 +562,6 @@ func (m *DelayTestManager) runBatch(
 		buffered = append(buffered, res)
 	}
 
-	// 🚀 核心保护：如果正在下载更新，且 80% 以上节点超时，大概率是下载干扰，不覆盖旧结果
 	if opts.Source != DelaySourceManual && m.ctrl.isAppUpdateDownloading() && total > 0 {
 		if timeoutCount*100/total >= 80 {
 			logger.Warnf("Массовые таймауты теста задержки из-за активной загрузки (%d/%d), результаты этого автотеста отброшены", timeoutCount, total)
@@ -584,7 +569,6 @@ func (m *DelayTestManager) runBatch(
 		}
 	}
 
-	// 正常分发结果
 	for _, res := range buffered {
 		if res.Status != "success" && opts.RetryFailed {
 			failed = append(failed, res.Name)
@@ -599,7 +583,6 @@ func (m *DelayTestManager) runBatch(
 		return
 	}
 
-	// 仅深度/后台模式下的重试
 	for _, name := range failed {
 		select {
 		case <-ctx.Done():
@@ -623,10 +606,8 @@ func (m *DelayTestManager) TestProxy(ctx context.Context, name string) (int, err
 		return 0, fmt.Errorf("empty proxy name")
 	}
 
-	// 用户单点优先，自动测速让路
 	m.cancelAutoBatchAndWait(ctx, 300*time.Millisecond)
 
-	// 🚀 核心接入：静默内核保障
 	cleanup, warmupRequired, err := m.ctrl.EnsureDelayCore(ctx)
 	if err != nil {
 		return 0, err
@@ -638,7 +619,6 @@ func (m *DelayTestManager) TestProxy(ctx context.Context, name string) (int, err
 		return 0, err
 	}
 
-	// 解析出叶子节点
 	target := name
 	if node, ok := topo.Nodes[name]; ok && node.IsGroup {
 		leaf := topo.resolveSelectedLeaf(name, map[string]bool{})
@@ -648,24 +628,21 @@ func (m *DelayTestManager) TestProxy(ctx context.Context, name string) (int, err
 		target = leaf
 	}
 
-	// 1. 同节点防重复并发
 	if !m.beginSingleNode(target) {
 		return 0, ErrDelayTestBusy
 	}
 	defer m.endSingleNode(target)
 
-	// 2. 信号量排队 (1s 超时)
 	if err := m.acquireDelaySlot(ctx, SingleQueueTimeout); err != nil {
 		return 0, err
 	}
 	defer m.releaseDelaySlot()
 
-	// 3. 执行测速
 	testURL := m.getTestURL()
 	var res DelayResult
 
 	if warmupRequired {
-		// 冷启动预热探测：成功就直接用，失败不立即 emit，避免 UI 闪超时
+
 		res = m.testOneDurationRaw(ctx, target, testURL, ColdStartProbeTimeout, ColdStartRetryGrace)
 
 		if (res.Err != nil || res.Delay <= 0) && isRetryableDelayFailure(res) {
@@ -705,8 +682,6 @@ func isRetryableDelayFailure(res DelayResult) bool {
 		strings.Contains(msg, "tls") ||
 		strings.Contains(msg, "connect")
 }
-
-// --- Topology Helpers ---
 
 func buildDelayTopology() (*DelayTopology, error) {
 	data, err := clash.GetInitialData()
@@ -777,7 +752,7 @@ func (t *DelayTopology) resolveSelectedLeaf(name string, seen map[string]bool) s
 
 	node, ok := t.Nodes[name]
 	if !ok {
-		return name // 叶子节点
+		return name
 	}
 
 	if !node.IsGroup {

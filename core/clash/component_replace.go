@@ -6,7 +6,6 @@ import (
 	"time"
 )
 
-// WaitFileReleased 等待文件被释放（变为可写状态）
 func WaitFileReleased(path string, timeout time.Duration) error {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return nil
@@ -16,7 +15,7 @@ func WaitFileReleased(path string, timeout time.Duration) error {
 	var lastErr error
 
 	for time.Now().Before(deadline) {
-		// 尝试以读写模式打开文件，如果成功说明没有进程独占该文件
+
 		f, err := os.OpenFile(path, os.O_RDWR, 0)
 		if err == nil {
 			_ = f.Close()
@@ -34,7 +33,6 @@ func WaitFileReleased(path string, timeout time.Duration) error {
 	return lastErr
 }
 
-// retryRename 带重试的文件重命名
 func retryRename(oldPath, newPath string, attempts int, delay time.Duration) error {
 	var lastErr error
 
@@ -50,28 +48,23 @@ func retryRename(oldPath, newPath string, attempts int, delay time.Duration) err
 	return lastErr
 }
 
-// ReplaceFileWithBackup 安全替换文件：目标 -> 备份(.bak)，新文件 -> 目标
 func ReplaceFileWithBackup(newPath, destPath string) error {
 	backupPath := destPath + ".bak"
 
-	// 1. 确保目标文件不再被占用
 	if err := WaitFileReleased(destPath, 5*time.Second); err != nil {
 		return fmt.Errorf("не удалось дождаться освобождения целевого файла: %w", err)
 	}
 
-	// 2. 清理旧备份
 	_ = os.Remove(backupPath)
 
-	// 3. 备份当前文件
 	if _, err := os.Stat(destPath); err == nil {
 		if err := retryRename(destPath, backupPath, 10, 300*time.Millisecond); err != nil {
 			return fmt.Errorf("не удалось создать резервную копию старого файла: %w", err)
 		}
 	}
 
-	// 4. 将新文件重命名为目标文件
 	if err := retryRename(newPath, destPath, 10, 300*time.Millisecond); err != nil {
-		// 替换失败，尝试恢复备份
+
 		if _, statErr := os.Stat(backupPath); statErr == nil {
 			_ = retryRename(backupPath, destPath, 10, 300*time.Millisecond)
 		}
@@ -79,9 +72,6 @@ func ReplaceFileWithBackup(newPath, destPath string) error {
 		return fmt.Errorf("не удалось заменить файл новым: %w", err)
 	}
 
-	// 5. 替换成功，清理备份
 	_ = os.Remove(backupPath)
 	return nil
 }
-
-

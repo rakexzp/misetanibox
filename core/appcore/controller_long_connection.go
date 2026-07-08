@@ -63,7 +63,7 @@ func (c *Controller) GetLongConnectionSnapshot() LongConnectionSnapshot {
 		}
 		duration := int64(now.Sub(startTime).Seconds())
 		if duration >= minSeconds && strings.ToLower(conn.Metadata.Network) == "tcp" {
-			// Check sensitive hosts
+
 			isSensitive := false
 			for _, host := range defaultSensitiveHosts {
 				if strings.Contains(strings.ToLower(conn.Metadata.Host), host) || strings.Contains(strings.ToLower(conn.Metadata.DestinationIP), host) {
@@ -72,8 +72,6 @@ func (c *Controller) GetLongConnectionSnapshot() LongConnectionSnapshot {
 				}
 			}
 
-			// Or active traffic (Download > 0 or Upload > 0 recently)
-			// Wait, we don't have recent traffic, just total. We'll rely on duration + sensitive hosts + non-DIRECT chains
 			hasProxyChain := false
 			for _, chain := range conn.Chains {
 				if chain != "DIRECT" && chain != "REJECT" && chain != "GLOBAL" {
@@ -93,7 +91,6 @@ func (c *Controller) GetLongConnectionSnapshot() LongConnectionSnapshot {
 		}
 	}
 
-	// deduplicate hosts
 	uniqueHosts := make(map[string]bool)
 	var finalHosts []string
 	for _, h := range snap.Hosts {
@@ -107,7 +104,6 @@ func (c *Controller) GetLongConnectionSnapshot() LongConnectionSnapshot {
 	return snap
 }
 
-// userInitiatedReasons 用户直接触发的操作，不应被长连接保护阻断
 var userInitiatedReasons = map[string]bool{
 	"manual":              true,
 	"tun-toggle":          true,
@@ -117,7 +113,7 @@ var userInitiatedReasons = map[string]bool{
 }
 
 func (c *Controller) ShouldDeferDisruptiveAction(reason string) (bool, LongConnectionSnapshot) {
-	// 用户直接触发的操作立即执行，不延迟
+
 	if userInitiatedReasons[reason] {
 		return false, LongConnectionSnapshot{}
 	}
@@ -150,7 +146,7 @@ func (c *Controller) HasActiveLongConnection() bool {
 }
 
 func (c *Controller) queuePendingDisruptiveAction(reason string) {
-	// Simple background poller for pending disruptive action
+
 	action := PendingDisruptiveAction{
 		Reason:    reason,
 		CreatedAt: time.Now(),

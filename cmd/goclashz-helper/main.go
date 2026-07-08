@@ -35,13 +35,11 @@ type helperService struct {
 	ln      net.Listener
 }
 
-// getPathWhitelist 返回允许的文件操作白名单
 func getPathWhitelist() (coreBinDir, stagingDir, dataDir string) {
 	exe, _ := os.Executable()
 	appDir := filepath.Dir(exe)
 	coreBinDir = filepath.Join(appDir, "core", "bin")
 
-	// 读取 data dir：优先环境变量，其次 {app}\data
 	dataDir = os.Getenv("GOCLASHZ_DATA_DIR")
 	if dataDir == "" {
 		dataDir = filepath.Join(appDir, "data")
@@ -159,7 +157,7 @@ func (s *helperService) Execute(args []string, r <-chan svc.ChangeRequest, chang
 }
 
 func createPipeListener(pipeName string) (net.Listener, error) {
-	// 读取授权的用户 SID
+
 	allowedSids := readAllowedSids()
 	sddl := buildPipeSDDL(allowedSids)
 
@@ -206,7 +204,7 @@ func (s *helperService) handleConn(conn net.Conn) {
 		s.writeResponse(conn, true, nil, "")
 	case "shutdown":
 		s.writeResponse(conn, true, nil, "")
-		// 延迟退出，让响应先发出去
+
 		go func() {
 			time.Sleep(200 * time.Millisecond)
 			if s.ln != nil {
@@ -381,7 +379,6 @@ func (s *helperService) handleReplaceCoreFile(conn net.Conn, params json.RawMess
 	source := filepath.Clean(p.Source)
 	target := filepath.Clean(p.Target)
 
-	// 白名单校验
 	if !isUnderPath(source, stagingDir) {
 		s.writeResponse(conn, false, nil, "source must be under staging dir")
 		return
@@ -396,7 +393,6 @@ func (s *helperService) handleReplaceCoreFile(conn net.Conn, params json.RawMess
 		return
 	}
 
-	// SHA256 校验
 	if p.SHA256 != "" {
 		hash, err := sha256File(source)
 		if err != nil {
@@ -409,13 +405,11 @@ func (s *helperService) handleReplaceCoreFile(conn net.Conn, params json.RawMess
 		}
 	}
 
-	// PE 校验
 	if !isValidPE(source) {
 		s.writeResponse(conn, false, nil, "source is not a valid PE")
 		return
 	}
 
-	// 停止 core
 	s.mu.Lock()
 	if s.coreCmd != nil && s.coreCmd.Process != nil {
 		s.coreCmd.Process.Kill()
@@ -425,7 +419,6 @@ func (s *helperService) handleReplaceCoreFile(conn net.Conn, params json.RawMess
 	}
 	s.mu.Unlock()
 
-	// 原子替换：target -> .bak，source -> target
 	_ = os.Remove(target + ".bak")
 	_ = os.Rename(target, target+".bak")
 
@@ -436,7 +429,7 @@ func (s *helperService) handleReplaceCoreFile(conn net.Conn, params json.RawMess
 	}
 
 	if err := os.WriteFile(target, input, 0755); err != nil {
-		// rollback
+
 		_ = os.Rename(target+".bak", target)
 		s.writeResponse(conn, false, nil, fmt.Sprintf("write target failed: %v", err))
 		return
@@ -459,7 +452,6 @@ func (s *helperService) handleInstallWintun(conn net.Conn, params json.RawMessag
 	source := filepath.Clean(p.Source)
 	target := filepath.Clean(p.Target)
 
-	// 白名单校验
 	if !isUnderPath(source, stagingDir) {
 		s.writeResponse(conn, false, nil, "source must be under staging dir")
 		return
@@ -474,13 +466,11 @@ func (s *helperService) handleInstallWintun(conn net.Conn, params json.RawMessag
 		return
 	}
 
-	// DLL PE 校验
 	if !isValidPE(source) {
 		s.writeResponse(conn, false, nil, "source is not a valid DLL/PE")
 		return
 	}
 
-	// 原子替换
 	_ = os.Remove(target + ".bak")
 	_ = os.Rename(target, target+".bak")
 
@@ -579,7 +569,6 @@ func installService(allowedSid string) {
 	}
 	defer s.Close()
 
-	// 写入允许的用户 SID 到注册表
 	if allowedSid != "" {
 		writeAllowedSid(allowedSid)
 	}
@@ -590,7 +579,7 @@ func installService(allowedSid string) {
 func writeAllowedSid(sid string) {
 	key, err := registry.OpenKey(registry.LOCAL_MACHINE, registryPath, registry.SET_VALUE)
 	if err != nil {
-		// 尝试创建
+
 		key, _, err = registry.CreateKey(registry.LOCAL_MACHINE, registryPath, registry.SET_VALUE)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "warning: failed to write allowed SID to registry: %v\n", err)

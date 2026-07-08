@@ -93,7 +93,6 @@ const onBlur = (e: Event) => {
   transition: all 0.2s ease;
 }
 
-/* 隐藏原生输入框的箭头（双重保险） */
 .stepper-input::-webkit-outer-spin-button,
 .stepper-input::-webkit-inner-spin-button {
   -webkit-appearance: none;
@@ -127,15 +126,12 @@ const onBlur = (e: Event) => {
   padding: 0;
 }
 
-/* 悬停与点击的反色处理：极简体系下的硬核反馈 */
 .stepper-btn:hover:not(:disabled),
 .stepper-btn:active:not(:disabled) {
   background-color: var(--text-main);
   color: var(--app-bg);
   transition: all 0.1s ease;
 }
-
-
 
 .stepper-btn:disabled {
   opacity: 0.2;
@@ -146,14 +142,6 @@ const onBlur = (e: Event) => {
   width: 14px;
   height: 14px;
 }
-
-/* 整体悬停效果 (根据用户要求移除) */
-/* .modern-number-stepper:hover:not(.disabled) { background-color: var(--surface-panel); } */
-
-
-/* 聚焦状态反馈 (根据用户要求移除，不加框不换色) */
-/* .modern-number-stepper:focus-within { background-color: var(--surface-panel); box-shadow: inset 0 0 0 1px var(--text-sub); } */
-
 
 .disabled {
   opacity: 0.5;

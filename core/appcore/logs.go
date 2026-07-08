@@ -24,7 +24,7 @@ func NewLogStreamManager(dispatcher *LogDispatcher) *LogStreamManager {
 func (m *LogStreamManager) Start(ctx context.Context, logLevel string) {
 	m.mu.Lock()
 	if m.cancel != nil {
-		m.cancel() // 清理旧流
+		m.cancel()
 	}
 
 	streamCtx, cancel := context.WithCancel(ctx)
@@ -46,7 +46,7 @@ func (m *LogStreamManager) Start(ctx context.Context, logLevel string) {
 
 		clash.FetchLogs(streamCtx, logLevel, func(data interface{}) {
 			m.mu.Lock()
-			// Generation Guard 帧级防并发污染
+
 			alive := m.gen == gen && m.cancel != nil
 			m.mu.Unlock()
 

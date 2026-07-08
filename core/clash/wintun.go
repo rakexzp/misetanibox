@@ -74,7 +74,6 @@ func CommitWintunRuntime(ctx context.Context, prepared map[string]string) (strin
 		return "", fmt.Errorf("Wintun: отсутствует staging-информация")
 	}
 
-	// 如果 core\bin 不可写，通过 helper 服务替换
 	if !isDirWritable(filepath.Dir(destPath)) {
 		client := sys.NewHelperClient()
 		if err := client.InstallWintun(stagedDLL, destPath); err != nil {
@@ -98,7 +97,6 @@ func CommitWintunRuntime(ctx context.Context, prepared map[string]string) (strin
 	return version, nil
 }
 
-// isDirWritable 检查目录是否可写
 func isDirWritable(dir string) bool {
 	testFile := filepath.Join(dir, ".write_test")
 	err := os.WriteFile(testFile, []byte("test"), 0644)

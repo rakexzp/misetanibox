@@ -22,13 +22,11 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// ExitEvent 描述内核退出事件
 type ExitEvent struct {
 	Intentional bool
 	Message     string
 }
 
-// OnExitFunc 是内核异常退出时的回调函数类型
 type OnExitFunc func(event ExitEvent)
 
 var (
@@ -41,14 +39,12 @@ var (
 	startedViaHelper  atomic.Bool
 )
 
-// SetOnExitCallback 注册内核异常退出的回调（由 appcore 层在启动时设置）
 func SetOnExitCallback(fn OnExitFunc) {
 	mu.Lock()
 	defer mu.Unlock()
 	onExitCallback = fn
 }
 
-// killProcessIfClash 安全杀进程：验证 PID 对应进程名是否确为目标执行文件名，防止 PID 复用误杀
 func killProcessIfClash(pid int, expectedExeName string) {
 	hProcess, err := windows.OpenProcess(windows.PROCESS_QUERY_INFORMATION|windows.PROCESS_TERMINATE, false, uint32(pid))
 	if err != nil {
@@ -68,7 +64,6 @@ func killProcessIfClash(pid int, expectedExeName string) {
 	}
 }
 
-// cleanupResidualClashProcess 清理残余内核进程
 func cleanupResidualClashProcess(pidFile string, expectedExeName string) {
 	pidData, err := os.ReadFile(pidFile)
 	if err != nil {
@@ -84,9 +79,6 @@ func cleanupResidualClashProcess(pidFile string, expectedExeName string) {
 	_ = os.Remove(pidFile)
 }
 
-// Start 启动内核
-// tun=true 时必须通过 helper 启动（TUN 需要服务权限）
-// tun=false 时直接启动，不依赖 helper
 func Start(ctx context.Context, tun bool) error {
 	mu.Lock()
 	defer mu.Unlock()
@@ -109,15 +101,13 @@ func Start(ctx context.Context, tun bool) error {
 	}
 
 	if tun {
-		// TUN 模式：必须通过 helper 启动
+
 		return startCoreViaHelper(ctx, exePath, binDir, runtimeConfig, pidFile)
 	}
 
-	// 普通模式：直接启动，不碰 helper
 	return startCoreDirect(ctx, exePath, binDir, runtimeConfig, pidFile)
 }
 
-// startCoreViaHelper 通过 helper 服务启动内核（TUN 专用）
 func startCoreViaHelper(_ context.Context, exePath, binDir, runtimeConfig, _ string) error {
 	client := sys.NewHelperClient()
 
@@ -137,7 +127,6 @@ func startCoreViaHelper(_ context.Context, exePath, binDir, runtimeConfig, _ str
 	return nil
 }
 
-// startCoreDirect 直接启动内核进程（普通代理模式）
 func startCoreDirect(ctx context.Context, exePath, binDir, runtimeConfig, pidFile string) error {
 	startedViaHelper.Store(false)
 
@@ -186,7 +175,6 @@ func Stop() error {
 	mu.Lock()
 	isIntentionalStop.Store(true)
 
-	// 通过 helper 启动的，也通过 helper 停止
 	if startedViaHelper.Load() {
 		mu.Unlock()
 		client := sys.NewHelperClient()
@@ -242,15 +230,13 @@ func StartedViaHelper() bool {
 	return startedViaHelper.Load()
 }
 
-
-
 func startCoreProcessWithRetry(ctx context.Context, exePath, binDir, runtimeConfig string) (*exec.Cmd, error) {
 	var lastErr error
 
 	for i := 0; i < 8; i++ {
 		cmd := exec.CommandContext(ctx, exePath, "-d", binDir, "-f", runtimeConfig)
 		cmd.Dir = binDir
-		utils.HideCommandWindow(cmd, 0) // 不使用 CREATE_BREAKAWAY_FROM_JOB
+		utils.HideCommandWindow(cmd, 0)
 
 		err := cmd.Start()
 		if err == nil {

@@ -3,24 +3,23 @@
 package sys
 
 import (
+	"golang.org/x/sys/windows"
 	"syscall"
 	"unsafe"
-	"golang.org/x/sys/windows"
 )
 
 var (
-	kernel32 = windows.NewLazySystemDLL("kernel32.dll")
+	kernel32         = windows.NewLazySystemDLL("kernel32.dll")
 	procCreateEventW = kernel32.NewProc("CreateEventW")
-	procSetEvent = kernel32.NewProc("SetEvent")
+	procSetEvent     = kernel32.NewProc("SetEvent")
 )
 
-// RequestExistingInstanceQuit triggers the shutdown event to ask the running instance to quit
 func RequestExistingInstanceQuit() {
 	eventName, _ := syscall.UTF16PtrFromString("Global\\GoclashZ_Shutdown_Event")
 	handle, _, _ := procCreateEventW.Call(
-		0, 
-		1, // ManualReset = TRUE
-		0, // InitialState = FALSE
+		0,
+		1,
+		0,
 		uintptr(unsafe.Pointer(eventName)),
 	)
 	if handle != 0 {
@@ -29,13 +28,12 @@ func RequestExistingInstanceQuit() {
 	}
 }
 
-// ListenForShutdownEvent blocks until the shutdown event is triggered, then returns
 func ListenForShutdownEvent() {
 	eventName, _ := syscall.UTF16PtrFromString("Global\\GoclashZ_Shutdown_Event")
 	handle, _, _ := procCreateEventW.Call(
-		0, 
-		1, // ManualReset = TRUE
-		0, // InitialState = FALSE
+		0,
+		1,
+		0,
 		uintptr(unsafe.Pointer(eventName)),
 	)
 	if handle != 0 {

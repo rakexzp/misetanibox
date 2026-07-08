@@ -10,17 +10,15 @@ import (
 	"goclashz/core/utils"
 )
 
-// Режимы маршрутизации по приложениям.
 const (
-	AppRouteOff       = "off"       // фича выключена, правила приложений не подмешиваются
-	AppRouteBlacklist = "blacklist" // выбранные приложения идут напрямую (мимо VPN), остальное — через VPN
-	AppRouteWhitelist = "whitelist" // только выбранные приложения через VPN, остальное — напрямую
+	AppRouteOff       = "off"
+	AppRouteBlacklist = "blacklist"
+	AppRouteWhitelist = "whitelist"
 )
 
-// AppRouting — пер-конфиг настройка маршрутизации по приложениям.
 type AppRouting struct {
-	Mode string   `json:"mode"` // off | blacklist | whitelist
-	Apps []string `json:"apps"` // basename экзешников в нижнем регистре, напр. "telegram.exe"
+	Mode string   `json:"mode"`
+	Apps []string `json:"apps"`
 }
 
 func normalizeAppRouting(ar *AppRouting) {
@@ -51,7 +49,6 @@ func AppRoutingPath(id string) (string, error) {
 	return filepath.Join(SubscriptionsDir(), safeId+"_apps.json"), nil
 }
 
-// LoadAppRouting читает настройку; при отсутствии/повреждении возвращает выключенный режим.
 func LoadAppRouting(id string) (AppRouting, error) {
 	path, err := AppRoutingPath(id)
 	if err != nil {
@@ -83,8 +80,6 @@ func SaveAppRouting(id string, ar AppRouting) error {
 	return utils.WriteFileAtomic(path, data, 0644)
 }
 
-// defaultProxyGroupName возвращает имя основной策略组 (первой proxy-group) как цель
-// для whitelist-правил; если групп нет — резервно GLOBAL.
 func defaultProxyGroupName(root map[string]interface{}) string {
 	if groups, ok := root["proxy-groups"].([]interface{}); ok {
 		for _, g := range groups {
@@ -98,12 +93,6 @@ func defaultProxyGroupName(root map[string]interface{}) string {
 	return "GLOBAL"
 }
 
-// applyAppRouting оборачивает уже собранные правила (base) правилами маршрутизации
-// по приложениям в зависимости от режима.
-//
-//	blacklist: PROCESS-NAME,<app>,DIRECT (в начало) + base
-//	whitelist: PROCESS-NAME,<app>,<group> (в начало) + MATCH,DIRECT (в конец), base игнорируется —
-//	           это строгий режим «через VPN только выбранное».
 func applyAppRouting(root map[string]interface{}, base []string, ar AppRouting) []string {
 	normalizeAppRouting(&ar)
 	if ar.Mode == AppRouteOff || len(ar.Apps) == 0 {

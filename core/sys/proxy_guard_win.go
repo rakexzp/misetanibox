@@ -24,7 +24,6 @@ func proxyStatePath() string {
 	return filepath.Join(utils.GetDataDir(), "system_proxy_state.json")
 }
 
-// MarkSystemProxyOwned 标记当前系统的代理所有权归属于本程序
 func MarkSystemProxyOwned(host string, port int) {
 	systemProxyMu.Lock()
 	defer systemProxyMu.Unlock()
@@ -32,7 +31,6 @@ func MarkSystemProxyOwned(host string, port int) {
 	markSystemProxyOwnedLocked(host, port)
 }
 
-// markSystemProxyOwnedLocked 内部实现，调用方必须持有 systemProxyMu
 func markSystemProxyOwnedLocked(host string, port int) {
 	state := ownedProxyState{
 		Host:      host,
@@ -48,7 +46,6 @@ func markSystemProxyOwnedLocked(host string, port int) {
 	_ = utils.WriteFileAtomic(proxyStatePath(), data, 0644)
 }
 
-// UnmarkSystemProxyOwned 清除代理所有权标记
 func UnmarkSystemProxyOwned() {
 	systemProxyMu.Lock()
 	defer systemProxyMu.Unlock()
@@ -56,12 +53,10 @@ func UnmarkSystemProxyOwned() {
 	unmarkSystemProxyOwnedLocked()
 }
 
-// unmarkSystemProxyOwnedLocked 内部实现，调用方必须持有 systemProxyMu
 func unmarkSystemProxyOwnedLocked() {
 	_ = os.Remove(proxyStatePath())
 }
 
-// readOwnedProxyStateLocked 内部实现，调用方必须持有 systemProxyMu
 func readOwnedProxyStateLocked() (ownedProxyState, bool) {
 	data, err := os.ReadFile(proxyStatePath())
 	if err != nil {
@@ -103,13 +98,9 @@ func currentProxyMatches(host string, port int) bool {
 
 	target := fmt.Sprintf("%s:%d", host, port)
 
-	// 兼容：
-	// 127.0.0.1:7890
-	// http=127.0.0.1:7890;https=127.0.0.1:7890
 	return strings.Contains(proxyServer, target)
 }
 
-// ClearOwnedSystemProxy 仅在检测到代理是由本程序设置且仍匹配时，执行清理
 func ClearOwnedSystemProxy() {
 	systemProxyMu.Lock()
 	defer systemProxyMu.Unlock()

@@ -10,7 +10,6 @@ import (
 	"time"
 )
 
-// DoH-резолверы для TXT-запроса. Пробуем по очереди — если один заблокирован, берём следующий.
 var dohResolvers = []string{
 	"https://cloudflare-dns.com/dns-query",
 	"https://dns.google/resolve",
@@ -27,16 +26,12 @@ type dohResponse struct {
 	Answer []dohAnswer `json:"Answer"`
 }
 
-// ResolveConfigViaDNS запрашивает TXT-запись домена через DoH и возвращает её содержимое:
-// ссылку на подписку (http/https) или inline-конфиг (например, base64 YAML).
-// Несколько DNS-строк одной записи склеиваются; если записей несколько — берётся самая длинная
-// (обычно именно в ней конфиг/ссылка).
 func ResolveConfigViaDNS(ctx context.Context, domain string) (string, error) {
 	domain = strings.TrimSpace(domain)
 	if domain == "" {
 		return "", fmt.Errorf("пустой домен")
 	}
-	// на случай если пользователь вставил URL — вытащим хост
+
 	if strings.Contains(domain, "://") {
 		if u, err := url.Parse(domain); err == nil && u.Host != "" {
 			domain = u.Host
@@ -52,7 +47,7 @@ func ResolveConfigViaDNS(ctx context.Context, domain string) (string, error) {
 			lastErr = err
 			continue
 		}
-		// выбираем самую содержательную запись
+
 		best := ""
 		for _, t := range txts {
 			if len(t) > len(best) {
@@ -97,7 +92,7 @@ func queryTXT(ctx context.Context, client *http.Client, resolver, domain string)
 
 	var out []string
 	for _, a := range parsed.Answer {
-		if a.Type != 16 { // 16 = TXT
+		if a.Type != 16 {
 			continue
 		}
 		out = append(out, cleanTXTData(a.Data))
@@ -105,8 +100,6 @@ func queryTXT(ctx context.Context, client *http.Client, resolver, domain string)
 	return out, nil
 }
 
-// cleanTXTData убирает кавычки вокруг DNS-строк и склеивает многострочную TXT-запись.
-// Формат от DoH: "часть1" "часть2" ... (каждая ≤255 байт).
 func cleanTXTData(raw string) string {
 	raw = strings.TrimSpace(raw)
 	if !strings.Contains(raw, "\"") {

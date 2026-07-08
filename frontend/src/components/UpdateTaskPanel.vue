@@ -103,8 +103,6 @@ watch(tasks, (newTasks) => {
   opacity: 0;
   transform: translateX(30px);
 }
-/* Simply fade and slide out in place. Absolute positioning breaks flex gaps and width. */
-/* Panel fade for when the last item is removed and the entire panel unmounts */
 .panel-fade-enter-active,
 .panel-fade-leave-active {
   transition: all 0.4s ease;

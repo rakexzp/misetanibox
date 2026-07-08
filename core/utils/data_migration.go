@@ -51,11 +51,11 @@ func migrateLegacyAppDataToInstallData(force bool) error {
 	}
 
 	if !force {
-		// Only automatically migrate if it's an installed version (marker exists)
+
 		appDir := GetAppDir()
 		markerPath := filepath.Join(appDir, ".installed")
 		if _, err := os.Stat(markerPath); os.IsNotExist(err) {
-			// Not an installed version, avoid migrating portable usages
+
 			return nil
 		}
 	}
@@ -77,15 +77,13 @@ func migrateLegacyAppDataToInstallData(force bool) error {
 		_ = os.Remove(filepath.Join(target, ".migration.lock"))
 	}()
 
-	// Check if already migrated
 	metaPath := filepath.Join(target, ".migration.json")
 	if _, err := os.Stat(metaPath); err == nil && !force {
-		// Already migrated. Do not migrate again unless forced.
+
 		tryDeleteLegacyDir(legacy, target)
 		return nil
 	}
 
-	// Backup existing target data if any
 	if hasMeaningfulData(target) {
 		backupDir := migrationBackupDir(target)
 		if err := copyDir(target, backupDir, shouldSkipMigrationFile); err != nil {
@@ -94,19 +92,16 @@ func migrateLegacyAppDataToInstallData(force bool) error {
 		}
 	}
 
-	// Copy data
 	if err := copyDir(legacy, target, shouldSkipMigrationFile); err != nil {
 		writeMigrationError(target, legacy, fmt.Sprintf("не удалось скопировать данные из старого AppData: %v", err))
 		return fmt.Errorf("не удалось скопировать данные из старого AppData: %w", err)
 	}
 
-	// Verify copied data
 	if err := verifyCopied(legacy, target, shouldSkipMigrationFile); err != nil {
 		writeMigrationError(target, legacy, fmt.Sprintf("проверка миграции не пройдена: %v", err))
 		return fmt.Errorf("проверка миграции не пройдена: %w", err)
 	}
 
-	// Write migration meta
 	meta := MigrationMeta{
 		Version:       1,
 		From:          legacy,
@@ -119,10 +114,8 @@ func migrateLegacyAppDataToInstallData(force bool) error {
 		return err
 	}
 
-	// Clean any previous error since we succeeded
 	_ = os.Remove(filepath.Join(target, ".migration_error.json"))
 
-	// Attempt to delete source
 	if err := os.RemoveAll(legacy); err != nil {
 		renamed := legacy + ".migrated_delete_me"
 		_ = os.Rename(legacy, renamed)
@@ -372,7 +365,6 @@ func verifyCopied(src, dst string, skipFunc func(string) bool) error {
 			return fmt.Errorf("отсутствует файл: %s", relPath)
 		}
 
-		// Optionally check size, but size should be fine.
 		if info.Size() != dstInfo.Size() {
 			return fmt.Errorf("размер файла не совпадает: %s", relPath)
 		}
@@ -389,7 +381,6 @@ func saveMigrationMeta(target string, meta MigrationMeta) error {
 	return os.WriteFile(filepath.Join(target, ".migration.json"), data, 0644)
 }
 
-// RepairDataDirPermission is a utility function to be called with admin rights to repair directory ACLs.
 func RepairDataDirPermission() error {
 	appDir := GetAppDir()
 	dataDir := filepath.Join(appDir, "data")
@@ -407,7 +398,6 @@ func RepairDataDirPermission() error {
 	return nil
 }
 
-// RepairCoreBinPermission is a utility function to be called with admin rights to repair core directory ACLs.
 func RepairCoreBinPermission() error {
 	coreDir := filepath.Join(GetAppDir(), "core")
 

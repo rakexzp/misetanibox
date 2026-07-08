@@ -14,7 +14,6 @@ import (
 	"time"
 )
 
-// Manifest 备份包元数据
 type Manifest struct {
 	App           string   `json:"app"`
 	BackupVersion int      `json:"backupVersion"`
@@ -25,9 +24,8 @@ type Manifest struct {
 
 const CurrentBackupVersion = 2
 
-// Export 打包数据到指定的目标路径，使用 staging 临时快照方式
 func Export(dataDir, destPath string, appVersion string) error {
-	// 1. 创建临时目录进行快照
+
 	stagingDir, err := os.MkdirTemp(filepath.Dir(dataDir), ".goclashz-export-*")
 	if err != nil {
 		return fmt.Errorf("не удалось создать временный каталог экспорта: %v", err)
@@ -44,7 +42,6 @@ func Export(dataDir, destPath string, appVersion string) error {
 
 	contains := []string{}
 
-	// 2. 复制目标文件到 staging
 	for _, target := range targets {
 		src := filepath.Join(dataDir, target)
 		dst := filepath.Join(stagingDir, target)
@@ -55,7 +52,7 @@ func Export(dataDir, destPath string, appVersion string) error {
 		}
 
 		if target == "profiles" {
-			// 🛡️ 针对索引文件夹，持有极短时间的读锁进行快照，防止 index.json 损坏
+
 			clash.IndexLock.RLock()
 			err = copyDir(src, dst)
 			clash.IndexLock.RUnlock()
@@ -70,7 +67,6 @@ func Export(dataDir, destPath string, appVersion string) error {
 		}
 	}
 
-	// 3. 生成 manifest.json
 	manifest := Manifest{
 		App:           "Misetanibox",
 		BackupVersion: CurrentBackupVersion,
@@ -86,7 +82,6 @@ func Export(dataDir, destPath string, appVersion string) error {
 		return fmt.Errorf("не удалось записать manifest резервной копии: %w", err)
 	}
 
-	// 4. 执行压缩打包
 	f, err := os.Create(destPath)
 	if err != nil {
 		return fmt.Errorf("не удалось создать файл резервной копии: %v", err)
@@ -114,21 +109,18 @@ func Export(dataDir, destPath string, appVersion string) error {
 	})
 }
 
-// BackupStagingResult 解压到 staging 后的结果
 type BackupStagingResult struct {
 	Index    []clash.SubIndexItem
 	HasIndex bool
 	IndexErr error
 }
 
-// RestoreTransactional 事务化恢复流程
 func RestoreTransactional(ctx context.Context, dataDir, archivePath, mode string) error {
-	// 1. 模式校验
+
 	if err := validateRestoreMode(mode); err != nil {
 		return err
 	}
 
-	// 2. 创建工作空间 (staging 为待恢复数据，rollback 为旧数据备份)
 	workDir, err := os.MkdirTemp(filepath.Dir(dataDir), ".goclashz-restore-*")
 	if err != nil {
 		return err
@@ -140,13 +132,11 @@ func RestoreTransactional(ctx context.Context, dataDir, archivePath, mode string
 	os.MkdirAll(stagingDir, 0755)
 	os.MkdirAll(rollbackDir, 0755)
 
-	// 3. 解压并归一化到 staging (Zip Bomb 防护在内部执行)
 	stagingResult, err := extractAndNormalizeToStaging(archivePath, stagingDir)
 	if err != nil {
 		return err
 	}
 
-	// 🛡️ 核心修复：针对替换式恢复，必须确保备份包内包含有效的索引文件
 	if mode == "all" || mode == "subs" {
 		if !stagingResult.HasIndex {
 			rebuilt, err := rebuildIndexFromSubscriptions(stagingDir)
@@ -162,20 +152,16 @@ func RestoreTransactional(ctx context.Context, dataDir, archivePath, mode string
 		}
 	}
 
-	// 4. 校验 manifest (针对非 GoclashZ 备份进行拦截)
 	if err := validateManifest(stagingDir); err != nil {
 		return err
 	}
 
-	// 5. 构建恢复计划
 	plan := buildRestorePlan(mode)
 
-	// 🛡️ 核心修复：校验备份包是否包含模式所需的目标，防止静默成功
 	if err := validateRestorePlanInputs(stagingDir, plan, mode); err != nil {
 		return err
 	}
 
-	// 6. 备份当前受影响的目标到 rollback 目录，用于失败回滚
 	if err := backupCurrentTargets(dataDir, plan, rollbackDir); err != nil {
 		return fmt.Errorf("не удалось создать резервную копию текущих данных, восстановление отменено: %v", err)
 	}
@@ -187,9 +173,8 @@ func RestoreTransactional(ctx context.Context, dataDir, archivePath, mode string
 		}
 	}
 
-	// 7. 执行原子替换逻辑
 	if err := applyRestorePlan(dataDir, stagingDir, plan, mode, stagingResult.Index); err != nil {
-		// 8. 执行失败，尝试从 rollback 目录恢复
+
 		_ = rollbackRestorePlan(dataDir, rollbackDir, plan)
 		return fmt.Errorf("восстановление не удалось, выполнен автоматический откат: %v", err)
 	}
@@ -225,7 +210,6 @@ func validateRestorePlanInputs(stagingDir string, plan *RestorePlan, mode string
 	required := append([]string{}, plan.ReplaceDirs...)
 	required = append(required, plan.ReplaceFiles...)
 
-	// 可选项可以排除 theme_setting.txt，兼容旧备份
 	optional := map[string]bool{
 		"theme_setting.txt": true,
 	}
@@ -244,7 +228,7 @@ func validateRestorePlanInputs(stagingDir string, plan *RestorePlan, mode string
 }
 
 func applyRestorePlan(dataDir, stagingDir string, plan *RestorePlan, mode string, backupIndex []clash.SubIndexItem) error {
-	// A. 替换式目录：先删再考
+
 	for _, dir := range plan.ReplaceDirs {
 		src := filepath.Join(stagingDir, dir)
 		dst := filepath.Join(dataDir, dir)
@@ -256,7 +240,6 @@ func applyRestorePlan(dataDir, stagingDir string, plan *RestorePlan, mode string
 		}
 	}
 
-	// B. 替换式文件：直接覆盖
 	for _, file := range plan.ReplaceFiles {
 		src := filepath.Join(stagingDir, file)
 		dst := filepath.Join(dataDir, file)
@@ -267,7 +250,6 @@ func applyRestorePlan(dataDir, stagingDir string, plan *RestorePlan, mode string
 		}
 	}
 
-	// C. 合并式目录：仅 Subscriptions 目录在 subs-merge 模式下执行增量复制
 	if mode == "subs-merge" {
 		src := filepath.Join(stagingDir, "Subscriptions")
 		dst := filepath.Join(dataDir, "Subscriptions")
@@ -278,13 +260,12 @@ func applyRestorePlan(dataDir, stagingDir string, plan *RestorePlan, mode string
 		}
 	}
 
-	// D. 索引状态恢复：单独处理内存索引，防止与磁盘状态不一致
 	switch mode {
 	case "all", "subs":
-		// 替换语义：丢弃本地，全量使用备份
+
 		return clash.ReplaceSubIndex(backupIndex)
 	case "subs-merge":
-		// 合并语义：将备份索引项合并进本地
+
 		return mergeBackupIndex(backupIndex)
 	}
 
@@ -331,7 +312,6 @@ func rollbackRestorePlan(dataDir, rollbackDir string, plan *RestorePlan) error {
 		src := filepath.Join(rollbackDir, target)
 		dst := filepath.Join(dataDir, target)
 
-		// 🛡️ 核心修复：无论旧目标是否存在，都先删除恢复过程中产生的新目标（防止残留数据污染）
 		_ = os.RemoveAll(dst)
 
 		if _, err := os.Stat(src); err == nil {
@@ -359,7 +339,7 @@ func validateManifest(stagingDir string) error {
 	path := filepath.Join(stagingDir, "manifest.json")
 
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		// 兼容旧版备份：旧备份没有 manifest.json
+
 		return nil
 	}
 
@@ -431,7 +411,6 @@ func extractAndNormalizeToStaging(archivePath, stagingDir string) (*BackupStagin
 			return nil, fmt.Errorf("общий размер архива резервной копии превышает лимит")
 		}
 
-		// 提前解析索引文件
 		if destRel == "profiles/index.json" {
 			result.HasIndex = true
 			rc, err := f.Open()
@@ -476,8 +455,6 @@ func extractAndNormalizeToStaging(archivePath, stagingDir string) (*BackupStagin
 	}
 	return result, nil
 }
-
-// --- Utils ---
 
 func copyFile(src, dst string) error {
 	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {

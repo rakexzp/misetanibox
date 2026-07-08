@@ -13,7 +13,6 @@ func (c *Controller) UpdateSub(ctx context.Context, name, url string) error {
 		return err
 	}
 
-	// 统一重启编排
 	state := c.GetAppState()
 	if state.ActiveConfig == id && state.IsRunning {
 		return c.RestartCoreWithReason(ctx, "subscription-update")

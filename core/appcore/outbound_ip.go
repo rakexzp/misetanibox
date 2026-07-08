@@ -17,8 +17,8 @@ import (
 )
 
 var (
-	proxyTransportIPv4 *http.Transport
-	proxyTransportIPv6 *http.Transport
+	proxyTransportIPv4  *http.Transport
+	proxyTransportIPv6  *http.Transport
 	directTransportIPv4 *http.Transport
 	directTransportIPv6 *http.Transport
 	transportOnce       sync.Once
@@ -56,14 +56,14 @@ func initTransports() {
 }
 
 type OutboundIPResult struct {
-	Preferred string `json:"preferred"` // 最终显示 IP，IPv6 优先
+	Preferred string `json:"preferred"`
 	IPv4      string `json:"ipv4"`
 	IPv6      string `json:"ipv6"`
-	Mode      string `json:"mode"`   // proxy 或 direct
-	Source    string `json:"source"` // (旧字段，可能废弃或保留用于主显)
+	Mode      string `json:"mode"`
+	Source    string `json:"source"`
 	Source4   string `json:"source4"`
 	Source6   string `json:"source6"`
-	Message   string `json:"message"` // (整体消息)
+	Message   string `json:"message"`
 	Message4  string `json:"message4"`
 	Message6  string `json:"message6"`
 	Complete  bool   `json:"complete"`
@@ -147,7 +147,6 @@ func (c *Controller) outboundIPCacheKey() string {
 	)
 }
 
-// GetOutboundIP 检测出站 IP
 func (c *Controller) GetOutboundIP(force bool) (OutboundIPResult, error) {
 	isForce := force
 	key := c.outboundIPCacheKey()
@@ -193,7 +192,6 @@ func (c *Controller) currentOutboundRoute() string {
 	return "direct"
 }
 
-// GetOutboundIPForRoute 检测出站 IP，带路由预期校验防止竞态
 func (c *Controller) GetOutboundIPForRoute(force bool, expectedRoute string) (OutboundIPResult, error) {
 	currentRoute := c.currentOutboundRoute()
 
@@ -210,16 +208,13 @@ func (c *Controller) GetOutboundIPForRoute(force bool, expectedRoute string) (Ou
 func (c *Controller) getOutboundIPInternal() (OutboundIPResult, error) {
 	state := c.GetAppState()
 
-	// TUN 模式：不走 HTTP proxy，直接检测（TUN 在网络层透明接管）
-	// System Proxy 模式：通过 HTTP proxy 检测
-	// Direct：直连检测
 	mode := "direct"
 	useHTTPProxy := false
 
 	switch {
 	case state.ActualTun:
 		mode = "tun-route"
-		useHTTPProxy = true // 强制通过代理端口检测，避免 Wintun 路由表未就绪或 IPv6 泄漏导致直连
+		useHTTPProxy = true
 	case state.ActualSystemProxy:
 		mode = "proxy"
 		useHTTPProxy = true
@@ -250,7 +245,7 @@ func (c *Controller) getOutboundIPInternal() (OutboundIPResult, error) {
 	defer cancel()
 
 	type ipResult struct {
-		family string // "ipv4" or "ipv6"
+		family string
 		ip     string
 		source string
 		err    error
@@ -267,7 +262,6 @@ func (c *Controller) getOutboundIPInternal() (OutboundIPResult, error) {
 
 	resultCh := make(chan ipResult, 2)
 
-	// 并发检测双栈
 	go func() {
 		ip, source, err := detectIP(ctx, endpointsV6, "tcp6", useHTTPProxy)
 		resultCh <- ipResult{family: "ipv6", ip: ip, source: source, err: err}
@@ -306,7 +300,7 @@ func (c *Controller) getOutboundIPInternal() (OutboundIPResult, error) {
 				}
 			}
 		case <-deadline.C:
-			count = 2 // Timeout, break the loop
+			count = 2
 			result.Message = "Таймаут проверки"
 		}
 	}
@@ -358,7 +352,6 @@ func detectIP(ctx context.Context, endpoints []string, network string, useProxy 
 			go func(endpoint string) {
 				defer wg.Done()
 
-				// 给单个请求一个合理的超时，避免无限期挂起
 				fetchCtx, fetchCancel := context.WithTimeout(reqCtx, 3500*time.Millisecond)
 				defer fetchCancel()
 
@@ -387,9 +380,9 @@ func detectIP(ctx context.Context, endpoints []string, network string, useProxy 
 			if i < len(endpoints)-1 {
 				select {
 				case <-reqCtx.Done():
-					return // 如果已经拿到正确结果被 cancel，则停止继续分发后续请求
+					return
 				case <-time.After(80 * time.Millisecond):
-					// 错峰延时
+
 				}
 			}
 		}

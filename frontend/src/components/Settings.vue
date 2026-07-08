@@ -643,8 +643,7 @@
               </label>
             </div>
             
-            <!-- 👇 新增：自启模式（当开机自启开启时才显示，附带动画） -->
-            <Transition name="dropdown">
+                        <Transition name="dropdown">
               <div v-if="behavior.startupWithOS" class="delay-retention-sub-items">
                 <div class="divider"></div>
                 
@@ -862,8 +861,7 @@
           </div>
 
           <div class="glass-card setting-group scrollable">
-            <!-- 软件图标与名称展示行 -->
-            <div class="setting-item" style="padding: 20px 0; display: flex; justify-content: space-between; align-items: center;">
+                        <div class="setting-item" style="padding: 20px 0; display: flex; justify-content: space-between; align-items: center;">
               <div class="info" style="display: flex; align-items: center; gap: 18px;">
                 <img :src="appLogo" style="width: 52px; height: 52px; border-radius: 12px;" />
                 <div>
@@ -872,9 +870,7 @@
                 </div>
               </div>
 
-              <!-- 新增：右侧空间显示后台静默下载进度 -->
-              <!-- 新增：右侧空间显示后台静默下载进度 -->
-              <div v-if="globalState.appUpdateProgress" class="app-update-progress-container"
+                                          <div v-if="globalState.appUpdateProgress" class="app-update-progress-container"
                    :class="{ 'clickable-progress': globalState.appUpdateProgress.isDownloaded }"
                    @click="globalState.appUpdateProgress.isDownloaded ? promptInstallApp(globalState.appUpdateProgress) : null">
                 <div class="progress-info">
@@ -1079,8 +1075,7 @@
         </div>
       </div>
     </Transition>
-    <!-- 统一模态框系统 -->
-    <Transition name="pop">
+        <Transition name="pop">
       <div v-if="showResetConfirm" class="modal-overlay" @click="showResetConfirm = false">
         <div class="custom-modal-card" @click.stop>
           <div class="modal-header">
@@ -1117,8 +1112,7 @@
       </div>
     </Transition>
 
-    <!-- 还原备份弹窗 (复用订阅管理的卡片样式) -->
-    <Transition name="pop">
+        <Transition name="pop">
       <div v-if="showRestoreModal" class="modal-overlay" @click.self="showRestoreModal = false">
         <div class="custom-modal-card" @click.stop>
           <div class="modal-header">
@@ -1265,7 +1259,6 @@ const showResetConfirm = ref(false);
 const resetModule = ref('');
 const resetModuleName = ref('');
 const showCoreUpdateConfirm = ref(false);
-// --- 备份与还原状态 ---
 const showRestoreModal = ref(false);
 const selectedPath = ref("");
 const restoreMode = ref("all");
@@ -1288,7 +1281,6 @@ const handleReset = async () => {
     await API.ResetComponentSettings(resetModule.value);
     showResetConfirm.value = false;
     
-    // 重新拉取对应数据以更新 UI
     if (resetModule.value === 'network') {
         const netConf = await (API.GetNetworkConfig as any)();
         if (netConf) netConfig.value = netConf;
@@ -1323,7 +1315,6 @@ const view = ref(props.initialView as 'main' | 'uwp' | 'tun' | 'dns' | 'network'
 watch(() => props.initialView, (newVal) => { view.value = newVal as any; });
 
 watch(view, async (v) => {
-  // 🚀 延迟 250ms（等待 out-in leave 动画结束）后再回到顶部，消除突兀的跳顶闪烁
   setTimeout(() => {
     document.querySelector('.view-scroller')?.scrollTo({ top: 0, behavior: 'auto' });
   }, 250);
@@ -1336,7 +1327,6 @@ watch(view, async (v) => {
 const coreVersion = ref('Чтение…');
 const wintunVersion = ref('Чтение…');
 const isInstalling = ref(false);
-
 
 const dbList = [
   { key: 'geoip', title: 'GeoIP', behaviorKey: 'geoIpLink' },
@@ -1419,10 +1409,8 @@ const isUpdatingAnyDb = computed(() => {
 
 const formatUpdateError = (err: any) => {
   let msg = String(err || '');
-  // 清洗超长 GitHub Release 资产 Signed URL
   msg = msg.replace(/https:\/\/release-assets\.githubusercontent\.com\/\S+/g, 'ссылка ресурса GitHub Release');
   
-  // 清洗普通 GitHub Release 下载地址，移除 query
   msg = msg.replace(/https:\/\/github\.com\/\S+\/releases\/download\/\S+/g, (match) => {
     try {
       const url = new URL(match);
@@ -1433,7 +1421,6 @@ const formatUpdateError = (err: any) => {
     }
   });
 
-  // 移除常见的签名敏感参数
   msg = msg.replace(/([?&](sp|sv|se|sr|sig|skoid|sktid|skt|ske|sks|skv)=[^\\s]+)/g, '');
 
   if (msg.length > 360) {
@@ -1442,12 +1429,9 @@ const formatUpdateError = (err: any) => {
   return msg;
 };
 
-
-
 const handleCheckUpdate = async () => {
   if (globalState.appUpdateChecking) return;
   try {
-    // 🚀 核心改进：调用异步静默下载流，将通知权交给全局监听器 (App.vue)
     await (API as any).CheckAndDownloadAppUpdateAsync();
   } catch (e) {
     await showAlert("Проверка обновлений не удалась: " + e, "Ошибка", true);
@@ -1479,7 +1463,6 @@ const promptInstallApp = async (progress: any) => {
   }
 };
 
-// 导出备份
 const handleExportBackup = async () => {
   try {
     const res = await (API as any).ExportBackup();
@@ -1491,14 +1474,12 @@ const handleExportBackup = async () => {
   }
 };
 
-// 打开还原面板
 const openRestoreModal = () => {
   selectedPath.value = "";
   restoreMode.value = "all";
   showRestoreModal.value = true;
 };
 
-// 选择还原文件
 const handleSelectFile = async () => {
   try {
     const path = await (API as any).SelectBackupFile();
@@ -1510,7 +1491,6 @@ const handleSelectFile = async () => {
   }
 };
 
-// 执行还原
 const confirmRestore = async () => {
   if (!selectedPath.value) return;
 
@@ -1604,7 +1584,6 @@ const netConfig = ref({
 
 const hostsError = ref('');
 
-// 👇 新增：校验 Hosts 是否符合 YAML 字典基础格式
 const validateHosts = (val: string) => {
   if (!val || val.trim() === '') {
     hostsError.value = ''; // 为空是合法的（代表不配置）
@@ -1615,10 +1594,8 @@ const validateHosts = (val: string) => {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     
-    // 跳过空行和以 # 开头的注释行
     if (line === '' || line.startsWith('#')) continue;
 
-    // 正则解析：必须是 "键: 值" 的形式 (至少包含一个冒号，且冒号后面要有内容)
     if (!/^[^:]+:\s*.+$/.test(line)) {
       hostsError.value = `Строка ${i + 1}: неверный формат. Нужно "домен: IP" (двоеточие латинское, значение обязательно)`;
       return false;
@@ -1629,7 +1606,6 @@ const validateHosts = (val: string) => {
   return true;
 };
 
-// 👇 实时监听用户的输入
 watch(() => netConfig.value.hosts, (newVal) => {
   validateHosts(newVal || '');
 });
@@ -1639,7 +1615,6 @@ const behavior = ref<any>({
   closeToTray: true,
     startupWithOS: false,
     restoreOnStartup: false,
-  // 👇 新增：显色彩色延迟数字
   colorDelay: false,
   delayRetention: false,          // 👇 移到了这里
   delayRetentionTime: 'long',     // 👇 移到了这里
@@ -1653,14 +1628,10 @@ const behavior = ref<any>({
   geoSiteLink: '',
   mmdbLink: '',
   asnLink: '',
-  // 👇 新增：自动更新相关
   autoUpdate: true,
   updateMethod: 'startup',
   updateInterval: 3,
 });
-
-
-
 
 const uwpApps = ref<any[]>([]);
 const uwpSearch = ref('');
@@ -1706,7 +1677,6 @@ const saveUwpChanges = async () => {
 
 const loadData = async () => {
   try {
-    // 统一刷新所有运行资产状态（内核版本、wintun、geo文件信息）
     const [_, status, tunConf, dnsConf, netConf, behaviorConf] = await Promise.all([
       refreshRuntimeAssets(),
       API.CheckTunEnv(),
@@ -1728,7 +1698,6 @@ const loadData = async () => {
     console.error('加载配置失败', e);
   }
 };
-
 
 const unsubs: (() => void)[] = [];
 
@@ -1790,7 +1759,6 @@ const handleTunToggle = async (e: Event) => {
     return;
   }
   
-  // 🚀 乐观 UI：先斩后奏
   globalState.tun = newState;
   
   try {
@@ -1801,7 +1769,6 @@ const handleTunToggle = async (e: Event) => {
     await showAlert("Операция TUN не удалась: " + err, 'Ошибка');
   }
 };
-
 
 const installDriver = async (force: boolean = true) => {
   if (isInstalling.value) return;
@@ -1815,13 +1782,10 @@ const installDriver = async (force: boolean = true) => {
   (API as any).InstallTunDriverAsync(force).catch(() => {});
 };
 
-// 🚀 核心：监听更新间隔时间，防止用户输入 0 或负数
 watch(() => behavior.value.updateInterval, async (newVal) => {
   if (newVal !== undefined && newVal <= 0) {
     behavior.value.updateInterval = 1;
     
-    // 👇 修复：只有在用户实际启用了定时更新的情况下，才弹出警告。
-    // 如果是旧版本配置缺失导致的 0，则静默修复并保存，不打扰用户。
     if (behavior.value.autoUpdate && behavior.value.updateMethod === 'scheduled') {
       await showAlert("Интервал проверки — не меньше 1 дня.", "Подсказка");
     }
@@ -1839,7 +1803,6 @@ const appUpdatePercent = computed(() => {
   if (!p || !p.totalBytes) return 0;
   return Math.min(100, Math.floor((p.bytesDone / p.totalBytes) * 100));
 });
-
 
 const updateTunDnsHijack = (e: Event) => {
   const val = (e.target as HTMLInputElement).value;
@@ -1874,7 +1837,6 @@ const onToggleLite = (e: Event) => {
   const on = (e.target as HTMLInputElement).checked;
   setUiMode(on ? 'lite' : 'full');
 };
-
 
 const smartCoreOn = ref(false);
 const smartCoreBusy = ref(false);
@@ -1932,7 +1894,6 @@ const handleStartupWithOSChange = async () => {
   saveBehavior();
 };
 
-// Helper 服务状态
 const helperStatus = ref<any>({ installed: false, running: false, reachable: false });
 const helperLoading = ref(false);
 
@@ -2441,7 +2402,6 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 
 .link-text { font-family: monospace; font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
 
-/* 统一弹窗按钮高度与宽度 */
 .modal-footer .action-btn, 
 .modal-footer .primary-btn {
   height: 42px;
@@ -2516,7 +2476,6 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
   transform: translateY(-8px);
 }
 
-/* 关于页面的超链接样式 */
 .link-item {
   color: var(--accent);
   font-size: 0.85rem;
@@ -2528,9 +2487,6 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
   opacity: 0.8;
   text-decoration: underline;
 }
-/* ================================ */
-/* 验证错误提示样式                    */
-/* ================================ */
 .hosts-input-container {
   display: flex;
   flex-direction: column;

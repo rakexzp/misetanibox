@@ -10,14 +10,12 @@ import (
 	"goclashz/core/clash"
 )
 
-// ProxyGroupState 代理组精简状态
 type ProxyGroupState struct {
 	Name string `json:"name"`
 	Type string `json:"type"`
 	Now  string `json:"now"`
 }
 
-// ProxyStateMonitor 负责监控策略组的选中状态变化
 type ProxyStateMonitor struct {
 	mu     sync.Mutex
 	cancel context.CancelFunc
@@ -55,7 +53,7 @@ func getProxyGroupStates() ([]ProxyGroupState, error) {
 
 		switch typ {
 		case "Selector", "URLTest", "Fallback", "LoadBalance":
-			// 排除系统保留组
+
 			if name == "GLOBAL" || name == "DIRECT" || name == "REJECT" {
 				continue
 			}
@@ -114,7 +112,6 @@ func (m *ProxyStateMonitor) Start(ctx context.Context) {
 					continue
 				}
 
-				// 使用 JSON 哈希简单的对比数据是否变化
 				payload, _ := json.Marshal(states)
 				hash := string(payload)
 				if hash == lastHash {
@@ -129,7 +126,6 @@ func (m *ProxyStateMonitor) Start(ctx context.Context) {
 					return
 				}
 
-				// 发送增量更新事件
 				m.emit.Emit("proxy-state-sync", states)
 			}
 		}

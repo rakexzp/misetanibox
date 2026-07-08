@@ -27,8 +27,7 @@
       </div>
     </div>
 
-    <!-- 列表过渡动画 -->
-    <TransitionGroup name="list" tag="div" class="subs-list">
+        <TransitionGroup name="list" tag="div" class="subs-list">
       <div v-if="localConfigs.length === 0" class="empty-state" key="empty">
         Нет локальных файлов конфигурации.
       </div>
@@ -92,11 +91,9 @@
       </div>
     </TransitionGroup>
 
-    <!-- 统一模态框系统 (回归上上次样式的简洁结构) -->
-    <Transition name="pop">
+        <Transition name="pop">
       <div v-if="activeModal" class="modal-overlay" @click="closeAllModals">
-        <!-- 导入主入口弹窗 -->
-        <div v-if="activeModal === 'import'" class="custom-modal-card" @click.stop>
+                <div v-if="activeModal === 'import'" class="custom-modal-card" @click.stop>
           <div class="modal-header">
             <h3>Импорт файла конфигурации</h3>
           </div>
@@ -113,8 +110,7 @@
           </div>
         </div>
 
-        <!-- 导入确认/命名弹窗 -->
-        <div v-if="activeModal === 'import_confirm'" class="custom-modal-card" @click.stop>
+                <div v-if="activeModal === 'import_confirm'" class="custom-modal-card" @click.stop>
           <div class="modal-header">
             <h3>{{ isImportingRemote ? 'Импорт подписки по ссылке' : 'Импорт локальной конфигурации' }}</h3>
           </div>
@@ -140,8 +136,7 @@
           </div>
         </div>
 
-        <!-- 重命名弹窗 -->
-        <div v-if="activeModal === 'rename'" class="custom-modal-card" @click.stop>
+                <div v-if="activeModal === 'rename'" class="custom-modal-card" @click.stop>
           <div class="modal-header">
             <h3>Переименовать конфигурацию</h3>
           </div>
@@ -155,8 +150,7 @@
           </div>
         </div>
 
-        <!-- 删除确认弹窗 -->
-        <div v-if="activeModal === 'delete'" class="custom-modal-card" @click.stop>
+                <div v-if="activeModal === 'delete'" class="custom-modal-card" @click.stop>
           <div class="modal-header">
             <h3 class="danger-text">Удалить навсегда</h3>
           </div>
@@ -203,13 +197,10 @@ const isDeleting = ref(false);
 const localConfigs = ref<clash.SubIndexItem[]>([]);
 const activeMenu = ref<string | null>(null);
 
-// --- 导入相关状态 ---
 const newSubUrl = ref('');
 const pendingImportPath = ref('');
 const configNameInput = ref('');
 const isImportingRemote = ref(false);
-
-
 
 const formatDate = (timestamp: number) => {
   if (!timestamp) return '';
@@ -260,7 +251,6 @@ let currentSelectionNonce = 0;
 const handleSelectConfig = async (config: clash.SubIndexItem) => {
   if (isCurrentConfig(config.id)) return;
   
-  // 乐观 UI 更新：不阻塞连续点击，直接放行
   currentSelectionNonce++;
   const thisNonce = currentSelectionNonce;
   
@@ -277,13 +267,11 @@ const handleSelectConfig = async (config: clash.SubIndexItem) => {
       break;
     } catch (error) {
       lastError = error;
-      // 如果发生重试，检查期间是否有新的点击，如果有直接中断当前重试
       if (currentSelectionNonce !== thisNonce) return;
       if (i < maxAttempts - 1) await new Promise(r => setTimeout(r, 500));
     }
   }
   
-  // 仅当当前请求仍是最新的（没有被新点击覆盖）且失败时，才进行回滚和报错
   if (lastError && currentSelectionNonce === thisNonce) {
     globalState.activeConfigId = previousConfigId;
     await showAlert("Не удалось переключить подписку: " + lastError, "Ошибка");
@@ -297,7 +285,6 @@ const handleUpdateAll = async () => {
     return;
   }
 
-  // 🚀 发起异步任务，具体状态由事件监听器控制
   API.UpdateAllSubsAsync().catch(() => {});
 };
 
@@ -447,7 +434,6 @@ const confirmDelete = async () => {
   isDeleting.value = true;
   try {
     if (isCurrentConfig(targetId.value)) {
-      // 停止代理并清理状态
       await API.ToggleSystemProxy(false);
       await API.ToggleTunMode(false);
       globalState.activeConfigId = '';
@@ -543,7 +529,6 @@ onUnmounted(() => {
 
 .subs-list { flex: 1; position: relative; }
 
-/* 卡片基础样式 */
 .sub-card { 
   position: relative; padding: 20px; border-radius: 12px; 
   background: var(--surface); margin-bottom: 16px; 
@@ -563,9 +548,6 @@ onUnmounted(() => {
 .sub-name { font-size: 0.95rem; font-weight: 600; margin: 0; }
 .sub-path { font-size: 0.7rem; color: var(--text-muted); }
 
-/* ================================== */
-/* 列表过渡动画 */
-/* ================================== */
 .list-move {
   transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 }
@@ -671,7 +653,6 @@ onUnmounted(() => {
 .modal-hint-text { padding: 4px 0 12px 0; color: var(--text-sub); font-size: 0.85rem; line-height: 1.6; }
 .danger-text { color: #ff4d4f !important; }
 
-/* --- 菜单遮罩 --- */
 .menu-click-overlay {
   position: fixed;
   top: 0; left: 0; width: 100vw; height: 100vh;
@@ -688,7 +669,6 @@ onUnmounted(() => {
 .menu-item.danger { color: #ff4d4f !important; font-weight: 600; }
 .empty-state { padding: 30px; text-align: center; color: var(--text-muted); border: none; border-radius: 10px; background: var(--surface); }
 
-/* --- 下拉菜单动画 --- */
 .dropdown-enter-active, .dropdown-leave-active {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }

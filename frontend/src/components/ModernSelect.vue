@@ -35,7 +35,6 @@ const props = defineProps<{
 
 const emit = defineEmits(['update:modelValue', 'change']);
 
-// 自动修正非法值
 watch(() => props.modelValue, (newVal) => {
   const match = props.options.find(o => o.value === newVal);
   if (!match && props.options.length > 0) {
@@ -62,7 +61,6 @@ const selectOption = (val: string | number) => {
   isOpen.value = false;
 };
 
-// 🌟 核心重绘逻辑：自己接管“失去焦点”事件
 const handleClickOutside = (event: MouseEvent) => {
   if (isOpen.value && selectRef.value && !selectRef.value.contains(event.target as Node)) {
     isOpen.value = false;
@@ -70,18 +68,15 @@ const handleClickOutside = (event: MouseEvent) => {
 };
 
 onMounted(() => {
-  // 组件挂载时，在整个窗口贴上“监听器”
   document.addEventListener('click', handleClickOutside);
 });
 
 onUnmounted(() => {
-  // 组件销毁时记得撕掉监听器，防止内存泄漏
   document.removeEventListener('click', handleClickOutside);
 });
 </script>
 
 <style scoped>
-/* 1. 基础容器（无任何系统响应逻辑） */
 .modern-custom-select {
   position: relative;
   min-width: 140px; 
@@ -96,7 +91,6 @@ onUnmounted(() => {
   width: 100%;
 }
 
-/* 2. 触发器（视觉主体） */
 .select-trigger {
   display: flex;
   justify-content: space-between;
@@ -111,14 +105,12 @@ onUnmounted(() => {
   background-color: var(--surface-hover);
 }
 
-/* 禁用状态 */
 .modern-custom-select.disabled .select-trigger {
   opacity: 0.5;
   cursor: not-allowed;
   background-color: var(--surface);
 }
 
-/* 3. 动画与弹出菜单 */
 .arrow {
   width: 16px;
   height: 16px;

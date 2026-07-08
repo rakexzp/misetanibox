@@ -18,7 +18,6 @@ const (
 	helperConnectTimeout = 150 * time.Millisecond
 )
 
-// getMethodTimeout 根据方法返回不同的请求超时
 func getMethodTimeout(method string) time.Duration {
 	switch method {
 	case "ping":
@@ -32,19 +31,16 @@ func getMethodTimeout(method string) time.Duration {
 	}
 }
 
-// HelperClient 通过 Named Pipe 与 GoclashZHelper 服务通信
 type HelperClient struct {
 	pipeName string
 }
 
-// NewHelperClient 创建 helper 客户端
 func NewHelperClient() *HelperClient {
 	return &HelperClient{
 		pipeName: GetHelperPipeName(),
 	}
 }
 
-// Ping 检查 helper 服务是否可达
 func (c *HelperClient) Ping() error {
 	resp, err := c.sendRequest("ping", nil)
 	if err != nil {
@@ -56,7 +52,6 @@ func (c *HelperClient) Ping() error {
 	return nil
 }
 
-// Shutdown 通知 helper 服务自行退出（不需要管理员权限）
 func (c *HelperClient) Shutdown() error {
 	resp, err := c.sendRequest("shutdown", nil)
 	if err != nil {
@@ -68,7 +63,6 @@ func (c *HelperClient) Shutdown() error {
 	return nil
 }
 
-// StartCore 通过 helper 启动内核进程
 func (c *HelperClient) StartCore(params StartCoreParams) error {
 	data, err := json.Marshal(params)
 	if err != nil {
@@ -84,7 +78,6 @@ func (c *HelperClient) StartCore(params StartCoreParams) error {
 	return nil
 }
 
-// StopCore 通过 helper 停止内核进程
 func (c *HelperClient) StopCore() error {
 	resp, err := c.sendRequest("stop-core", nil)
 	if err != nil {
@@ -96,7 +89,6 @@ func (c *HelperClient) StopCore() error {
 	return nil
 }
 
-// CoreStatus 查询内核运行状态
 func (c *HelperClient) CoreStatus() (CoreStatusData, error) {
 	var status CoreStatusData
 	resp, err := c.sendRequest("core-status", nil)
@@ -112,7 +104,6 @@ func (c *HelperClient) CoreStatus() (CoreStatusData, error) {
 	return status, nil
 }
 
-// RepairPermission 通过 helper 修复数据目录权限
 func (c *HelperClient) RepairPermission(dataDir string) error {
 	data, _ := json.Marshal(map[string]string{"dataDir": dataDir})
 	resp, err := c.sendRequest("repair-permission", data)
@@ -125,7 +116,6 @@ func (c *HelperClient) RepairPermission(dataDir string) error {
 	return nil
 }
 
-// ReplaceCoreFile 通过 helper 替换核心文件
 func (c *HelperClient) ReplaceCoreFile(params ReplaceCoreFileParams) error {
 	data, err := json.Marshal(params)
 	if err != nil {
@@ -141,7 +131,6 @@ func (c *HelperClient) ReplaceCoreFile(params ReplaceCoreFileParams) error {
 	return nil
 }
 
-// InstallWintun 通过 helper 安装 Wintun 驱动文件
 func (c *HelperClient) InstallWintun(source, target string) error {
 	data, err := json.Marshal(InstallWintunParams{Source: source, Target: target})
 	if err != nil {
@@ -157,7 +146,6 @@ func (c *HelperClient) InstallWintun(source, target string) error {
 	return nil
 }
 
-// sendRequest 通过 Named Pipe 发送请求并等待响应
 func (c *HelperClient) sendRequest(method string, params json.RawMessage) (*HelperResponse, error) {
 	timeout := helperConnectTimeout
 	conn, err := winio.DialPipe(c.pipeName, &timeout)
@@ -189,7 +177,6 @@ func (c *HelperClient) sendRequest(method string, params json.RawMessage) (*Help
 	return &resp, nil
 }
 
-// CheckHelperService 检查 helper 服务状态（安装 + 运行 + 可达）
 func CheckHelperService() HelperStatusData {
 	status := HelperStatusData{}
 
@@ -233,13 +220,10 @@ func isServiceRunning(name string) (bool, error) {
 	return isServiceRunningSCM(name)
 }
 
-// InstallHelperService 安装 helper 服务（需要管理员权限）
 func InstallHelperService(exePath string) error {
 	return errors.New("deprecated: use InstallOrRepairHelperServiceForUser")
 }
 
-// InstallOrRepairHelperServiceForUser 安装或修复 helper 服务并授权指定用户 SID
-// 服务已存在时跳过创建，继续补写 SID 和 DACL
 func InstallOrRepairHelperServiceForUser(exePath string, userSID string) error {
 	if _, err := os.Stat(exePath); err != nil {
 		return fmt.Errorf("helper executable not found: %s: %w", exePath, err)
@@ -255,9 +239,7 @@ func InstallOrRepairHelperServiceForUser(exePath string, userSID string) error {
 		}
 
 		if err := grantServiceControlToUser(HelperServiceName, userSID); err != nil {
-			// 这里不要直接失败。
-			// 因为 f26c5ed 已经可能把旧服务 DACL 写坏，
-			// 但只要管理员进程能启动服务，Helper 仍可恢复工作。
+
 			logger.Warnf("не удалось задать DACL службы, продолжаем попытку запуска: %v", err)
 		}
 	}
@@ -265,7 +247,6 @@ func InstallOrRepairHelperServiceForUser(exePath string, userSID string) error {
 	return nil
 }
 
-// RecoverHelperServiceForUser 强修复 Helper 服务
 func RecoverHelperServiceForUser(exePath string, userSID string) error {
 	if !CheckAdmin() {
 		return fmt.Errorf("для исправления службы Helper требуются права администратора")
@@ -282,12 +263,12 @@ func RecoverHelperServiceForUser(exePath string, userSID string) error {
 	}
 
 	if err := StartHelperService(); err != nil {
-		// 再试一次停止 + 启动，不要立即 delete。
+
 		_ = StopHelperService()
 		time.Sleep(500 * time.Millisecond)
 
 		if err2 := StartHelperService(); err2 != nil {
-			// 最后才尝试 delete/recreate。
+
 			if delErr := UninstallHelperService(); delErr == nil {
 				time.Sleep(1200 * time.Millisecond)
 
@@ -326,23 +307,19 @@ func writeAllowedSidToRegistry(sid string) error {
 	return nil
 }
 
-// UninstallHelperService 卸载 helper 服务（需要管理员权限）
 func UninstallHelperService() error {
 	_ = StopHelperService()
 	return uninstallServiceSCM(HelperServiceName)
 }
 
-// StartHelperService 启动 helper 服务（需要管理员权限）
 func StartHelperService() error {
 	return startServiceSCM(HelperServiceName)
 }
 
-// StopHelperService 停止 helper 服务（需要管理员权限）
 func StopHelperService() error {
 	return stopServiceSCM(HelperServiceName)
 }
 
-// WaitForHelperReady 等待 helper 服务就绪
 func WaitForHelperReady(maxRetries int, interval time.Duration) error {
 	client := NewHelperClient()
 	for i := 0; i < maxRetries; i++ {

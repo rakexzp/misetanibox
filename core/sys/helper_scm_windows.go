@@ -30,7 +30,6 @@ func openServiceWithAccess(m *mgr.Mgr, name string, access uint32) (*mgr.Service
 	}, nil
 }
 
-// isServiceInstalledSCM 通过 SCM 检查服务是否已注册
 func isServiceInstalledSCM(name string) (bool, error) {
 	m, err := mgr.Connect()
 	if err != nil {
@@ -49,7 +48,6 @@ func isServiceInstalledSCM(name string) (bool, error) {
 	return true, nil
 }
 
-// isServiceRunningSCM 通过 SCM 检查服务是否正在运行
 func isServiceRunningSCM(name string) (bool, error) {
 	m, err := mgr.Connect()
 	if err != nil {
@@ -71,7 +69,6 @@ func isServiceRunningSCM(name string) (bool, error) {
 	return status.State == svc.Running, nil
 }
 
-// installOrUpdateServiceSCM 通过 SCM 安装或更新服务
 func installOrUpdateServiceSCM(name, exePath, description string) error {
 	m, err := mgr.Connect()
 	if err != nil {
@@ -139,7 +136,6 @@ func installOrUpdateServiceSCM(name, exePath, description string) error {
 	return nil
 }
 
-// uninstallServiceSCM 通过 SCM 卸载服务
 func uninstallServiceSCM(name string) error {
 	m, err := mgr.Connect()
 	if err != nil {
@@ -160,7 +156,6 @@ func uninstallServiceSCM(name string) error {
 	return nil
 }
 
-// startServiceSCM 通过 SCM 启动服务（已运行时容错）
 func startServiceSCM(name string) error {
 	m, err := mgr.Connect()
 	if err != nil {
@@ -174,7 +169,6 @@ func startServiceSCM(name string) error {
 	}
 	defer s.Close()
 
-	// 已运行则直接返回
 	status, err := s.Query()
 	if err == nil && status.State == svc.Running {
 		return nil
@@ -187,7 +181,6 @@ func startServiceSCM(name string) error {
 		return fmt.Errorf("start service failed: %w", err)
 	}
 
-	// 等待服务进入 Running 状态
 	deadline := time.Now().Add(10 * time.Second)
 	for time.Now().Before(deadline) {
 		status, err := s.Query()
@@ -206,7 +199,6 @@ func startServiceSCM(name string) error {
 	return fmt.Errorf("service did not start within timeout")
 }
 
-// stopServiceSCM 通过 SCM 停止服务
 func stopServiceSCM(name string) error {
 	m, err := mgr.Connect()
 	if err != nil {
@@ -233,12 +225,11 @@ func stopServiceSCM(name string) error {
 		return fmt.Errorf("stop service failed: %w", err)
 	}
 
-	// 等待服务停止
 	deadline := time.Now().Add(10 * time.Second)
 	for time.Now().Before(deadline) {
 		status, err := s.Query()
 		if err != nil {
-			return nil // 服务可能已删除
+			return nil
 		}
 		if status.State == svc.Stopped {
 			return nil
@@ -249,7 +240,6 @@ func stopServiceSCM(name string) error {
 	return fmt.Errorf("service did not stop within timeout")
 }
 
-// grantServiceControlToUser 设置服务 DACL，允许指定用户 query/start/stop/interrogate
 func grantServiceControlToUser(serviceName string, userSID string) error {
 	adminRights := "CCDCLCSWRPWPDTLOCRSDRCWDWO"
 	userRights := "LCRPWPLOCRRC"

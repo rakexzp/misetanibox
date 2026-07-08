@@ -331,7 +331,6 @@ func BuildRuleFromForm(req BuildRuleRequest) (string, error) {
 	return SanitizeRuleLine(rule)
 }
 
-// GetRuleFormOptions 获取弹窗渲染所需选项数据
 func GetRuleFormOptionsData(id string) (RuleFormOptions, error) {
 	var opts RuleFormOptions
 
@@ -340,7 +339,6 @@ func GetRuleFormOptionsData(id string) (RuleFormOptions, error) {
 		return opts, err
 	}
 
-	// Read effective rules to count types
 	rules, err := BuildRuntimeRules(id, root)
 	if err != nil {
 		return opts, err
@@ -349,7 +347,6 @@ func GetRuleFormOptionsData(id string) (RuleFormOptions, error) {
 
 	opts.Policies = ExtractPolicyOptions(root)
 
-	// Combine default order with dynamically encountered types, and sort by count
 	var types []RuleTypeOption
 	typeSet := map[string]bool{}
 
@@ -368,7 +365,7 @@ func GetRuleFormOptionsData(id string) (RuleFormOptions, error) {
 				types = append(types, meta)
 				typeSet[t] = true
 			} else {
-				// Fallback generic info for unseen types
+
 				types = append(types, RuleTypeOption{
 					Value:        t,
 					Label:        t,
@@ -382,9 +379,6 @@ func GetRuleFormOptionsData(id string) (RuleFormOptions, error) {
 		}
 	}
 
-	// Sort types: highest count first.
-	// (Using simple bubble sort for short array, but let's use sort slice later if needed.
-	// Since order is important, we just bubble sort by count descending, keeping default order for ties.)
 	for i := 0; i < len(types); i++ {
 		for j := i + 1; j < len(types); j++ {
 			if types[j].Count > types[i].Count {

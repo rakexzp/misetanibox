@@ -76,8 +76,7 @@
 
     <TrafficCard :traffic="traffic" />
 
-    <!-- Редактор фона карточки -->
-    <Transition name="pop">
+        <Transition name="pop">
       <div v-if="editingCard" class="modal-overlay" @click.self="editingCard = null">
         <div class="bg-editor" @click.stop :style="{ transform: `translate(${editorPos.x}px, ${editorPos.y}px)` }">
           <h3 class="bg-editor-drag" @mousedown="startEditorDrag">Картинка карточки <span class="drag-hint">⠿</span></h3>
@@ -144,7 +143,6 @@ import { ref, reactive, computed, watch } from 'vue';
 import * as API from '../../wailsjs/go/main/App';
 import { globalState, showAlert, showConfirm, updateStateFromBackend, scheduleOutboundIPRefresh, setSystemProxyIntent, setTunIntent, setCardBg } from '../store';
 
-// готовые пресеты-градиенты (без веса ассетов)
 const BG_PRESETS: { id: string; css: string }[] = [
   { id: 'aurora', css: 'linear-gradient(135deg, #667eea, #764ba2)' },
   { id: 'sunset', css: 'linear-gradient(135deg, #ff6a00, #ee0979)' },
@@ -155,13 +153,11 @@ const BG_PRESETS: { id: string; css: string }[] = [
   { id: 'night',  css: 'linear-gradient(135deg, #232526, #414345)' },
   { id: 'steel',  css: 'linear-gradient(135deg, #485563, #29323c)' },
 ];
-// выбранный пресет-градиент на карточку (когда нет загруженной картинки)
 const cardPresets = reactive<Record<string, string>>(
   JSON.parse(localStorage.getItem('mise_cardPresets') || '{}')
 );
 const saveCardPresets = () => localStorage.setItem('mise_cardPresets', JSON.stringify(cardPresets));
 
-// пер-карточные настройки положения/масштаба/затемнения фона
 interface CardBgOpts { x: number; y: number; zoom: number; scrim: number }
 const defaultBgOpts = (): CardBgOpts => ({ x: 50, y: 50, zoom: 100, scrim: 45 });
 const cardBgOpts = reactive<Record<string, CardBgOpts>>(
@@ -173,7 +169,6 @@ const optsFor = (key: string): CardBgOpts => {
   return cardBgOpts[key];
 };
 
-// личная галерея фонов (сохранённые пользователем картинки)
 const gallery = ref<{ id: string; dataUrl: string }[]>([]);
 const loadGallery = async () => {
   try { gallery.value = (await (API as any).GetGallery()) || []; } catch { gallery.value = []; }
@@ -202,7 +197,6 @@ const editingCard = ref<string | null>(null);
 const editorPos = ref({ x: 0, y: 0 });
 const openCardEditor = (key: string) => { optsFor(key); editorPos.value = { x: 0, y: 0 }; loadGallery(); editingCard.value = key; };
 
-// перетаскивание окна редактора за заголовок
 const startEditorDrag = (e: MouseEvent) => {
   const start = { mx: e.clientX, my: e.clientY, x: editorPos.value.x, y: editorPos.value.y };
   const move = (ev: MouseEvent) => {
@@ -224,10 +218,8 @@ const cardStyle = (key: string) => {
   if (!upload && !preset) return {};
   const o = optsFor(key);
   return {
-    // загруженная картинка → url(); пресет → сам градиент
     backgroundImage: upload ? `url(${upload})` : preset,
     backgroundPosition: `${o.x}% ${o.y}%`,
-    // 100 = cover (полностью покрывает карточку), выше = приближение (для градиентов не важно)
     backgroundSize: o.zoom <= 100 ? 'cover' : `${o.zoom}%`,
     '--card-scrim': String(o.scrim / 100),
   } as any;
@@ -237,7 +229,6 @@ const pickCardImage = async (key: string) => {
   try {
     const url = await (API as any).SetCardBg(key);
     if (url) {
-      // загруженная картинка заменяет пресет
       delete cardPresets[key]; saveCardPresets();
       setCardBg(key, url); optsFor(key);
     }
@@ -246,7 +237,6 @@ const pickCardImage = async (key: string) => {
   }
 };
 const applyPreset = async (key: string, css: string) => {
-  // пресет заменяет загруженную картинку
   try { await (API as any).ClearCardBg(key); } catch { /* ignore */ }
   setCardBg(key, '');
   cardPresets[key] = css; saveCardPresets();
@@ -292,9 +282,7 @@ const consoleServiceOn = computed(() => desiredActive.value || actualActive.valu
 
 const consoleServiceTitle = computed(() => {
   if (isRestarting.value) return 'Перезапуск ядра...';
-  // TUN 开启时：用 actualTun 判断，与 IP 检测的 state.Tun 一致
   if (globalState.tun && globalState.actualTun) return 'Перехват активен';
-  // 系统代理：用 isRunning 判断
   if (globalState.systemProxy && globalState.isRunning) return 'Перехват активен';
   if (actualActive.value) return 'Работает';
   return 'Служба остановлена';
@@ -315,9 +303,6 @@ const handleRestartCore = async () => {
   }
 };
 
-// ==========================================
-// 切换状态管理（三层模型：intent / actual / pending）
-// ==========================================
 const sysProxyCardOn = computed(() => globalState.systemProxy);
 const tunCardOn = computed(() => globalState.tun);
 
@@ -347,7 +332,6 @@ const toggleSysProxy = async () => {
     const latest = await (API as any).GetAppState().catch(() => null);
     if (latest) updateStateFromBackend(latest);
   } catch (err: any) {
-    // 只有明确失败才回滚
     setSystemProxyIntent(previous);
 
     const msg = String(err?.message || err || '');
@@ -402,7 +386,6 @@ const toggleTun = async () => {
       return;
     }
 
-    // 其他明确失败：回滚
     setTunIntent(previous);
 
     if (msg.includes('no active config selected') || msg.includes('ErrNoActiveConfig')) {
@@ -417,14 +400,10 @@ const toggleTun = async () => {
   }
 };
 
-// ==========================================
-// 模式切换
-// ==========================================
 let modeWorkerActive = false;
 let pendingModeTarget: string | null = null;
 let previousMode = globalState.mode;
 
-// Keep previousMode in sync with external mode changes (e.g., from backend events)
 watch(() => globalState.mode, (newVal, oldVal) => {
   if (!modeWorkerActive) {
     previousMode = oldVal;
@@ -479,11 +458,8 @@ const runModeWorker = async (targetMode: string) => {
 <style scoped>
 .overview-layout { display: flex; flex-direction: column; gap: 24px; min-height: 100%; overflow: visible; position: relative; }
 
-/* карточки — позиционирующий контекст для кнопок редактирования и скрима */
 .hero-panel, .action-card, .mode-section { position: relative; }
 
-/* пер-карточная картинка: фон карточки + затемняющий скрим для читаемости текста.
-   Размер/позицию задаёт инлайн-стиль из редактора — здесь БЕЗ !important, иначе перебьёт. */
 .card-has-bg { background-repeat: no-repeat; position: relative; }
 .card-has-bg > *:not(.card-edit) { position: relative; z-index: 1; }
 .card-has-bg::before {
@@ -494,12 +470,10 @@ const runModeWorker = async (targetMode: string) => {
   background: rgba(0, 0, 0, var(--card-scrim, 0.45));
   z-index: 0;
 }
-/* поверх картинки текст белый */
 .card-has-bg .card-title, .card-has-bg .card-hint, .card-has-bg .status-heading,
 .card-has-bg .micro-title, .card-has-bg .version-tag, .card-has-bg .section-heading,
 .card-has-bg .config-name { color: #fff !important; }
 
-/* кнопки редактирования картинки на карточке (появляются при наведении) */
 .card-edit {
   position: absolute; top: 8px; right: 8px; z-index: 2;
   display: flex; gap: 4px; opacity: 0; transition: opacity 0.15s;
@@ -512,7 +486,6 @@ const runModeWorker = async (targetMode: string) => {
 }
 .card-edit-btn:hover { background: rgba(0,0,0,0.7); }
 
-/* редактор фона карточки */
 .bg-editor {
   width: 100%; max-width: 360px;
   background: var(--surface); border: 1px solid var(--surface-hover);

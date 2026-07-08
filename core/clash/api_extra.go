@@ -12,16 +12,13 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// LogMessage 内核日志结构
 type LogMessage struct {
 	Type    string `json:"type"`
 	Payload string `json:"payload"`
 }
 
-// LogCallback 日志回调类型
 type LogCallback func(log LogMessage)
 
-// StartLogStream 开启日志监听流（通过回调推送，不再依赖 Wails）
 func StartLogStream(ctx context.Context, onLog LogCallback) {
 	const (
 		pongWait   = 60 * time.Second
@@ -29,7 +26,6 @@ func StartLogStream(ctx context.Context, onLog LogCallback) {
 		writeWait  = 5 * time.Second
 	)
 
-	// 使用动态生成的 WebSocket 地址
 	wsURL := APIWSURLWithRawQuery("/logs", "level=info")
 
 	dialer := websocket.Dialer{
@@ -43,7 +39,6 @@ func StartLogStream(ctx context.Context, onLog LogCallback) {
 	}
 	defer conn.Close()
 
-	// 🚀 核心：设置读超时并绑定 Pong 处理，用于探测连接活性
 	_ = conn.SetReadDeadline(time.Now().Add(pongWait))
 	conn.SetPongHandler(func(string) error {
 		return conn.SetReadDeadline(time.Now().Add(pongWait))
@@ -51,7 +46,6 @@ func StartLogStream(ctx context.Context, onLog LogCallback) {
 
 	done := make(chan struct{})
 
-	// 读取循环
 	go func() {
 		defer close(done)
 		for {
@@ -65,7 +59,6 @@ func StartLogStream(ctx context.Context, onLog LogCallback) {
 				continue
 			}
 
-			// ✨ 通过回调推送日志
 			if onLog != nil {
 				onLog(log)
 			}
@@ -75,11 +68,10 @@ func StartLogStream(ctx context.Context, onLog LogCallback) {
 	ticker := time.NewTicker(pingPeriod)
 	defer ticker.Stop()
 
-	// 控制循环
 	for {
 		select {
 		case <-ctx.Done():
-			// 优雅关闭 WebSocket 连接
+
 			_ = conn.WriteControl(
 				websocket.CloseMessage,
 				websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""),
@@ -91,7 +83,7 @@ func StartLogStream(ctx context.Context, onLog LogCallback) {
 			return
 
 		case <-ticker.C:
-			// 🚀 核心：主动发送 Ping 以维持连接并探测对端状态
+
 			if err := conn.WriteControl(websocket.PingMessage, nil, time.Now().Add(writeWait)); err != nil {
 				return
 			}
@@ -99,14 +91,12 @@ func StartLogStream(ctx context.Context, onLog LogCallback) {
 	}
 }
 
-// PatchConfig 修改内核运行特性 (TUN, LAN, IPv6, LogLevel等)
 func PatchConfig(settings map[string]interface{}) error {
 	payload, err := json.Marshal(settings)
 	if err != nil {
 		return fmt.Errorf("не удалось сериализовать конфигурацию: %v", err)
 	}
 
-	// 使用动态 API 地址
 	req, err := http.NewRequest("PATCH", APIURL("/configs"), strings.NewReader(string(payload)))
 	if err != nil {
 		return fmt.Errorf("не удалось построить PATCH-запрос: %v", err)

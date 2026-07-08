@@ -18,7 +18,6 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// Win32 constants
 const (
 	WM_USER           = 0x0400
 	WM_TRAYICON       = WM_USER + 1
@@ -53,7 +52,6 @@ const (
 	IDI_APPLICATION = 32512
 )
 
-// Menu command IDs
 const (
 	idShow       = 1001
 	idSysProxy   = 1002
@@ -65,7 +63,6 @@ const (
 	idQuit       = 1008
 )
 
-// TrayCommand represents a command from the tray menu
 type TrayCommand int
 
 const (
@@ -79,7 +76,6 @@ const (
 	TrayCmdQuitApp
 )
 
-// Win32 structures
 type NOTIFYICONDATA struct {
 	CbSize           uint32
 	HWnd             windows.HWND
@@ -127,7 +123,6 @@ type WNDCLASSEX struct {
 	HIconSm       uintptr
 }
 
-// Win32 API functions
 var (
 	user32   = windows.NewLazyDLL("user32.dll")
 	shell32  = windows.NewLazyDLL("shell32.dll")
@@ -155,7 +150,6 @@ var (
 	procShell_NotifyIconW      = shell32.NewProc("Shell_NotifyIconW")
 )
 
-// TrayRuntime is the Win32-based system tray implementation
 type TrayRuntime struct {
 	app  *App
 	logf func(level string, format string, args ...any)
@@ -171,20 +165,17 @@ type TrayRuntime struct {
 	latestMu sync.Mutex
 	latest   appcore.AppState
 
-	// Win32 state
 	hwnd              windows.HWND
 	hIcon             uintptr
 	ownsIcon          bool
 	iconAdded         atomic.Bool
 	taskbarCreatedMsg uint32
 
-	// State coalescing
 	renderQueued atomic.Bool
 
 	retryAddCount atomic.Int32
 }
 
-// NewTrayRuntime creates a new Win32 tray runtime
 func NewTrayRuntime(app *App) *TrayRuntime {
 	return &TrayRuntime{
 		app:   app,
@@ -193,7 +184,6 @@ func NewTrayRuntime(app *App) *TrayRuntime {
 	}
 }
 
-// Start initializes and starts the tray runtime
 func (t *TrayRuntime) Start(ctx context.Context) {
 	if !t.started.CompareAndSwap(false, true) {
 		return
@@ -205,7 +195,6 @@ func (t *TrayRuntime) Start(ctx context.Context) {
 	go t.commandLoop()
 }
 
-// Stop gracefully stops the tray runtime
 func (t *TrayRuntime) Stop() {
 	if t.cancel != nil {
 		t.cancel()
@@ -216,7 +205,6 @@ func (t *TrayRuntime) Stop() {
 	}
 }
 
-// UpdateState posts a state update to the tray thread
 func (t *TrayRuntime) UpdateState(state appcore.AppState) {
 	t.latestMu.Lock()
 	t.latest = state
@@ -239,7 +227,6 @@ func (t *TrayRuntime) UpdateState(state appcore.AppState) {
 	}
 }
 
-// PostCommand posts a command to be executed
 func (t *TrayRuntime) PostCommand(cmd TrayCommand) {
 	select {
 	case t.cmdCh <- cmd:
@@ -247,14 +234,12 @@ func (t *TrayRuntime) PostCommand(cmd TrayCommand) {
 	}
 }
 
-// snapshot returns the latest state
 func (t *TrayRuntime) snapshot() appcore.AppState {
 	t.latestMu.Lock()
 	defer t.latestMu.Unlock()
 	return t.latest
 }
 
-// runWin32TrayLoop runs the Win32 message loop on a locked OS thread
 func (t *TrayRuntime) runWin32TrayLoop() {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
@@ -269,12 +254,10 @@ func (t *TrayRuntime) runWin32TrayLoop() {
 		t.ownsIcon = false
 	}()
 
-	// Register TaskbarCreated message for Explorer restart recovery
 	taskbarCreatedPtr, _ := windows.UTF16PtrFromString("TaskbarCreated")
 	ret, _, _ := procRegisterWindowMessageW.Call(uintptr(unsafe.Pointer(taskbarCreatedPtr)))
 	t.taskbarCreatedMsg = uint32(ret)
 
-	// Create hidden window
 	hwnd := t.createHiddenWindow()
 	if hwnd == 0 {
 		t.logf("error", "[Tray] Failed to create tray window")
@@ -282,21 +265,17 @@ func (t *TrayRuntime) runWin32TrayLoop() {
 	}
 	t.hwnd = hwnd
 
-	// Load icon
 	t.loadIcon()
 
-	// Initial add tray icon attempt, if fails, schedule async retry
 	if err := t.addTrayIcon(); err != nil {
 		t.scheduleTrayAddRetry()
 	}
 
 	t.ready.Store(true)
 
-	// Initial render with current state
 	t.renderQueued.Store(false)
 	t.renderOnTrayThread(t.snapshot())
 
-	// Message loop
 	var msg MSG
 	for {
 		ret, _, _ := procGetMessageW.Call(
@@ -312,14 +291,12 @@ func (t *TrayRuntime) runWin32TrayLoop() {
 		procDispatchMessageW.Call(uintptr(unsafe.Pointer(&msg)))
 	}
 
-	// Cleanup
 	t.deleteTrayIcon()
 	if t.hIcon != 0 && t.ownsIcon {
 		procDestroyIcon.Call(t.hIcon)
 	}
 }
 
-// createHiddenWindow creates a hidden window for receiving messages
 func (t *TrayRuntime) createHiddenWindow() windows.HWND {
 	className, _ := windows.UTF16PtrFromString("GoclashZTrayWindow")
 
@@ -362,7 +339,6 @@ func (t *TrayRuntime) createHiddenWindow() windows.HWND {
 	return windows.HWND(hwnd)
 }
 
-// loadIcon loads the application icon
 func (t *TrayRuntime) loadIcon() {
 	if len(iconData) == 0 {
 		ret, _, _ := procLoadIconW.Call(0, IDI_APPLICATION)
@@ -390,13 +366,11 @@ func (t *TrayRuntime) loadIcon() {
 		}
 	}
 
-	// Fallback to default application icon (shared, do not destroy)
 	ret, _, _ := procLoadIconW.Call(0, IDI_APPLICATION)
 	t.hIcon = ret
 	t.ownsIcon = false
 }
 
-// shellNotifyIcon wraps Shell_NotifyIconW with error checking
 func shellNotifyIcon(op uintptr, nid *NOTIFYICONDATA) error {
 	r, _, err := procShell_NotifyIconW.Call(op, uintptr(unsafe.Pointer(nid)))
 	if r == 0 {
@@ -405,7 +379,6 @@ func shellNotifyIcon(op uintptr, nid *NOTIFYICONDATA) error {
 	return nil
 }
 
-// addTrayIcon adds the tray icon
 func (t *TrayRuntime) addTrayIcon() error {
 	if t.hwnd == 0 {
 		return fmt.Errorf("hwnd is nil")
@@ -434,7 +407,6 @@ func (t *TrayRuntime) addTrayIcon() error {
 	return err
 }
 
-// scheduleTrayAddRetry schedules a retry for adding the tray icon
 func (t *TrayRuntime) scheduleTrayAddRetry() {
 	count := t.retryAddCount.Add(1)
 	if count > 3 {
@@ -446,7 +418,6 @@ func (t *TrayRuntime) scheduleTrayAddRetry() {
 	}(count)
 }
 
-// deleteTrayIcon removes the tray icon
 func (t *TrayRuntime) deleteTrayIcon() {
 	if t.hwnd == 0 || !t.iconAdded.Load() {
 		return
@@ -464,7 +435,6 @@ func (t *TrayRuntime) deleteTrayIcon() {
 	t.iconAdded.Store(false)
 }
 
-// updateTrayTooltip updates the tray icon tooltip
 func (t *TrayRuntime) updateTrayTooltip(tooltip string) {
 	if t.hwnd == 0 || !t.iconAdded.Load() {
 		return
@@ -482,16 +452,14 @@ func (t *TrayRuntime) updateTrayTooltip(tooltip string) {
 	if err := shellNotifyIcon(NIM_MODIFY, &nid); err != nil {
 		t.logf("warn", "[Tray] updateTrayTooltip failed: %v", err)
 
-		// 轻量自愈：NIM_MODIFY 失败时尝试重新添加一次
 		if err := t.addTrayIcon(); err != nil {
 			t.logf("error", "[Tray] re-add tray icon after modify failure failed: %v", err)
 		}
 	}
 }
 
-// wndProc is the window procedure for handling messages
 func (t *TrayRuntime) wndProc(hwnd windows.HWND, msg uint32, wparam uintptr, lparam uintptr) uintptr {
-	// Handle TaskbarCreated message (Explorer restart)
+
 	if msg == t.taskbarCreatedMsg && t.taskbarCreatedMsg != 0 {
 		t.logf("info", "[Tray] Explorer restarted, re-adding tray icon")
 		t.retryAddCount.Store(0)
@@ -552,7 +520,6 @@ func (t *TrayRuntime) wndProc(hwnd windows.HWND, msg uint32, wparam uintptr, lpa
 	return ret
 }
 
-// renderOnTrayThread updates the tray state (must be called from tray thread)
 func (t *TrayRuntime) renderOnTrayThread(state appcore.AppState) {
 	if !t.ready.Load() || !t.iconAdded.Load() {
 		return
@@ -566,7 +533,6 @@ func (t *TrayRuntime) renderOnTrayThread(state appcore.AppState) {
 	t.updateTrayTooltip(tooltip)
 }
 
-// showContextMenu creates and shows the context menu (called from tray thread)
 func (t *TrayRuntime) showContextMenu() {
 	state := t.snapshot()
 
@@ -615,7 +581,6 @@ func (t *TrayRuntime) showContextMenu() {
 		0,
 	)
 
-	// Post WM_NULL to dismiss menu properly (Win32 requirement)
 	procPostMessageW.Call(uintptr(t.hwnd), WM_NULL, 0, 0)
 
 	if ret > 0 {
@@ -623,7 +588,6 @@ func (t *TrayRuntime) showContextMenu() {
 	}
 }
 
-// appendMenu adds a menu item with optional check mark
 func (t *TrayRuntime) appendMenu(hMenu uintptr, id uint32, text string, checked bool) {
 	flags := MF_STRING
 	if checked {
@@ -634,7 +598,6 @@ func (t *TrayRuntime) appendMenu(hMenu uintptr, id uint32, text string, checked 
 	procAppendMenuW.Call(hMenu, uintptr(flags), uintptr(id), uintptr(unsafe.Pointer(textPtr)))
 }
 
-// dispatchMenuCommand dispatches menu commands to the command channel
 func (t *TrayRuntime) dispatchMenuCommand(id uint32) {
 	switch id {
 	case idShow:
@@ -656,7 +619,6 @@ func (t *TrayRuntime) dispatchMenuCommand(id uint32) {
 	}
 }
 
-// commandLoop processes commands from the command channel
 func (t *TrayRuntime) commandLoop() {
 	for {
 		select {
@@ -668,7 +630,6 @@ func (t *TrayRuntime) commandLoop() {
 	}
 }
 
-// reportTrayError reports tray command errors to the UI
 func (t *TrayRuntime) reportTrayError(action string, err error) {
 	if err == nil {
 		return
@@ -677,7 +638,6 @@ func (t *TrayRuntime) reportTrayError(action string, err error) {
 	t.app.core.GetEvents().Emit("notify-error", fmt.Sprintf("Не удалось %s: %v", action, err))
 }
 
-// handleCommand executes a tray command
 func (t *TrayRuntime) handleCommand(cmd TrayCommand) {
 	defer func() {
 		if r := recover(); r != nil {

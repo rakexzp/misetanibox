@@ -23,7 +23,6 @@ var RequiredAssets = []RequiredAssetDef{
 	{Key: AssetGeoSite, Name: "geosite.dat", Label: "GeoSite", Required: false},
 	{Key: AssetMMDB, Name: "country.mmdb", Label: "MMDB", Required: false},
 	{Key: AssetASN, Name: "asn.dat", Label: "ASN", Required: false},
-	// AssetSmartModel (Model.bin) — только для форк-ядра Smart; сейчас не поставляется.
 }
 
 func requiredAssetDefsFor(req Requirement) []RequiredAssetDef {
@@ -64,19 +63,19 @@ type SeedCatalog struct {
 }
 
 type SeedAssetHealth struct {
-	Key   AssetKey    `json:"key"`
-	Name  string      `json:"name"`
-	Label string      `json:"label"`
-	Path  string      `json:"path"`
-	Ready bool        `json:"ready"`
-	Error string      `json:"error,omitempty"`
-	SHA256 string     `json:"sha256,omitempty"`
+	Key    AssetKey `json:"key"`
+	Name   string   `json:"name"`
+	Label  string   `json:"label"`
+	Path   string   `json:"path"`
+	Ready  bool     `json:"ready"`
+	Error  string   `json:"error,omitempty"`
+	SHA256 string   `json:"sha256,omitempty"`
 }
 
 type SeedCatalogStatus struct {
-	ManifestExists bool            `json:"manifestExists"`
-	ManifestOK     bool            `json:"manifestOK"`
-	ManifestError  string          `json:"manifestError,omitempty"`
+	ManifestExists bool              `json:"manifestExists"`
+	ManifestOK     bool              `json:"manifestOK"`
+	ManifestError  string            `json:"manifestError,omitempty"`
 	Assets         []SeedAssetHealth `json:"assets"`
 }
 
@@ -137,12 +136,12 @@ func GetSeedCatalogStatus(ctx context.Context) SeedCatalogStatus {
 		seedHealth := checkAssetByPath(ctx, def.Key, def.Label, seedPath)
 
 		sh := SeedAssetHealth{
-			Key:   def.Key,
-			Name:  def.Name,
-			Label: def.Label,
-			Path:  seedPath,
-			Ready: seedHealth.Ready,
-			Error: seedHealth.Error,
+			Key:    def.Key,
+			Name:   def.Name,
+			Label:  def.Label,
+			Path:   seedPath,
+			Ready:  seedHealth.Ready,
+			Error:  seedHealth.Error,
 			SHA256: seedHealth.SHA256,
 		}
 		status.Assets = append(status.Assets, sh)

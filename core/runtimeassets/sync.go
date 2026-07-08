@@ -112,7 +112,6 @@ func RepairFromSeed(ctx context.Context, req Requirement, mode RepairMode) error
 	}
 	appUpdated := manifestHash != "" && manifestHash != state.SeedManifestSha256
 
-	// 用 manifest 元信息补充 sha256/version（可选）
 	catalog := LoadSeedCatalog()
 
 	var errs []string
@@ -124,7 +123,6 @@ func RepairFromSeed(ctx context.Context, req Requirement, mode RepairMode) error
 		seedPath := seedPathForCanonicalName(name)
 		runtimePath := runtimePathForCanonicalName(name)
 
-		// 1. 验证 seed 文件是否真实存在且可用
 		seedHealth := checkAssetByPath(ctx, key, def.Label, seedPath)
 		if !seedHealth.Ready {
 			if def.Required {
@@ -137,7 +135,6 @@ func RepairFromSeed(ctx context.Context, req Requirement, mode RepairMode) error
 			continue
 		}
 
-		// 2. 验证 runtime 是否可用
 		runtimeHealth := checkRuntimeAsset(ctx, key, def.Label, name)
 
 		shouldCopy := false
@@ -154,7 +151,6 @@ func RepairFromSeed(ctx context.Context, req Requirement, mode RepairMode) error
 			shouldCopy = !runtimeHealth.Exists
 		}
 
-		// 3. 升级覆盖策略：runtime 已就绪时判断是否被用户魔改
 		if shouldCopy && !forceMode(mode) && runtimeHealth.Ready && appUpdated {
 			if copied, exists := state.CopiedAssets[name]; exists {
 				if runtimeHealth.SHA256 == copied.SHA256 {
@@ -182,7 +178,6 @@ func RepairFromSeed(ctx context.Context, req Requirement, mode RepairMode) error
 
 		log.Printf("[runtimeassets] самовосстановление из seed успешно: %s", name)
 
-		// 优先用 manifest 元信息的 sha256，fallback 到 seed 实际 sha256
 		copySHA256 := seedHealth.SHA256
 		if meta, ok := catalog.Items[name]; ok && meta.SHA256 != "" {
 			copySHA256 = meta.SHA256

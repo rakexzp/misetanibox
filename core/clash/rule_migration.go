@@ -11,7 +11,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// EnsureRuleStorageMigratedLocked 为单个配置进行迁移兜底检查（调用前必须持有 ruleStorageMu）
 func EnsureRuleStorageMigratedLocked(id string) error {
 	safeId, err := utils.SanitizeFilename(id)
 	if err != nil {
@@ -19,7 +18,7 @@ func EnsureRuleStorageMigratedLocked(id string) error {
 	}
 	rulesPath := filepath.Join(SubscriptionsDir(), safeId+"_rules.json")
 	if _, err := os.Stat(rulesPath); os.IsNotExist(err) {
-		return nil // 已经不存在，或者已经迁移并删除了
+		return nil
 	}
 
 	IndexLock.RLock()
@@ -39,7 +38,6 @@ func EnsureRuleStorageMigratedLocked(id string) error {
 	return migrateRemoteRules(id, rulesPath)
 }
 
-// MigrateRuleStorageV2 在应用启动时进行全局批量迁移
 func MigrateRuleStorageV2() error {
 	IndexLock.RLock()
 	ids := make([]string, 0, len(SubIndex))
@@ -63,7 +61,6 @@ func MigrateRuleStorageV2() error {
 	return firstErr
 }
 
-// migrateLocalRules 迁移本地配置：将 JSON 的 rules 覆盖写入 YAML rules
 func migrateLocalRules(id, legacyRulesPath string) error {
 	workingPath, _ := WorkingConfigPath(id)
 	originPath, _ := OriginConfigPath(id)
@@ -91,7 +88,6 @@ func migrateLocalRules(id, legacyRulesPath string) error {
 		}
 	}
 
-	// 确保 origin 备份存在
 	if _, err := os.Stat(originPath); os.IsNotExist(err) {
 		data, _ := os.ReadFile(workingPath)
 		utils.WriteFileAtomic(originPath, data, 0644)
@@ -100,7 +96,6 @@ func migrateLocalRules(id, legacyRulesPath string) error {
 	return deleteLegacyRulesJson(legacyRulesPath)
 }
 
-// migrateRemoteRules 迁移远程配置：生成 origin，对比 rules 生成 overlay
 func migrateRemoteRules(id, legacyRulesPath string) error {
 	workingPath, _ := WorkingConfigPath(id)
 	originPath, _ := OriginConfigPath(id)
@@ -172,7 +167,7 @@ func readLegacyRulesJson(path string) ([]string, error) {
 
 	var set CustomRuleSet
 	if err := json.Unmarshal(data, &set); err != nil {
-		return nil, nil // corrupted, ignore and return nil
+		return nil, nil
 	}
 	return set.CustomRules, nil
 }

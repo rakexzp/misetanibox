@@ -48,7 +48,6 @@ type TrafficStreamManager struct {
 	downloadTotalRaw int64
 	lastTick         time.Time
 
-	// 👇 新增：流量统计模式与连接历史
 	mode            TrafficMode
 	prevConnTraffic map[string]connTrafficMark
 }
@@ -144,7 +143,6 @@ func (m *TrafficStreamManager) proxyTrafficLoop(ctx context.Context, currentGen 
 		m.mu.Unlock()
 	}()
 
-	// /connections 模式下，我们每 900ms 采样一次
 	ticker := time.NewTicker(900 * time.Millisecond)
 	defer ticker.Stop()
 
@@ -207,7 +205,7 @@ func (m *TrafficStreamManager) sampleProxyConnections(currentGen int) {
 
 		prev, ok := m.prevConnTraffic[conn.ID]
 		if !ok {
-			// 新连接，第一次采样只建立基线
+
 			continue
 		}
 
@@ -249,7 +247,6 @@ func isProxyConnection(conn traffic.RawConnection) bool {
 		return false
 	}
 
-	// Check the first element in the chain (user-facing proxy)
 	firstChain := strings.ToUpper(strings.TrimSpace(conn.Chains[0]))
 	if firstChain == "DIRECT" || firstChain == "REJECT" || firstChain == "REJECT-DROP" {
 		return false

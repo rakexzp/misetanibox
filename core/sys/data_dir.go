@@ -54,27 +54,23 @@ func GetDataDirInfo() DataDirInfo {
 		LegacyDataDir:  utils.GetLegacyDataDir(),
 	}
 
-	// seed 清单
 	manifestPath := utils.GetSeedAssetManifestPath()
 	if _, err := os.Stat(manifestPath); err == nil {
 		info.SeedManifestExists = true
 	}
 
-	// core 状态（基础 stat 检查，由调用方用 runtimeassets 状态覆盖）
 	info.CoreExePath = filepath.Join(info.CoreBinDir, "clash.exe")
 	if st, err := os.Stat(info.CoreExePath); err == nil && !st.IsDir() && st.Size() > 0 {
 		info.CoreExists = true
 		info.CoreReady = true
 	}
 
-	// wintun 状态
 	wintunPath := filepath.Join(info.CoreBinDir, "wintun.dll")
 	if st, err := os.Stat(wintunPath); err == nil && !st.IsDir() && st.Size() > 0 {
 		info.WintunExists = true
 		info.WintunReady = true
 	}
 
-	// 布局判断
 	info.LayoutMode = "unknown"
 	if utils.IsPackagedInstall() {
 		info.LayoutMode = "standard"
@@ -83,7 +79,6 @@ func GetDataDirInfo() DataDirInfo {
 	}
 	info.LayoutOK = info.CoreExists
 
-	// 旧版目录
 	if info.LegacyDataDir != "" {
 		if _, err := os.Stat(info.LegacyDataDir); err == nil {
 			info.LegacyExists = true
@@ -94,7 +89,6 @@ func GetDataDirInfo() DataDirInfo {
 		info.LegacyCoreExists = true
 	}
 
-	// 迁移记录
 	metaPath := filepath.Join(info.DataDir, ".migration.json")
 	if data, err := os.ReadFile(metaPath); err == nil {
 		var meta struct {

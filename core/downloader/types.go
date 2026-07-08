@@ -5,10 +5,10 @@ import (
 )
 
 type Options struct {
-	URLs      []string // 🚀 竞速容灾：传入多个下载地址
+	URLs      []string
 	DestPath  string
 	UserAgent string
-	Headers   map[string]string // доп. заголовки (x-hwid и т.п.)
+	Headers   map[string]string
 	MaxBytes  int64
 
 	Client *http.Client
@@ -16,12 +16,12 @@ type Options struct {
 	Strategy func() DownloadStrategy
 
 	VerifyGitHubSHA    bool
-	RequireGitHubSHA   bool // SHA 为可选，Validator 为必须
-	InsecureSkipVerify bool // SSL 宽容
+	RequireGitHubSHA   bool
+	InsecureSkipVerify bool
 
 	AttemptsPerEndpoint int
-	OnResponse          func(resp *http.Response)  // 拦截器
-	Validator           func(tmpPath string) error // 防损屏障：替换前执行验证逻辑
+	OnResponse          func(resp *http.Response)
+	Validator           func(tmpPath string) error
 
 	OnProgress func(bytesDone, totalBytes, speedBps int64, etaSec int64)
 }

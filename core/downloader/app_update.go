@@ -26,8 +26,7 @@ type AppUpdateInfo struct {
 var strictVersionRe = regexp.MustCompile(`(?i)(?:^|[^0-9])v?(\d+\.\d+(?:\.\d+)?(?:\.\d+)?)`)
 
 func CheckAppUpdate(ctx context.Context, currentVersion string, strategy func() DownloadStrategy) (*AppUpdateInfo, error) {
-	// Манифест обновления на своём зеркале (HTTP, РФ-доступно; api.github.com режется + репо приватный).
-	// Формат JSON совместим с GitHub-релизом: tag_name, body, html_url, assets[].
+
 	apiURL := "http://files.geodema.network/misetani/update.json"
 
 	clients := BuildOrderedClients(strategy, 60*time.Second)
@@ -186,7 +185,6 @@ func parseVersionParts(v string) []int {
 	return out
 }
 
-// DownloadAppUpdate 使用通用下载机下载应用更新包
 func DownloadAppUpdate(
 	ctx context.Context,
 	info *AppUpdateInfo,
@@ -207,18 +205,17 @@ func DownloadAppUpdate(
 
 	fileName := sanitizeUpdateAssetName(info.AssetName)
 	if fileName == "" {
-		// 兜底方案
+
 		fileName = fmt.Sprintf("Misetanibox_%s_Setup.exe", strings.TrimPrefix(info.Version, "v"))
 	}
 
 	destPath := filepath.Join(destDir, fileName)
 
-	// 🚀 复用 grab/v3 下载机
 	err := DownloadLargeAssetAtomic(ctx, Options{
 		URLs:       []string{info.DownloadURL},
 		DestPath:   destPath,
 		UserAgent:  "Misetanibox-Updater",
-		MaxBytes:   300 << 20, // 限制 300MB
+		MaxBytes:   300 << 20,
 		Strategy:   strategy,
 		OnProgress: onProgress,
 		Validator: func(tmpPath string) error {
@@ -232,14 +229,12 @@ func DownloadAppUpdate(
 	return destPath, nil
 }
 
-// ValidateWindowsExecutable 验证是否为有效的 Windows 可执行文件
 func ValidateWindowsExecutable(path string) error {
 	info, err := os.Stat(path)
 	if err != nil {
 		return err
 	}
 
-	// 最小体积校验 (1MB)
 	if info.Size() < 1024*1024 {
 		return fmt.Errorf("пакет обновления: аномальный размер (меньше 1MB)")
 	}
@@ -250,7 +245,6 @@ func ValidateWindowsExecutable(path string) error {
 	}
 	defer f.Close()
 
-	// 读取前两个字节检查 "MZ" 头
 	header := make([]byte, 2)
 	if _, err := io.ReadFull(f, header); err != nil {
 		return err
@@ -268,7 +262,7 @@ func sanitizeUpdateAssetName(name string) string {
 	if name == "." || name == "" {
 		return ""
 	}
-	// 只允许 .exe
+
 	if !strings.HasSuffix(strings.ToLower(name), ".exe") {
 		return ""
 	}

@@ -46,7 +46,6 @@
 import { globalState } from '../store';
 import * as API from '../../wailsjs/go/main/App';
 
-// 定义 Props 接收外部数据
 defineProps<{
   activeId: string;
   traffic: { 
@@ -63,22 +62,17 @@ defineProps<{
   icons: Record<string, string>;
 }>();
 
-// 定义 Emit 通知父组件切换标签
 const emit = defineEmits(['update:activeId']);
 
 const toggleTheme = () => {
   const newTheme = globalState.theme === 'dark' ? 'light' : 'dark';
-  // 🚀 核心修复：乐观 UI 更新
-  // 在向后端发送请求前，先修改本地状态，确保 UI 响应瞬间完成，不被后端执行阻塞
   globalState.theme = newTheme;
   API.SaveThemePreference(newTheme === 'dark');
 };
 </script>
 
 <style scoped>
-/* 从 App.vue 迁移并优化的样式 */
 .sidebar { 
-  /* 👇 使用我们在 App.vue 根节点定义的变量 (提供 220px 作为降级兜底) */
   width: var(--sidebar-width, 220px); 
   display: flex; 
   flex-direction: column; 
@@ -100,7 +94,6 @@ const toggleTheme = () => {
 .nav-item { 
   display: flex; 
   align-items: center; 
-  /* 🚀 魔法 1：再次压缩。左边距微调至 16px，更紧凑 */
   padding: 10px 12px 10px 16px;  
   gap: 12px; 
   margin-bottom: 4px; 
@@ -121,8 +114,6 @@ const toggleTheme = () => {
   font-weight: 600; 
 }
 
-/* 🚀 魔法 2：无尾箭头锚点 (Chevron Indicator) */
-/* 使用精致的 45 度折角代替竖条，更具指向性与科技感 */
 .nav-item.active::after {
   content: '';
   position: absolute;
@@ -187,18 +178,12 @@ const toggleTheme = () => {
   0%, 100% { opacity: 0.6; box-shadow: 0 0 4px var(--text-main); }
   50% { opacity: 1; box-shadow: 0 0 12px var(--text-main); }
 }
-/* ========================================== */
-/* 导航菜单交错动效 (Staggered Slide)            */
-/* ========================================== */
 
-/* 1. 正在移动的元素 (v-move 是 TransitionGroup 自动提供的类名) */
 .nav-slide-move {
   transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* 2. 进入与离开的激活状态 */
 .nav-slide-enter-active {
-  /* 展开时：高度先撑开 (0.3s)，内容延迟淡入 (delay 0.1s) */
   transition: 
     max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
     padding 0.3s cubic-bezier(0.4, 0, 0.2, 1),
@@ -209,7 +194,6 @@ const toggleTheme = () => {
 }
 
 .nav-slide-leave-active {
-  /* 折叠时：内容先淡出位移 (0.2s)，高度延迟收缩 (delay 0.2s) */
   transition: 
     opacity 0.2s ease-in,
     transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
@@ -219,7 +203,6 @@ const toggleTheme = () => {
   overflow: hidden;
 }
 
-/* 3. 初始/结束状态 */
 .nav-slide-enter-from,
 .nav-slide-leave-to {
   max-height: 0;

@@ -42,16 +42,14 @@ type Options struct {
 	Events  EventSink
 	Version string
 
-	// OnStateChange 在每次 SyncState() 时回调，用于 App 层同步托盘等外部 UI
 	OnStateChange func()
 }
 
-// CoreRuntimeState 核心运行时状态
 type CoreRuntimeState struct {
 	Running      bool
 	PID          int
-	Owner        string // direct/helper
-	Purpose      string // user/delay/startup
+	Owner        string
+	Purpose      string
 	Tun          bool
 	SystemProxy  bool
 	ActiveConfig string
@@ -59,7 +57,6 @@ type CoreRuntimeState struct {
 	StartedAt    time.Time
 }
 
-// runtimeStateStore 线程安全的核心运行时状态存储
 type runtimeStateStore struct {
 	mu    sync.RWMutex
 	state CoreRuntimeState
@@ -83,7 +80,6 @@ func (s *runtimeStateStore) Clear() {
 	s.state = CoreRuntimeState{}
 }
 
-// runtimeSatisfiesCore 检查当前运行时状态是否满足期望核心状态
 func (c *Controller) runtimeSatisfiesCore(plan RuntimePlan) bool {
 	if !clash.IsRunning() {
 		return false
@@ -116,7 +112,6 @@ type Controller struct {
 	sysProxyActive    bool
 	tunActive         bool
 
-	// 自动测速任务控制
 	autoTestQuit chan struct{}
 	autoTestMu   sync.Mutex
 
@@ -141,7 +136,6 @@ type Controller struct {
 	pendingCoreUpdateAssetURL string
 	pendingCoreUpdateVersion  string
 
-	// 🚀 核心：静默测速内核生命周期管理
 	delayCoreMu          sync.Mutex
 	delayCoreRefs        int
 	delayCoreStarted     bool
@@ -151,14 +145,11 @@ type Controller struct {
 	delayCoreStartErr    error
 	delayCoreStopTimer   *time.Timer
 
-	// 🚀 新增：明确用户运行意图
 	userCoreRunning bool
 	coreStartedAt   time.Time
 
-	// 核心运行时状态
 	runtimeState runtimeStateStore
 
-	// 🚀 核心：自适应调度状态
 	networkMu            sync.RWMutex
 	appUpdateDownloading bool
 	autoDelayRunning     bool
@@ -196,9 +187,6 @@ func NewController(opts Options) *Controller {
 		Desired:       NewDesiredStateStore(),
 	}
 
-	// 🚀 核心修复：如果用户未开启“开机自启并恢复状态”，则在应用实例化时立即重置代理意图。
-	// 这保证了前端在第一时间拉取 GetAppState 时，拿到的是干净的 false 状态，
-	// 彻底杜绝每次启动页面都“先显示上次启动状态，然后才复位”的闪烁 Bug。
 	if !behavior.Get().RestoreOnStartup {
 		d := c.Desired.Get()
 		if d.SystemProxy || d.Tun || d.CoreRunning {
@@ -265,8 +253,8 @@ func (c *Controller) CancelUpdateTask(key string) {
 }
 
 func (c *Controller) RemoveUpdateTask(key string) {
-	c.CancelUpdateTask(key) // 总是先取消再移除
-	c.ClearUpdateCache(key) // 清理可能遗留的断点续传临时文件
+	c.CancelUpdateTask(key)
+	c.ClearUpdateCache(key)
 	c.UpdateTasks.Remove(key)
 }
 
@@ -319,9 +307,8 @@ func (c *Controller) Bootstrap(ctx context.Context, opts BootstrapOptions) {
 
 	c.Supervisor.Start(ctx)
 
-	// 只有自启且配置了恢复状态时，才执行后台恢复任务（异步，带重试，不阻塞 UI）
 	if opts.IsStartupLaunch && c.Behavior.Get().RestoreOnStartup {
-		// 启动恢复：在后台完成后再启动 auto delay
+
 		go func() {
 			c.runStartupRestoreJob(ctx)
 			c.RefreshAutoDelayTest(AutoDelayRefreshOptions{
@@ -330,7 +317,7 @@ func (c *Controller) Bootstrap(ctx context.Context, opts BootstrapOptions) {
 			})
 		}()
 	} else {
-		// 普通双击启动，或者关闭了恢复状态的自启：清空期望状态
+
 		desired := c.Desired.Get()
 		desired.SystemProxy = false
 		desired.Tun = false
@@ -339,7 +326,6 @@ func (c *Controller) Bootstrap(ctx context.Context, opts BootstrapOptions) {
 
 		c.SyncState()
 
-		// 非启动恢复，立即启动 auto delay
 		c.RefreshAutoDelayTest(AutoDelayRefreshOptions{
 			Immediate: true,
 			Reason:    "startup",
@@ -349,8 +335,6 @@ func (c *Controller) Bootstrap(ctx context.Context, opts BootstrapOptions) {
 	c.RefreshAppAutoUpdate()
 }
 
-// runStartupRestoreJob 在后台异步恢复代理状态，带指数退避重试
-// 使用同步 Reconcile，结果驱动
 func (c *Controller) runStartupRestoreJob(ctx context.Context) {
 	backoff := []time.Duration{2 * time.Second, 5 * time.Second, 10 * time.Second, 20 * time.Second, 40 * time.Second}
 
@@ -366,7 +350,6 @@ func (c *Controller) runStartupRestoreJob(ctx context.Context) {
 			return
 		}
 
-		// 根据 desired 类型设置不同的 timeout
 		restoreTimeout := 8 * time.Second
 		if desired.Tun {
 			restoreTimeout = 15 * time.Second
@@ -408,7 +391,6 @@ func (c *Controller) syncStartupTaskStateSafe() {
 
 	behavior := c.Behavior.Get()
 
-	// 只有明确检测到任务不存在/禁用，才更新为 false，避免错误覆盖
 	behavior.StartupWithOS = info.Exists && info.Enabled
 
 	_ = c.Behavior.SetAndSave(behavior)
@@ -418,7 +400,6 @@ func (c *Controller) GetEvents() EventSink {
 	return c.events
 }
 
-// AppState 定义全局状态同步结构
 type AppState struct {
 	IsRunning   bool   `json:"isRunning"`
 	IsAdmin     bool   `json:"isAdmin"`
@@ -426,33 +407,31 @@ type AppState struct {
 	Theme       string `json:"theme"`
 	HideLogs    bool   `json:"hideLogs"`
 	AppLogLevel string `json:"appLogLevel"`
-	// 用户意图（卡片数据源）
+
 	DesiredSystemProxy bool `json:"desiredSystemProxy"`
 	DesiredTun         bool `json:"desiredTun"`
-	// 后端实际 runtime 状态（诊断/IP 检测用）
+
 	ActualSystemProxy bool `json:"actualSystemProxy"`
 	ActualTun         bool `json:"actualTun"`
-	// 兼容旧前端
+
 	SystemProxy bool   `json:"systemProxy"`
 	Tun         bool   `json:"tun"`
 	Version     string `json:"version"`
 	AppVersion  string `json:"appVersion"`
-	// 让前端实时知道当前在跑哪个配置
+
 	ActiveConfig     string `json:"activeConfig"`
 	ActiveConfigName string `json:"activeConfigName"`
 	ActiveConfigType string `json:"activeConfigType"`
-	// 延迟保留相关
+
 	DelayRetention     bool   `json:"delayRetention"`
 	DelayRetentionTime string `json:"delayRetentionTime"`
 
-	// 应用更新相关
 	UpdateReady      bool   `json:"updateReady"`
 	NewAppVersion    string `json:"newAppVersion"`
 	UpdateDownloaded bool   `json:"updateDownloaded"`
 	DownloadedPath   string `json:"downloadedPath"`
 }
 
-// GetAppState 获取应用运行状态快照
 func (c *Controller) GetAppState() AppState {
 	behavior := c.Behavior.Get()
 	activeConfig := behavior.ActiveConfig
@@ -464,7 +443,6 @@ func (c *Controller) GetAppState() AppState {
 	userRunning := c.userCoreRunning
 	c.mu.RUnlock()
 
-	// 将内核物理运行状态与 UI 业务接管状态解耦
 	logicalIsRunning := clash.IsRunning() && userRunning
 
 	state := AppState{
@@ -502,7 +480,6 @@ func (c *Controller) GetAppState() AppState {
 	return state
 }
 
-// SyncState 触发状态同步事件
 func (c *Controller) SyncState() {
 	state := c.GetAppState()
 	c.events.Emit("app-state-sync", state)
@@ -511,7 +488,6 @@ func (c *Controller) SyncState() {
 		c.onStateChange()
 	}
 
-	// 🚀 核心修复：Controller 自助管理流量流
 	if c.ctx != nil {
 		if state.IsRunning {
 			behavior := c.Behavior.Get()
@@ -524,10 +500,8 @@ func (c *Controller) SyncState() {
 	}
 }
 
-// --- 内部方法 (需要提前持有 coreLifecycleMu) ---
-
 func (c *Controller) ensureCoreRunningWithDesiredState(ctx context.Context, desired DesiredState) error {
-	// 检查当前运行时状态是否已满足期望
+
 	if c.runtimeSatisfiesCore(RuntimePlan{
 		NeedTun:      desired.Tun,
 		ActiveConfig: desired.ActiveConfig,
@@ -536,7 +510,6 @@ func (c *Controller) ensureCoreRunningWithDesiredState(ctx context.Context, desi
 		return nil
 	}
 
-	// 启动核心前强制兜底：从 seed 修补缺失/损坏的 core/wintun（在 activeConfig 检查之前）
 	assetReq := runtimeassets.RequireCoreOnly
 	if desired.Tun {
 		assetReq = runtimeassets.RequireTun
@@ -554,13 +527,11 @@ func (c *Controller) ensureCoreRunningWithDesiredState(ctx context.Context, desi
 		return ErrNoActiveConfig
 	}
 
-	// TUN 模式：确保 helper 服务就绪
 	if desired.Tun {
 		if err := c.EnsureHelperReady("tun-start"); err != nil {
 			return err
 		}
-		// Linux: ядро создаёт TUN-устройство само → нужен CAP_NET_ADMIN на бинаре ядра
-		// (на Windows — no-op, там TUN поднимает helper-служба).
+
 		if err := sys.EnsureTunPrivilege(); err != nil {
 			return err
 		}
@@ -631,7 +602,6 @@ func (c *Controller) ensureCoreRunningWithDesiredState(ctx context.Context, desi
 	c.coreStartedAt = time.Now()
 	c.mu.Unlock()
 
-	// 设置运行时状态
 	owner := "direct"
 	if desired.Tun {
 		owner = "helper"
@@ -647,10 +617,8 @@ func (c *Controller) ensureCoreRunningWithDesiredState(ctx context.Context, desi
 		StartedAt:    time.Now(),
 	})
 
-	// 内核已有反应，同步状态
 	c.SyncState()
 
-	// 完整代理数据后台处理，不阻塞开关返回
 	go func() {
 		bgCtx, cancel := context.WithTimeout(c.ctx, 8*time.Second)
 		defer cancel()
@@ -670,7 +638,6 @@ func (c *Controller) stopCoreProcessLocked() {
 	c.runtimeState.Clear()
 }
 
-// classifyProbeError 将探针错误分类为用户可读的诊断信息
 func classifyProbeError(err error) string {
 	if err == nil {
 		return "API не стал доступен за отведённое время"
@@ -678,33 +645,27 @@ func classifyProbeError(err error) string {
 
 	msg := err.Error()
 
-	// 端口未监听：内核未绑定 API 端口
 	if strings.Contains(msg, "connection refused") {
 		return "Порт не прослушивается: ядро не привязало API-порт"
 	}
 
-	// 超时
 	if strings.Contains(msg, "timeout") || strings.Contains(msg, "deadline exceeded") {
 		return "Таймаут ответа ядра: возможно, слишком большая конфигурация или нехватка ресурсов системы"
 	}
 
-	// HTTP 状态码非 2xx
 	if strings.Contains(msg, "failed: HTTP") || strings.Contains(msg, "HTTP ") {
 		return "Порт занят другой программой: получен неожиданный ответ"
 	}
 
-	// 响应非合法 JSON
 	if strings.Contains(msg, "unexpected end") || strings.Contains(msg, "invalid character") ||
 		strings.Contains(msg, "cannot decode") || strings.Contains(msg, "JSON") {
 		return "Порт занят другой программой: ответ не в формате ядра"
 	}
 
-	// 连接重置 / 连接断开
 	if strings.Contains(msg, "connection reset") || strings.Contains(msg, "broken pipe") {
 		return "Соединение сброшено: ядро, вероятно, аварийно завершилось"
 	}
 
-	// 其他 net.OpError
 	var opErr *net.OpError
 	if errors.As(err, &opErr) {
 		return "Ошибка сетевого соединения"
@@ -713,9 +674,6 @@ func classifyProbeError(err error) string {
 	return "Сбой API-пробы, проверьте конфигурацию ядра"
 }
 
-// --- 导出方法 ---
-
-// EnsureCoreRunning 确保内核已启动并就绪 (带锁包装)
 func (c *Controller) EnsureCoreRunning(ctx context.Context) error {
 	c.coreLifecycleMu.Lock()
 	defer c.coreLifecycleMu.Unlock()
@@ -729,7 +687,6 @@ func (c *Controller) EnsureCoreRunning(ctx context.Context) error {
 	return c.ensureCoreRunningWithDesiredState(ctx, desired)
 }
 
-// StopCoreService 停止内核并清理所有运行时状态（通常用于程序退出）
 func (c *Controller) StopCoreService() {
 	c.DisableAll()
 }
@@ -815,7 +772,6 @@ func (c *Controller) setLastError(msg string) {
 	c.events.Emit("notify-error", msg)
 }
 
-// DisableAll 彻底清理并关闭所有功能
 func (c *Controller) DisableAll() {
 	c.coreLifecycleMu.Lock()
 	defer c.coreLifecycleMu.Unlock()
@@ -870,18 +826,14 @@ func (c *Controller) DisableAll() {
 	c.SyncState()
 }
 
-// 🚀 核心新增：静默测速内核保障机制
-// 返回值：cleanup 释放引用, warmupRequired 是否处于启动预热窗口, err 错误
 func (c *Controller) EnsureDelayCore(ctx context.Context) (cleanup func(), warmupRequired bool, err error) {
 	c.delayCoreMu.Lock()
 
-	// 如果有待执行的 idle 停止 timer，先取消
 	if c.delayCoreStopTimer != nil {
 		c.delayCoreStopTimer.Stop()
 		c.delayCoreStopTimer = nil
 	}
 
-	// 情况 1：内核已在物理运行
 	if clash.IsRunning() {
 		c.delayCoreRefs++
 		c.delayCoreMu.Unlock()
@@ -889,7 +841,6 @@ func (c *Controller) EnsureDelayCore(ctx context.Context) (cleanup func(), warmu
 		return c.releaseDelayCore, warmup, nil
 	}
 
-	// 情况 2：已有其他协程正在启动内核，挂载并等待
 	if c.delayCoreStarting {
 		ready := c.delayCoreReady
 		c.delayCoreMu.Unlock()
@@ -915,7 +866,6 @@ func (c *Controller) EnsureDelayCore(ctx context.Context) (cleanup func(), warmu
 		return c.releaseDelayCore, true, nil
 	}
 
-	// 情况 3：内核未运行，且本协程是第一个发起启动的
 	profileID := c.Behavior.Get().ActiveConfig
 	if profileID == "" {
 		c.delayCoreMu.Unlock()
@@ -931,12 +881,11 @@ func (c *Controller) EnsureDelayCore(ctx context.Context) (cleanup func(), warmu
 	c.delayCoreStartErr = nil
 	c.delayCoreMu.Unlock()
 
-	// 在锁外执行耗时的启动与探测
 	startErr := c.startDelayCoreAndWaitReady(startCtx, profileID)
 
 	ok := c.finishDelayCoreStart(ready, startErr)
 	if !ok {
-		// 如果启动被 DisableAll 抢先取消了
+
 		if startErr == nil && !c.IsUserRunning() {
 			clash.Stop()
 			c.SyncState()
@@ -986,7 +935,6 @@ func (c *Controller) startDelayCoreAndWaitReady(ctx context.Context, profileID s
 	}
 	started = true
 
-	// 🛡️ 核心保障：如果启动失败或中途取消，必须停止这个临时 core
 	defer func() {
 		if started && !ready && !c.IsUserRunning() {
 			clash.Stop()
@@ -1080,17 +1028,15 @@ func (c *Controller) NeedsDelayWarmup() bool {
 	return time.Since(startedAt) <= DelayWarmupWindow
 }
 
-// StartCoreOnly 严格执行“只启内核，不改状态”
 func (c *Controller) StartCoreOnly(ctx context.Context, id string) error {
 	behavior := c.Behavior.Get()
-	// 仅构建运行时 YAML 并启动进程，强制禁用 TUN 以避免影响真实代理状态
+
 	if err := clash.BuildRuntimeConfig(id, behavior.ActiveMode, behavior.LogLevel, false); err != nil {
 		return err
 	}
-	return clash.Start(ctx, false) // delay 测试不走 TUN
+	return clash.Start(ctx, false)
 }
 
-// StopCoreProcess 仅停止物理进程，保留用户开启意图
 func (c *Controller) StopCoreProcess() {
 	c.coreLifecycleMu.Lock()
 	defer c.coreLifecycleMu.Unlock()
@@ -1103,7 +1049,6 @@ func (c *Controller) fillDesiredTarget(d *DesiredState) {
 	d.Mode = b.ActiveMode
 }
 
-// ToggleSystemProxy 开关：系统代理
 func (c *Controller) ToggleSystemProxy(ctx context.Context, enable bool) error {
 	previousDesired := c.Desired.Get()
 
@@ -1121,7 +1066,7 @@ func (c *Controller) ToggleSystemProxy(ctx context.Context, enable bool) error {
 	c.Desired.SetAndSave(desired)
 
 	if err := c.Supervisor.Reconcile(ctx, "system-proxy-toggle"); err != nil {
-		// 回滚
+
 		c.Desired.SetAndSave(previousDesired)
 		c.SyncState()
 		return err
@@ -1129,8 +1074,6 @@ func (c *Controller) ToggleSystemProxy(ctx context.Context, enable bool) error {
 	return nil
 }
 
-// EnsureHelperReady 确保 helper 服务已安装并运行
-// 使用 singleflight 合并并发调用
 func (c *Controller) EnsureHelperReady(reason string) error {
 	_, err, _ := helperReadyGroup.Do("helper-ready", func() (any, error) {
 		return nil, c.ensureHelperReadySlow(reason)
@@ -1167,37 +1110,33 @@ func (c *Controller) ensureHelperReadySlow(reason string) error {
 	return nil
 }
 
-// ToggleTunMode 开关：TUN 模式
 func (c *Controller) ToggleTunMode(ctx context.Context, enable bool) error {
 	if enable {
-		// 无配置检查
+
 		behavior := c.Behavior.Get()
 		if behavior.ActiveConfig == "" {
 			return ErrNoActiveConfig
 		}
 
-		// helper 检查（快速 ping，不启动服务）
 		client := sys.NewHelperClient()
 		helperReachable := client.Ping() == nil
 
 		if !helperReachable && !sys.CheckAdmin() {
-			// 非管理员且 helper 不可达
+
 			helperStatus := sys.CheckHelperService()
 			if !helperStatus.Installed {
 				return ErrHelperInstallRequired
 			}
-			// 已安装但不可达，需要修复
+
 			return ErrHelperRepairRequired
 		}
 
-		// 管理员模式下 helper 不可达，静默安装/修复
 		if !helperReachable && sys.CheckAdmin() {
 			if err := c.EnsureHelperReady("tun-first-install"); err != nil {
 				return fmt.Errorf("Не удалось установить фоновую службу: %w", err)
 			}
 		}
 
-		// 使用统一资产模型检查 Wintun
 		assetStatus, assetErr := runtimeassets.EnsureReady(ctx, runtimeassets.RequireTun, runtimeassets.RepairInvalid)
 		if assetErr != nil {
 			w := assetStatus.Assets[runtimeassets.AssetWintun]
@@ -1229,12 +1168,10 @@ func (c *Controller) ToggleTunMode(ctx context.Context, enable bool) error {
 	return nil
 }
 
-// RestartCore 重启内核（默认为内部调用原因）
 func (c *Controller) RestartCore(ctx context.Context) error {
 	return c.RestartCoreWithReason(ctx, "internal")
 }
 
-// RestartCoreWithReason 重启内核并携带显式原因，决定是否触发缓存清理
 func (c *Controller) RestartCoreWithReason(ctx context.Context, reason string) error {
 	if err := c.guardDisruptiveAction(reason); err != nil {
 		c.queuePendingDisruptiveAction(reason)
@@ -1255,23 +1192,20 @@ func (c *Controller) RestartCoreWithReason(ctx context.Context, reason string) e
 
 	needCore := desired.CoreRunning || desired.SystemProxy || desired.Tun
 
-	// 无论是否开启代理，都强行启动内核一次以验证配置正确性
 	if err := c.ensureCoreRunningWithDesiredState(ctx, desired); err != nil {
 		c.SyncState()
 		return err
 	}
 
 	if !needCore {
-		// 如果原本未开启代理服务，则启动验证成功后立刻关闭，不驻留后台
+
 		c.stopCoreProcessLocked()
 	}
 
-	// 发送通用的重启信号
 	c.events.Emit("core-restarted", map[string]any{
 		"reason": reason,
 	})
 
-	// 🛡️ 核心改进：仅在用户明确意图或核心配置变更时，才通知前端清理延迟缓存
 	switch reason {
 	case "manual", "config-switch", "subscription-update", "restore", "config-save":
 		c.events.Emit("delay-cache-clear", reason)
@@ -1281,14 +1215,12 @@ func (c *Controller) RestartCoreWithReason(ctx context.Context, reason string) e
 	return nil
 }
 
-// UpdateClashMode 切换 Clash 路由模式
 func (c *Controller) UpdateClashMode(ctx context.Context, mode string) error {
 	behavior := c.Behavior.Get()
 	if behavior.ActiveMode == mode {
 		return nil
 	}
 
-	// 1. 更新配置并写盘
 	behavior.ActiveMode = mode
 	if err := c.Behavior.SetAndSave(behavior); err != nil {
 		c.events.Emit("notify-error", "Не удалось сохранить режим: "+err.Error())
@@ -1301,7 +1233,6 @@ func (c *Controller) UpdateClashMode(ctx context.Context, mode string) error {
 	c.fillDesiredTarget(&desired)
 	c.Desired.SetAndSave(desired)
 
-	// 2. 如果内核正在运行，尝试通过 API 热切换
 	if clash.IsRunning() {
 		if err := clash.UpdateModeWithContext(ctx, mode); err != nil {
 			c.SyncState()
@@ -1314,7 +1245,6 @@ func (c *Controller) UpdateClashMode(ctx context.Context, mode string) error {
 			c.runtimeState.Set(st)
 		}
 
-		// 🚀 核心修复：切换到全局模式时，主动同步隐藏 GLOBAL
 		if mode == "global" {
 			c.syncGlobalSelectionOnModeEnter(ctx, behavior.ActiveConfig)
 		}
@@ -1324,7 +1254,6 @@ func (c *Controller) UpdateClashMode(ctx context.Context, mode string) error {
 	return nil
 }
 
-// RefreshAutoDelayTest 刷新定时测速任务
 func (c *Controller) RefreshAutoDelayTest(opts AutoDelayRefreshOptions) {
 	c.autoTestMu.Lock()
 
@@ -1372,11 +1301,11 @@ func (c *Controller) RefreshAutoDelayTest(opts AutoDelayRefreshOptions) {
 func autoDelayInitialDelay(reason string) time.Duration {
 	switch reason {
 	case "startup":
-		return 7 * time.Second // 冷启动给予 7s 宽限，避开系统启动高峰
+		return 7 * time.Second
 	case "restore":
-		return 15 * time.Second // 恢复备份后给予 15s 宽限
+		return 15 * time.Second
 	case "enabled":
-		return 3 * time.Second // 手动开启功能：3 秒
+		return 3 * time.Second
 	default:
 		return 5 * time.Second
 	}
@@ -1449,7 +1378,6 @@ func (c *Controller) RefreshAppAutoUpdate() {
 		return
 	}
 
-	// 标记已检查，防止由于配置保存触发的副作用导致死循环
 	behavior.LastUpdateCheck = now
 	_ = c.Behavior.SetAndSave(behavior)
 
@@ -1465,7 +1393,6 @@ func (c *Controller) SaveAppBehavior(b AppBehavior) error {
 
 	next := c.Behavior.Get()
 
-	// 副作用调度
 	if old.AutoDelayTest != next.AutoDelayTest ||
 		old.AutoDelayTestInterval != next.AutoDelayTestInterval {
 		c.RefreshAutoDelayTest(AutoDelayRefreshOptions{
@@ -1509,12 +1436,11 @@ func (c *Controller) handleStartupWithOSChange(enable bool) {
 		return
 	}
 
-	// Always delete existing task before creating a new one to ensure clean update
 	_ = sys.DeleteStartupTask()
 
 	if enable {
 		if createTaskErr := sys.CreateStartupTask(exePath); createTaskErr != nil {
-			// Roll back on failure
+
 			behavior := c.Behavior.Get()
 			behavior.StartupWithOS = false
 			_ = c.Behavior.SetAndSave(behavior)
@@ -1531,8 +1457,6 @@ func (c *Controller) StopTrafficStream() {
 func (c *Controller) ResetTrafficTotals() {
 	c.traffic.ResetRuntimeState()
 }
-
-// --- 日志流调度 ---
 
 func (c *Controller) StartLogStream(ctx context.Context) {
 	logLevel := c.Behavior.Get().LogLevel
@@ -1589,8 +1513,6 @@ func (c *Controller) SetDownloadedAppUpdate(path, version string) {
 	}
 }
 
-// --- Proxy Selection & Sync ---
-
 func (c *Controller) SelectProxyWithModeSync(
 	ctx context.Context,
 	profileID string,
@@ -1598,14 +1520,13 @@ func (c *Controller) SelectProxyWithModeSync(
 	groupName string,
 	proxyName string,
 ) error {
-	// 🚀 核心修复：全局模式下采取“先校验、双切换、双持久化”的严格路径
+
 	if mode == "global" {
-		// 1. 预校验 GLOBAL 是否支持该节点
+
 		if err := c.validateProxySelection(ctx, groupName, proxyName, true); err != nil {
 			return fmt.Errorf("Предварительная проверка глобальной синхронизации не пройдена: %w", err)
 		}
 
-		// 2. 依次切换正常组和 GLOBAL 组
 		if err := clash.SelectProxyWithContext(ctx, groupName, proxyName); err != nil {
 			return fmt.Errorf("Не удалось переключить прокси-группу: %w", err)
 		}
@@ -1613,12 +1534,11 @@ func (c *Controller) SelectProxyWithModeSync(
 			return fmt.Errorf("Не удалось синхронизировать глобальный выход: %w", err)
 		}
 
-		// 3. 依次记录持久化状态
 		c.Offline.Mark(profileID, groupName, proxyName)
 		c.Offline.Mark(profileID, "GLOBAL", proxyName)
 
 	} else {
-		// 规则/直连模式：仅切换正常组
+
 		if err := clash.SelectProxyWithContext(ctx, groupName, proxyName); err != nil {
 			return err
 		}
@@ -1644,7 +1564,6 @@ func (c *Controller) validateProxySelection(ctx context.Context, groupName, node
 		return fmt.Errorf("Недопустимые данные прокси-группы")
 	}
 
-	// 1. 校验目标组是否包含该节点
 	if g, ok := groups[groupName].(map[string]interface{}); ok {
 		if !proxyGroupContainsNode(g, nodeName) {
 			return fmt.Errorf("Прокси-группа %s не содержит узел %s", groupName, nodeName)
@@ -1653,7 +1572,6 @@ func (c *Controller) validateProxySelection(ctx context.Context, groupName, node
 		return fmt.Errorf("Прокси-группа %s не существует", groupName)
 	}
 
-	// 2. 可选：校验 GLOBAL 是否包含该节点
 	if checkGlobal {
 		if g, ok := groups["GLOBAL"].(map[string]interface{}); ok {
 			if !proxyGroupContainsNode(g, nodeName) {
@@ -1668,19 +1586,17 @@ func (c *Controller) validateProxySelection(ctx context.Context, groupName, node
 }
 
 func (c *Controller) syncGlobalSelectionOnModeEnter(ctx context.Context, profileID string) {
-	// 🚀 核心逻辑：
-	// 优先寻找已有的 GLOBAL 持久化记录
-	// 如果没有，则寻找一个有效的手动可选组的选择作为兜底同步
+
 	targetNode, exists := c.Offline.Get(profileID, "GLOBAL")
 
 	if !exists {
-		// 搜索其他可选组的选择
+
 		selections := c.Offline.Snapshot(profileID)
 		for gName, node := range selections {
 			if gName == "GLOBAL" {
 				continue
 			}
-			// 如果找到了一个节点，且它在 GLOBAL 中合法，就用它
+
 			if err := c.selectGlobalProxyIfValid(ctx, node); err == nil {
 				c.Offline.Mark(profileID, "GLOBAL", node)
 				return
@@ -1689,7 +1605,6 @@ func (c *Controller) syncGlobalSelectionOnModeEnter(ctx context.Context, profile
 		return
 	}
 
-	// 执行同步
 	if err := c.selectGlobalProxyIfValid(ctx, targetNode); err != nil {
 		c.logError("Не удалось выполнить синхронизацию при входе в глобальный режим: %v", err)
 	}
@@ -1757,7 +1672,6 @@ func (c *Controller) applyStoredProxySelections(ctx context.Context, profileID s
 		return
 	}
 
-	// 1. 先回放正常可选组
 	for groupName, nodeName := range selected {
 		if groupName == "GLOBAL" {
 			continue
@@ -1785,7 +1699,6 @@ func (c *Controller) applyStoredProxySelections(ctx context.Context, profileID s
 		_ = clash.SelectProxyWithContext(ctx, groupName, nodeName)
 	}
 
-	// 2. 全局模式下回放隐藏 GLOBAL
 	behavior := c.Behavior.Get()
 	if behavior.ActiveMode == "global" {
 		if globalNode, ok := selected["GLOBAL"]; ok && globalNode != "" {
@@ -1824,12 +1737,10 @@ func proxyGroupContainsNode(group map[string]interface{}, nodeName string) bool 
 	return false
 }
 
-// GetDiagnosticInfo returns current diagnostic info
 func (c *Controller) GetDiagnosticInfo() DiagnosticInfo {
 	return GetDiagnosticInfo()
 }
 
-// ExportDiagnostics exports diagnostics to a user-selected path
 func (c *Controller) ExportDiagnostics() error {
 	path, err := runtime.SaveFileDialog(c.ctx, runtime.SaveDialogOptions{
 		DefaultFilename: "goclashz_diagnostics.json",
@@ -1839,7 +1750,7 @@ func (c *Controller) ExportDiagnostics() error {
 		},
 	})
 	if err != nil || path == "" {
-		return err // cancelled or error
+		return err
 	}
 	return ExportDiagnosticsToFile(path)
 }

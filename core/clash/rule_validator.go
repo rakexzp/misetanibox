@@ -7,7 +7,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// ValidateClashReferencesBytes 解析并校验配置引用的合法性
 func ValidateClashReferencesBytes(data []byte) error {
 	var root map[string]interface{}
 	if err := yaml.Unmarshal(data, &root); err != nil {
@@ -16,7 +15,6 @@ func ValidateClashReferencesBytes(data []byte) error {
 	return ValidateClashReferences(root)
 }
 
-// ValidateClashReferences 校验 clash 配置引用的合法性，确保删除代理或策略组后能够捕获错误
 func ValidateClashReferences(root map[string]interface{}) error {
 	builtinPolicies := map[string]bool{
 		"DIRECT":      true,
@@ -32,7 +30,6 @@ func ValidateClashReferences(root map[string]interface{}) error {
 	proxyProviderNames := map[string]bool{}
 	ruleProviderNames := map[string]bool{}
 
-	// 1. 记录所有的代理节点名字
 	if proxiesNode, ok := root["proxies"].([]interface{}); ok {
 		for _, p := range proxiesNode {
 			if proxy, isMap := p.(map[string]interface{}); isMap {
@@ -43,7 +40,6 @@ func ValidateClashReferences(root map[string]interface{}) error {
 		}
 	}
 
-	// 2. 记录所有的代理组名字
 	if groupsNode, ok := root["proxy-groups"].([]interface{}); ok {
 		for _, g := range groupsNode {
 			if group, isMap := g.(map[string]interface{}); isMap {
@@ -54,14 +50,12 @@ func ValidateClashReferences(root map[string]interface{}) error {
 		}
 	}
 
-	// 3. 记录所有的 proxy-providers 名字
 	if providersNode, ok := root["proxy-providers"].(map[string]interface{}); ok {
 		for name := range providersNode {
 			proxyProviderNames[name] = true
 		}
 	}
 
-	// 4. 记录所有的 rule-providers 名字
 	if ruleProvidersNode, ok := root["rule-providers"].(map[string]interface{}); ok {
 		for name := range ruleProvidersNode {
 			ruleProviderNames[name] = true
@@ -72,13 +66,11 @@ func ValidateClashReferences(root map[string]interface{}) error {
 		return builtinPolicies[name] || proxyNames[name] || groupNames[name]
 	}
 
-	// 5. 校验所有的 proxy-groups 引用
 	if groupsNode, ok := root["proxy-groups"].([]interface{}); ok {
 		for _, g := range groupsNode {
 			if group, isMap := g.(map[string]interface{}); isMap {
 				groupName, _ := group["name"].(string)
 
-				// 检查 use (proxy-providers)
 				if useNode, ok := group["use"].([]interface{}); ok {
 					for _, u := range useNode {
 						if providerName, ok := u.(string); ok {
@@ -89,7 +81,6 @@ func ValidateClashReferences(root map[string]interface{}) error {
 					}
 				}
 
-				// 检查 proxies
 				if pList, ok := group["proxies"].([]interface{}); ok {
 					for _, p := range pList {
 						if proxyName, ok := p.(string); ok {
@@ -103,7 +94,6 @@ func ValidateClashReferences(root map[string]interface{}) error {
 		}
 	}
 
-	// 6. 校验规则 (rules) 的目标
 	if rulesNode, ok := root["rules"].([]interface{}); ok {
 		for _, r := range rulesNode {
 			if ruleStr, ok := r.(string); ok {
@@ -132,7 +122,7 @@ func ValidateClashReferences(root map[string]interface{}) error {
 							}
 						}
 					} else if ruleType == "AND" || ruleType == "OR" || ruleType == "NOT" || ruleType == "SUB-RULE" {
-						// 复杂规则跳过深度校验
+
 						continue
 					} else if len(parts) >= 3 {
 						target := parts[2]
@@ -148,7 +138,6 @@ func ValidateClashReferences(root map[string]interface{}) error {
 	return nil
 }
 
-// SanitizeRuleLine 规范化和校验单条规则
 func SanitizeRuleLine(rule string) (string, error) {
 	rule = NormalizeRule(rule)
 	if rule == "" {
@@ -186,7 +175,6 @@ func SanitizeRuleLine(rule string) (string, error) {
 	return strings.Join(parts, ","), nil
 }
 
-// SanitizeRuleList 规范化和校验多条规则
 func SanitizeRuleList(rules []string) ([]string, error) {
 	var valid []string
 	for _, r := range rules {

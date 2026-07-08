@@ -10,12 +10,11 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-// DeviceInfo — идентификация устройства для заголовков подписки.
 type DeviceInfo struct {
-	HWID  string // x-hwid: стабильный идентификатор машины
-	OS    string // x-device-os
-	OSVer string // x-ver-os
-	Model string // x-device-model
+	HWID  string
+	OS    string
+	OSVer string
+	Model string
 }
 
 var (
@@ -23,7 +22,6 @@ var (
 	cachedDeviceInfo DeviceInfo
 )
 
-// GetDeviceInfo возвращает закешированную идентификацию устройства.
 func GetDeviceInfo() DeviceInfo {
 	deviceInfoOnce.Do(func() {
 		cachedDeviceInfo = DeviceInfo{
@@ -36,8 +34,6 @@ func GetDeviceInfo() DeviceInfo {
 	return cachedDeviceInfo
 }
 
-// SubscriptionHeaders — HTTP-заголовки для запроса подписки, чтобы сервер
-// подписки мог различать устройства по HWID.
 func SubscriptionHeaders() map[string]string {
 	info := GetDeviceInfo()
 	h := map[string]string{}
@@ -68,7 +64,7 @@ func readRegString(root registry.Key, path, name string) string {
 }
 
 func readMachineGuid() string {
-	// WOW64-безопасно: ключ живёт в 64-битном хайве
+
 	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Cryptography`, registry.QUERY_VALUE|registry.WOW64_64KEY)
 	if err == nil {
 		defer k.Close()
@@ -85,7 +81,6 @@ func readWindowsVersion() string {
 	display := readRegString(registry.LOCAL_MACHINE, cv, "DisplayVersion")
 	build := readRegString(registry.LOCAL_MACHINE, cv, "CurrentBuildNumber")
 
-	// ProductName в реестре застрял на "Windows 10" даже на 11 — чиним по билду
 	if build != "" {
 		var buildNum int
 		fmt.Sscanf(build, "%d", &buildNum)

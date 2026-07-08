@@ -1,4 +1,3 @@
-// 文件路径: frontend/src/store.ts
 import { reactive } from 'vue';
 import { EventsOn } from '../wailsjs/runtime/runtime';
 import * as API from '../wailsjs/go/main/App';
@@ -49,7 +48,6 @@ export function normalizeOutboundIP(raw: any): OutboundIPResult {
   };
 }
 
-// 1. 同步读取本地缓存（发生在 Vue 渲染前，绝对 0 延迟）
 const cachedHideLogs = localStorage.getItem('goclashz_hideLogs') === 'true';
 const cachedTheme = localStorage.getItem('goclashz_theme') || 'light';
 const cachedUiMode = (localStorage.getItem('goclashz_uiMode') as 'full' | 'lite') || 'lite';
@@ -65,10 +63,8 @@ try {
   initialOutboundIP = null;
 }
 
-// 存储全局倒计时 ID，不放在 reactive 中防止不必要的响应式开销
 const delayTimers: Record<string, number> = {};
 
-// intent 持久化：卡片状态只看 intent，不看后端 runtime，使用 sessionStorage 确保应用关闭后重置
 function readControlIntent(): { systemProxy?: boolean; tun?: boolean } | null {
   try {
     const raw = sessionStorage.getItem('goclashz_control_intent');
@@ -105,7 +101,6 @@ export function setCardBg(key: string, dataUrl: string) {
 
 const cachedIntent = readControlIntent();
 
-// 定义全局响应式状态
 export const globalState = reactive({
   isRunning: false,
   mode: 'rule',
@@ -113,16 +108,12 @@ export const globalState = reactive({
   uiMode: cachedUiMode as 'full' | 'lite', // full = Про, lite = Happ-подобный простой режим
   cardBgs: {} as Record<string, string>, // пер-карточные фоны (key → data-URI), грузятся с бэкенда
   hideLogs: cachedHideLogs,
-  // UI intent：卡片唯一数据源
   systemProxy: cachedIntent?.systemProxy ?? false,
   tun: cachedIntent?.tun ?? false,
-  // backend actual：后端实际状态，用于诊断/IP 检测
   actualSystemProxy: false,
   actualTun: false,
-  // pending：只控制重复点击，不影响亮灭
   systemProxyPending: false,
   tunPending: false,
-  // 首次 hydrate 标记
   controlStateHydrated: false,
   version: '',
   appVersion: '',
@@ -134,22 +125,18 @@ export const globalState = reactive({
   delayRetention: true,
   delayRetentionTime: 'long',
 
-  // 👇 新增：应用更新相关
   updateReady: false,
   newAppVersion: '',
   updateDownloaded: false,
   downloadedPath: '',
   appUpdateChecking: false, // 👈 新增：跟踪软件更新检查状态
 
-  // 🚀 核心：使用缓存初始化消除渲染空窗期的闪烁
   activeConfigId: cachedActiveConfigId,
   activeConfigName: '',
   activeConfigType: '',
 
-  // 👇 新增：全局延迟缓存池，用于实现跨页面长效保存
   proxyDelays: {} as Record<string, { delay: number | null, status: string, message: string }>,
 
-  // 跨页面 IP 状态缓存
   outboundIP: initialOutboundIP as OutboundIPResult | null,
   outboundIPStale: false,
   ipDetecting: false,
@@ -172,7 +159,6 @@ export const globalState = reactive({
     networkBusy: false,
   },
 
-  // 全局模态框状态
   modal: {
     show: false,
     type: 'alert' as 'alert' | 'confirm',
@@ -185,9 +171,6 @@ export const globalState = reactive({
   }
 });
 
-
-
-// 👇 新增清洗规则：打破数据格式强粘合，防止大小写污染
 const normalizeLogLevel = (level?: string) => {
   const v = String(level || '').toLowerCase().trim();
   if (v === 'warning') return 'warn';
@@ -205,7 +188,6 @@ export function updateStateFromBackend(rawData: any) {
   if (rawData.isRunning !== undefined) globalState.isRunning = rawData.isRunning;
   else if (rawData.IsRunning !== undefined) globalState.isRunning = rawData.IsRunning;
 
-  // mode 更新
   if (rawData.mode !== undefined) globalState.mode = rawData.mode;
   else if (rawData.Mode !== undefined) globalState.mode = rawData.Mode;
 
@@ -231,18 +213,15 @@ export function updateStateFromBackend(rawData: any) {
     globalState.appLogLevel = normalizeLogLevel(newAppLogLevel || 'info');
   }
 
-  // 检测代理/TUN 状态变化，触发强制 IP 检测（基于 actual，不基于 intent）
   const oldActualProxy = globalState.actualSystemProxy;
   const oldActualTun = globalState.actualTun;
 
   const newProxy = rawData.actualSystemProxy ?? rawData.systemProxy ?? rawData.SystemProxy;
   const newTun = rawData.actualTun ?? rawData.tun ?? rawData.Tun;
 
-  // 始终更新 actual（后端真实 runtime 状态）
   if (newProxy !== undefined) globalState.actualSystemProxy = !!newProxy;
   if (newTun !== undefined) globalState.actualTun = !!newTun;
 
-  // 首次 hydrate：用后端 desired 初始化 intent，之后不再由后端覆盖
   if (!globalState.controlStateHydrated) {
     const cached = readControlIntent();
     const desiredProxy = rawData.desiredSystemProxy ?? rawData.DesiredSystemProxy;
@@ -264,7 +243,6 @@ export function updateStateFromBackend(rawData: any) {
     persistControlIntent();
   }
 
-  // route-aware IP 刷新：基于 actual 状态变化
   const proxyChanged = newProxy !== undefined && oldActualProxy !== !!newProxy;
   const tunChanged = newTun !== undefined && oldActualTun !== !!newTun;
   const runningChanged = oldRunning !== globalState.isRunning;
@@ -317,14 +295,6 @@ export function updateStateFromBackend(rawData: any) {
 
 type DelayRetentionTime = 'long' | '30' | '60' | '300' | string;
 
-/**
- * 更新延迟并处理保留逻辑
- * @param name 节点名称
- * @param delay 延迟数值
- * @param status 状态 (success, timeout, connect-error, test-error)
- * @param message 详细错误信息
- * @param retentionTime 保留时间 (s) 或 'long'
- */
 export function updateProxyDelay(
   name: string,
   delay: number | null,
@@ -332,16 +302,13 @@ export function updateProxyDelay(
   message: string = '',
   retentionTime: DelayRetentionTime = 'long'
 ) {
-  // 1. 更新数值
   globalState.proxyDelays[name] = { delay, status, message };
 
-  // 2. 清理之前的计时器
   if (delayTimers[name]) {
     clearTimeout(delayTimers[name]);
     delete delayTimers[name];
   }
 
-  // 3. 如果不是长时间保留且有值，开启全局定时清理
   if (delay !== null && retentionTime !== 'long') {
     const seconds = parseInt(retentionTime);
     if (isNaN(seconds) || seconds <= 0) return;
@@ -357,7 +324,6 @@ export function updateProxyDelay(
   }
 }
 
-// 全局 Alert 提示框 (替代原生 alert)
 export function showAlert(message: string, title: string = 'Уведомление', isDanger: boolean = false): Promise<void> {
   return new Promise((resolve) => {
     globalState.modal.type = 'alert';
@@ -371,7 +337,6 @@ export function showAlert(message: string, title: string = 'Уведомлени
   });
 }
 
-// 全局 Confirm 确认框 (替代原生 confirm)
 export function showConfirm(message: string, title: string = 'Подтверждение', isDanger: boolean = false): Promise<boolean> {
   return new Promise((resolve) => {
     globalState.modal.type = 'confirm';
@@ -385,15 +350,10 @@ export function showConfirm(message: string, title: string = 'Подтвержд
   });
 }
 
-// IP 检测队列（latest-wins）
 let ipDetectSeq = 0;
 let pendingIPRefresh: { force?: boolean; clearBeforeStart?: boolean; reason?: string; silent?: boolean; expectedRoute?: string } | null = null;
 const ipRefreshTimers: Record<string, number> = {};
 
-/**
- * 统一调度 IP 检测（latest-wins）
- * 同 key 的重复调度会覆盖前一个
- */
 export function scheduleOutboundIPRefresh(
   key: string,
   opts: {
@@ -450,12 +410,10 @@ let routeSettleTimer: number | null = null;
 function scheduleRouteAwareIPRefresh(reason: string) {
   const route = getEffectiveOutboundRoute();
 
-  // 切换中：保留旧 IP，不测 direct，等 actual 稳定
   if (route === 'switching') {
     return;
   }
 
-  // route 没变：不重复检测
   if (route === lastEffectiveRoute) {
     return;
   }
@@ -498,9 +456,6 @@ export function refreshOutboundIPRouteAware(reason = 'manual') {
   });
 }
 
-/**
- * 执行 IP 检测（latest-wins，不丢弃新请求）
- */
 export async function refreshOutboundIP(options?: {
   force?: boolean;
   clearBeforeStart?: boolean;
@@ -535,10 +490,8 @@ export async function refreshOutboundIP(options?: {
       options?.expectedRoute || ''
     );
 
-    // 已有更新请求，丢弃旧结果
     if (seq !== ipDetectSeq) return;
 
-    // 路由切换中：保留旧 IP，不覆盖
     if (result?.message?.includes('Переключение маршрута')) {
       if (!options?.silent && seq === ipDetectSeq) {
         globalState.ipDetecting = false;
@@ -552,7 +505,6 @@ export async function refreshOutboundIP(options?: {
       globalState.outboundIPStale = false;
       localStorage.setItem('goclashz_outboundIP', JSON.stringify(cleaned));
     } else if (!options?.silent) {
-      // 检测失败：保留旧成功结果，标记 stale
       if (globalState.outboundIP?.preferred) {
         globalState.outboundIPStale = true;
       } else {
@@ -598,7 +550,6 @@ export async function refreshOutboundIP(options?: {
       globalState.ipDetecting = false;
     }
 
-    // latest-wins：如果有新请求排队，立即执行
     if (pendingIPRefresh) {
       const next = pendingIPRefresh;
       pendingIPRefresh = null;
@@ -612,7 +563,6 @@ let storeInited = false;
 export async function initStore() {
   if (storeInited) return;
   storeInited = true;
-  // 1. 初始化时进行一次真理同步，获取后端当前所有真实状态
   try {
     const initialState = await API.GetAppState();
     updateStateFromBackend(initialState);
@@ -620,7 +570,6 @@ export async function initStore() {
     console.error("初始化应用状态失败:", err);
   }
 
-  // 2. 保持事件监听，响应来自 Go (托盘或后台) 的实时更新
   EventsOn("app-state-sync", (newState: any) => {
     updateStateFromBackend(newState);
   });
@@ -694,7 +643,6 @@ export async function initStore() {
     globalState.appUpdateProgress = null;
   });
 
-  // 3. 初始化刷新出站 IP，并注册各种事件触发刷新
   refreshOutboundIP();
   
   EventsOn("core-restarted", () => scheduleOutboundIPRefresh('core-restarted', { force: true, delay: 1500, reason: 'core-restarted' }));
@@ -704,29 +652,23 @@ export async function initStore() {
   EventsOn("core-update-success", () => scheduleOutboundIPRefresh('core-update', { force: true, delay: 1500, reason: 'core-update' }));
   EventsOn("driver-install-success", () => scheduleOutboundIPRefresh('driver-install', { force: true, delay: 1500, reason: 'driver-install' }));
 
-  // 👇 提取出一个清空延迟的通用函数
   const clearAllDelays = () => {
     globalState.proxyDelays = {};
     Object.values(delayTimers).forEach(clearTimeout);
     for (const key in delayTimers) delete delayTimers[key];
   };
 
-  // 🛡️ 核心修复：不再监听通用的 core-restarted（因为开关系统代理也会重启内核）
-  // 而是监听显式的清理指令，由后端决定何时真正需要清除历史缓存
   EventsOn("delay-cache-clear", clearAllDelays);
 
-  // 👇 监听测速结果，全局入库（防止切页丢失数据）
   EventsOn("proxy-delay-update", (data: any) => {
     if (!data || !data.name) return;
 
-    // 🚀 核心修复：如果是 busy 状态通知，说明还在批量测速中，不要覆盖已有结果
     if (data.status === 'busy') return;
 
     const status = data.status || 'success';
     const message = data.message || '';
     const delay = data.delay ?? null;
 
-    // 🛡️ 核心优化：如果本次测速失败（非 success），且本地已有成功的延迟，则不覆盖数值，仅更新消息以供 UI 提示
     const existing = globalState.proxyDelays[data.name];
     if (status !== 'success' && existing && existing.delay && existing.delay > 0) {
       existing.status = status;

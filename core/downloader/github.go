@@ -25,8 +25,6 @@ var githubReleaseAssetRe = regexp.MustCompile(
 	`^https://github\.com/([^/]+)/([^/]+)/releases/download/([^/]+)/([^?#]+)`,
 )
 
-// githubDigestCache 按 owner/repo/tag 缓存整个 release 的所有 asset digest，
-// 一键更新多个同 release 文件时只请求一次 GitHub API。
 var githubDigestCache = struct {
 	sync.Mutex
 	data map[string]map[string]string
@@ -37,8 +35,6 @@ var githubDigestCache = struct {
 func normalizeGitHubAssetURL(rawURL string) string {
 	rawURL = strings.TrimSpace(rawURL)
 
-	// 兼容 ghproxy:
-	// https://ghproxy.net/https://github.com/owner/repo/releases/download/tag/file.zip
 	if idx := strings.Index(rawURL, "https://github.com/"); idx >= 0 {
 		return rawURL[idx:]
 	}
@@ -65,7 +61,6 @@ func ResolveGitHubAssetSHA256(ctx context.Context, client *http.Client, rawURL s
 
 	cacheKey := owner + "/" + repo + "/" + tag
 
-	// 先查缓存
 	githubDigestCache.Lock()
 	if assets, ok := githubDigestCache.data[cacheKey]; ok {
 		if digest := assets[assetName]; digest != "" {
@@ -75,7 +70,6 @@ func ResolveGitHubAssetSHA256(ctx context.Context, client *http.Client, rawURL s
 	}
 	githubDigestCache.Unlock()
 
-	// 缓存未命中，请求 GitHub API 获取整个 release 的 digest map
 	assets, err := fetchGitHubReleaseDigests(ctx, client, owner, repo, tag, userAgent)
 	if err != nil {
 		return "", err

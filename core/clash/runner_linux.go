@@ -19,13 +19,11 @@ import (
 	"goclashz/core/utils"
 )
 
-// ExitEvent 描述内核退出事件
 type ExitEvent struct {
 	Intentional bool
 	Message     string
 }
 
-// OnExitFunc 是内核异常退出时的回调函数类型
 type OnExitFunc func(event ExitEvent)
 
 var (
@@ -37,14 +35,12 @@ var (
 	onExitCallback    OnExitFunc
 )
 
-// SetOnExitCallback 注册内核异常退出的回调（由 appcore 层在启动时设置）
 func SetOnExitCallback(fn OnExitFunc) {
 	mu.Lock()
 	defer mu.Unlock()
 	onExitCallback = fn
 }
 
-// killProcessIfClash 安全杀进程：验证 PID 对应进程确为目标执行文件，防止 PID 复用误杀
 func killProcessIfClash(pid int, expectedExeName string) {
 	exePath, err := os.Readlink(fmt.Sprintf("/proc/%d/exe", pid))
 	if err != nil {
@@ -56,7 +52,6 @@ func killProcessIfClash(pid int, expectedExeName string) {
 	_ = syscall.Kill(pid, syscall.SIGKILL)
 }
 
-// cleanupResidualClashProcess 清理残余内核进程
 func cleanupResidualClashProcess(pidFile string, expectedExeName string) {
 	pidData, err := os.ReadFile(pidFile)
 	if err != nil {
@@ -72,9 +67,6 @@ func cleanupResidualClashProcess(pidFile string, expectedExeName string) {
 	_ = os.Remove(pidFile)
 }
 
-// Start 启动内核
-// 在 Linux 上没有 helper：TUN 模式同样直接启动进程。
-// TUN 需要 root/CAP_NET_ADMIN —— 若权限不足，内核自身会在日志中报错。
 func Start(ctx context.Context, tun bool) error {
 	mu.Lock()
 	defer mu.Unlock()
@@ -155,7 +147,7 @@ func Stop() error {
 	mu.Unlock()
 
 	if proc != nil {
-		// Сначала мягко (SIGTERM), даём внутренним обработчикам корректно свернуться
+
 		if err := proc.Signal(syscall.SIGTERM); err != nil {
 			logger.Errorf("не удалось остановить процесс ядра: %v", err)
 			_ = proc.Kill()
@@ -187,7 +179,6 @@ func IsRunning() bool {
 	return isRunning.Load()
 }
 
-// StartedViaHelper — на Linux helper-службы нет, всегда false
 func StartedViaHelper() bool {
 	return false
 }

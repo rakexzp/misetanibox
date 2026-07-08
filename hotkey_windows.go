@@ -37,7 +37,6 @@ func (a *App) startHotkeyWorker(ctx context.Context) {
 		return
 	}
 
-	// Start a goroutine to unblock GetMessageW when context is cancelled
 	go func() {
 		<-ctx.Done()
 		unregHotkey.Call(0, hotkeyIDQuit)

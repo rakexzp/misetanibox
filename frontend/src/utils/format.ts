@@ -38,7 +38,6 @@ export const formatRelativeTime = (timestamp: number) => {
   if (!timestamp) return 'Никогда';
   
   const now = new Date().getTime();
-  // Ensure timestamp is in milliseconds
   const tsMs = timestamp > 9999999999 ? timestamp : timestamp * 1000;
   const diff = now - tsMs;
   

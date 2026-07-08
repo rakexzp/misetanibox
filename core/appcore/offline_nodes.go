@@ -10,7 +10,7 @@ import (
 
 type OfflineNodeStore struct {
 	mu    sync.RWMutex
-	nodes map[string]map[string]string // profileID -> groupName -> nodeName
+	nodes map[string]map[string]string
 	path  string
 }
 
@@ -32,16 +32,13 @@ func (s *OfflineNodeStore) Load(defaultProfileID string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// 1. 先尝试新版格式 (profileID -> group -> node)
 	var nested map[string]map[string]string
 	if err := json.Unmarshal(data, &nested); err == nil && nested != nil {
-		// 检查是否真的解出了嵌套结构，防止由于 map[string]interface{} 兼容性导致的假成功
-		// (虽然 map[string]map[string]string 比较严格)
+
 		s.nodes = nested
 		return
 	}
 
-	// 2. 再尝试旧版扁平格式 (group -> node)
 	var legacy map[string]string
 	if err := json.Unmarshal(data, &legacy); err == nil && legacy != nil {
 		if defaultProfileID == "" {
@@ -52,12 +49,10 @@ func (s *OfflineNodeStore) Load(defaultProfileID string) {
 			defaultProfileID: legacy,
 		}
 
-		// 迁移后立即异步保存为新版格式，不阻塞启动
 		go s.Save()
 		return
 	}
 
-	// 3. 损坏文件兜底
 	s.nodes = make(map[string]map[string]string)
 }
 
@@ -135,11 +130,11 @@ func MergeOfflineSelection(data map[string]interface{}, selected map[string]stri
 	if groups, ok := data["groups"].(map[string]interface{}); ok {
 		for gName, groupData := range groups {
 			if gMap, ok2 := groupData.(map[string]interface{}); ok2 {
-				// 优先使用离线选择
+
 				if selNode, exists := selected[gName]; exists {
 					gMap["now"] = selNode
 				}
-				// 兜底：没有当前选中项，默认选中第一项
+
 				if gMap["now"] == "" || gMap["now"] == nil {
 					if lenRaw, has := gMap["all"]; has {
 						if allArr, ok3 := lenRaw.([]interface{}); ok3 && len(allArr) > 0 {

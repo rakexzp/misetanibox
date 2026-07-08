@@ -84,7 +84,6 @@ const totalChars = ref(0);
 const statusText = ref('Сохранено');
 const yamlError = ref('');
 
-// 自定义 editor setup：不引入 basicSetup / highlightSelectionMatches / drawSelection
 const editorBaseSetup = [
   lineNumbers(),
   highlightActiveLineGutter(),
@@ -296,7 +295,6 @@ const loadConfig = async () => {
     statusText.value = 'Ошибка загрузки: ' + errorMsg;
     emit('status-change', { text: 'Ошибка загрузки', modified: false, error: true });
 
-    // 如果读取配置失败（如严格路径校验不通过），弹出提示并返回
     showAlert('Не удалось прочитать файл конфигурации: ' + errorMsg, 'Ошибка', true);
   } finally {
     loading.value = false;
@@ -514,7 +512,6 @@ onUnmounted(() => {
   padding: 8px 14px;
 }
 
-/* 编辑区 */
 .editor-body {
   flex: 1;
   height: calc(100vh - 260px);
@@ -538,7 +535,6 @@ onUnmounted(() => {
   min-height: 100%;
 }
 
-/* 底部统计栏：滚到底部后显示 */
 .editor-summary-bar {
   display: flex;
   justify-content: space-between;
@@ -562,7 +558,6 @@ onUnmounted(() => {
   border: 1px dashed var(--text-muted);
 }
 
-/* 选区 span 级兜底：确保 token 颜色不干扰选中文字 */
 .editor-body :deep(.cm-content span::selection) {
   background: #000 !important;
   color: #fff !important;

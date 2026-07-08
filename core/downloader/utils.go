@@ -13,7 +13,7 @@ import (
 	"sync"
 )
 
-var destLocks sync.Map // map[string]*sync.Mutex
+var destLocks sync.Map
 
 func lockDest(path string) func() {
 	clean := filepath.Clean(path)

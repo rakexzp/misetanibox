@@ -63,12 +63,10 @@ const statusText = computed(() => {
   }
 });
 
-
 const handleTogglePause = async () => {
   if (props.task.status === 'running') {
     await (API as any).CancelUpdateTask(props.task.key);
   } else {
-    // Resume
     await startTask();
   }
 };
@@ -78,7 +76,6 @@ const handleRemove = async () => {
 };
 
 const handleForceRetry = async () => {
-  // 彻底删除缓存，重新下载
   await (API as any).ClearUpdateCache(props.task.key);
   await startTask();
 };

@@ -39,7 +39,6 @@ type App struct {
 	windowMu      sync.Mutex
 	windowVisible bool
 
-	// 全局热键线程 ID (Ctrl+Alt+Q 退出)
 	hotkeyTID atomic.Uint32
 
 	tray *TrayRuntime
@@ -66,7 +65,6 @@ func (a *App) ShowMainWindow() {
 	runtime.WindowShow(a.ctx)
 	runtime.WindowUnmaximise(a.ctx)
 
-	// Windows 下从托盘恢复时，有时需要主动拉前台并闪烁提醒
 	sys.FocusMainWindowAndFlashTwiceWin32Only()
 
 	a.setWindowVisible(true)
@@ -120,7 +118,6 @@ func NewApp() *App {
 func (a *App) runStartupRuntimeAssetMaintenance(ctx context.Context) {
 	runtimeassets.MigrateLegacyAssets()
 
-	// 第一阶段：必须修好 core + wintun
 	coreStatus, coreErr := runtimeassets.EnsureReady(ctx, runtimeassets.RequireTun, runtimeassets.RepairInvalid)
 	if coreErr != nil {
 		logger.Errorf("самовосстановление основных компонентов не удалось: %v", coreErr)
@@ -131,7 +128,6 @@ func (a *App) runStartupRuntimeAssetMaintenance(ctx context.Context) {
 		}
 	}
 
-	// 第二阶段：尝试修 geo，失败不影响应用启动
 	geoStatus, geoErr := runtimeassets.EnsureReady(ctx, runtimeassets.RequireGeoOnly, runtimeassets.RepairMissingOnly)
 	if geoErr != nil {
 		logger.Warnf("самовосстановление Geo-данных не удалось, будет добито онлайн-обновлением позже: %v", geoErr)
@@ -156,10 +152,8 @@ func (a *App) startup(ctx context.Context) {
 
 	a.runStartupRuntimeAssetMaintenance(ctx)
 
-	// 必须先加载订阅索引，再启动 appcore 的自动任务。
 	clash.LoadIndex()
 
-	// 执行规则存储从 V1 (_rules.json) 到 V2 (yaml/overlay) 的全量迁移
 	_ = clash.MigrateRuleStorageV2()
 
 	config := a.core.Behavior.Get()
@@ -189,7 +183,6 @@ func (a *App) shutdown(ctx context.Context) {
 		a.tray.Stop()
 	}
 
-	// 通知 Helper 服务自行退出（通过 Named Pipe，不需要管理员权限）
 	go func() {
 		client := sys.NewHelperClient()
 		_ = client.Shutdown()
@@ -209,8 +202,6 @@ func (a *App) shutdown(ctx context.Context) {
 	}
 }
 
-// --- AppState & Sync ---
-
 type AppState = appcore.AppState
 
 func (a *App) GetAppState() AppState {
@@ -218,7 +209,7 @@ func (a *App) GetAppState() AppState {
 }
 
 func (a *App) SyncState() {
-	// 内部会发送 app-state-sync、自动启停 traffic stream，以及通过 OnStateChange 同步托盘
+
 	a.core.SyncState()
 }
 
@@ -293,8 +284,6 @@ func (a *App) StopConnectionMonitor() {
 	a.core.StopConnectionMonitor()
 }
 
-// --- Toggles & Controls ---
-
 func (a *App) ToggleSystemProxy(enable bool) error {
 	ctx, cancel := context.WithTimeout(a.ctx, 15*time.Second)
 	defer cancel()
@@ -356,8 +345,6 @@ func (a *App) CloseConnection(id string) error {
 	return clash.CloseConnection(id)
 }
 
-// --- Subscriptions ---
-
 func (a *App) GetLocalConfigs() []clash.SubIndexItem {
 	return clash.ListSubIndex()
 }
@@ -366,9 +353,6 @@ func (a *App) UpdateSub(name, url string) error {
 	return a.core.UpdateSub(a.ctx, name, url)
 }
 
-// AddSubViaDNS получает подписку через DNS TXT-запись домена: в TXT лежит либо ссылка
-// на подписку (http/https), либо inline-конфиг (обычно base64 YAML). Резолв идёт через DoH,
-// поэтому работает даже когда провайдер портит обычный DNS или блокирует URL подписки.
 func (a *App) AddSubViaDNS(domain, name string) (string, error) {
 	content, err := clash.ResolveConfigViaDNS(a.ctx, domain)
 	if err != nil {
@@ -379,7 +363,6 @@ func (a *App) AddSubViaDNS(domain, name string) (string, error) {
 		return "", fmt.Errorf("TXT-запись пуста")
 	}
 
-	// Вариант 1: в TXT лежит ссылка на подписку.
 	if strings.HasPrefix(content, "http://") || strings.HasPrefix(content, "https://") {
 		if err := a.core.UpdateSub(a.ctx, name, content); err != nil {
 			return "", err
@@ -387,7 +370,6 @@ func (a *App) AddSubViaDNS(domain, name string) (string, error) {
 		return content, nil
 	}
 
-	// Вариант 2: inline-конфиг. Пробуем base64, иначе берём как есть.
 	raw := []byte(content)
 	trimmed := strings.TrimPrefix(content, "base64:")
 	if dec, decErr := base64.StdEncoding.DecodeString(strings.TrimSpace(trimmed)); decErr == nil && len(dec) > 0 {
@@ -417,17 +399,13 @@ func (a *App) AddSubViaDNS(domain, name string) (string, error) {
 	return id, nil
 }
 
-// --- Smart-ядро (опциональная докачка форк-ядра vernesong) ---
-
 func (a *App) IsSmartCore() bool {
 	return clash.IsSmartCoreActive()
 }
 
-// InstallSmartCore скачивает и ставит смарт-ядро, подменяя стоковое. Ядро на время подмены
-// останавливается; затем перезапускается, если было запущено.
 func (a *App) InstallSmartCore() error {
 	wasRunning := a.core.GetAppState().IsRunning
-	a.core.StopCoreProcess() // освобождаем clash.exe от блокировки
+	a.core.StopCoreProcess()
 	if err := clash.InstallSmartCore(a.ctx); err != nil {
 		if wasRunning {
 			_ = a.core.RestartCoreWithReason(a.ctx, "smart-core-install-failed")
@@ -441,7 +419,6 @@ func (a *App) InstallSmartCore() error {
 	return nil
 }
 
-// RemoveSmartCore возвращает стоковое ядро.
 func (a *App) RemoveSmartCore() error {
 	wasRunning := a.core.GetAppState().IsRunning
 	a.core.StopCoreProcess()
@@ -458,12 +435,10 @@ func (a *App) RemoveSmartCore() error {
 	return nil
 }
 
-// GetSmartRoute — включён ли режим «весь прокси-трафик через Смарт» (для Про/по правилам).
 func (a *App) GetSmartRoute() bool {
 	return clash.IsSmartRouteActive()
 }
 
-// SetSmartRoute сохраняет флаг и перезапускает ядро (если запущено), чтобы правила перегенерились.
 func (a *App) SetSmartRoute(active bool) error {
 	if err := clash.SetSmartRouteActive(active); err != nil {
 		return err
@@ -481,8 +456,6 @@ func (a *App) UpdateSingleSub(id string) error {
 func (a *App) UpdateAllSubsAsync() {
 	a.core.UpdateAllSubsAsync(a.ctx)
 }
-
-// --- Traffic & Logs ---
 
 func (a *App) StartStreamingLogs() {
 	a.core.StartLogStream(a.ctx)
@@ -503,8 +476,6 @@ func (a *App) ClearLogs() {
 func (a *App) ResetTrafficTotals() {
 	a.core.ResetTrafficTotals()
 }
-
-// --- Behavior & Theme ---
 
 type AppBehavior = appcore.AppBehavior
 
@@ -554,8 +525,6 @@ func (a *App) SaveThemePreference(isDark bool) {
 	a.SyncState()
 }
 
-// --- System Tools ---
-
 func (a *App) GetStartupTaskInfo() (sys.StartupTaskInfo, error) {
 	return sys.CheckStartupTask()
 }
@@ -568,14 +537,10 @@ func (a *App) RepairStartupTask() error {
 	return sys.CreateStartupTask(exePath)
 }
 
-// --- Helper Service Management ---
-
-// GetHelperServiceStatus 返回后台服务状态
 func (a *App) GetHelperServiceStatus() sys.HelperStatusData {
 	return sys.CheckHelperService()
 }
 
-// InstallHelperService 安装后台服务（需要 UAC 提权）
 func (a *App) InstallHelperService() error {
 	exePath := filepath.Join(utils.GetAppDir(), "GoclashZHelper.exe")
 	if _, err := os.Stat(exePath); err != nil {
@@ -597,7 +562,6 @@ func (a *App) InstallHelperService() error {
 	return sys.RecoverHelperServiceForUser(exePath, sid)
 }
 
-// UninstallHelperService 卸载后台服务（需要 UAC 提权）
 func (a *App) UninstallHelperService() error {
 	if !sys.CheckAdmin() {
 		return sys.RunElevatedWithArgsWait("--uninstall-helper")
@@ -605,7 +569,6 @@ func (a *App) UninstallHelperService() error {
 	return sys.UninstallHelperService()
 }
 
-// RestartHelperService 重启后台服务（需要 UAC 提权）
 func (a *App) RestartHelperService() error {
 	if !sys.CheckAdmin() {
 		return sys.RunElevatedWithArgsWait("--restart-helper")
@@ -620,7 +583,6 @@ func (a *App) RestartHelperService() error {
 func (a *App) GetDataDirInfo() sys.DataDirInfo {
 	info := sys.GetDataDirInfo()
 
-	// 用 runtimeassets 唯一权威状态覆盖 stat 判断
 	status := runtimeassets.GetStatus(context.Background())
 	if core, ok := status.Assets[runtimeassets.AssetCore]; ok {
 		info.CoreExists = core.Exists
@@ -634,7 +596,6 @@ func (a *App) GetDataDirInfo() sys.DataDirInfo {
 	}
 	info.LayoutOK = info.CoreExists
 
-	// seed 目录真实文件状态
 	seedStatus := runtimeassets.GetSeedCatalogStatus(context.Background())
 	info.SeedManifestOK = seedStatus.ManifestOK
 	info.SeedManifestError = seedStatus.ManifestError
@@ -655,7 +616,6 @@ func (a *App) GetDataDirInfo() sys.DataDirInfo {
 		}
 	}
 
-	// 自动修复能力判断
 	info.CanAutoRepairCore = info.SeedCoreReady && !info.CoreReady
 	info.CanAutoRepairWintun = info.SeedWintunReady && !info.WintunReady
 
@@ -679,7 +639,6 @@ func mimeForExt(ext string) string {
 	}
 }
 
-// sanitizeCardKey оставляет только буквы/цифры — защита от path traversal в имени файла.
 func sanitizeCardKey(key string) string {
 	var b strings.Builder
 	for _, r := range key {
@@ -702,7 +661,6 @@ func fileToDataURL(path string) string {
 	return "data:" + mimeForExt(filepath.Ext(path)) + ";base64," + base64.StdEncoding.EncodeToString(data)
 }
 
-// SetCardBg открывает диалог выбора картинки и сохраняет её как фон конкретной карточки (по key).
 func (a *App) SetCardBg(key string) (string, error) {
 	key = sanitizeCardKey(key)
 	if key == "" {
@@ -724,7 +682,7 @@ func (a *App) SetCardBg(key string) (string, error) {
 	if len(data) > 6*1024*1024 {
 		return "", fmt.Errorf("файл больше 6 МБ — выберите картинку поменьше")
 	}
-	// удаляем прежний фон этой карточки (любое расширение)
+
 	if old, _ := filepath.Glob(cardBgGlob(key)); old != nil {
 		for _, f := range old {
 			_ = os.Remove(f)
@@ -741,13 +699,12 @@ func (a *App) SetCardBg(key string) (string, error) {
 	return "data:" + mimeForExt(ext) + ";base64," + base64.StdEncoding.EncodeToString(data), nil
 }
 
-// GetCardBgs возвращает все сохранённые фоны карточек: {key: data-URI}.
 func (a *App) GetCardBgs() map[string]string {
 	out := map[string]string{}
 	matches, _ := filepath.Glob(filepath.Join(utils.GetDataDir(), "cardbg_*.*"))
 	for _, f := range matches {
 		base := filepath.Base(f)
-		name := strings.TrimSuffix(base, filepath.Ext(base)) // cardbg_<key>
+		name := strings.TrimSuffix(base, filepath.Ext(base))
 		key := strings.TrimPrefix(name, "cardbg_")
 		if key != "" {
 			if url := fileToDataURL(f); url != "" {
@@ -758,7 +715,6 @@ func (a *App) GetCardBgs() map[string]string {
 	return out
 }
 
-// ClearCardBg удаляет фон конкретной карточки.
 func (a *App) ClearCardBg(key string) error {
 	matches, _ := filepath.Glob(cardBgGlob(key))
 	for _, f := range matches {
@@ -767,9 +723,6 @@ func (a *App) ClearCardBg(key string) error {
 	return nil
 }
 
-// --- Галерея личных фонов (сохранённые пользователем картинки для повторного применения) ---
-
-// GalleryItem — сохранённая картинка галереи.
 type GalleryItem struct {
 	ID      string `json:"id"`
 	DataURL string `json:"dataUrl"`
@@ -777,10 +730,9 @@ type GalleryItem struct {
 
 func galleryDir() string { return filepath.Join(utils.GetDataDir(), "gallery") }
 
-// GetGallery возвращает все сохранённые фоны (id + data-URI), отсортированные по времени (новые сверху).
 func (a *App) GetGallery() []GalleryItem {
 	matches, _ := filepath.Glob(filepath.Join(galleryDir(), "*.*"))
-	// новые файлы (больший unixnano в имени) — вперёд
+
 	sort.Slice(matches, func(i, j int) bool { return matches[i] > matches[j] })
 	out := make([]GalleryItem, 0, len(matches))
 	for _, f := range matches {
@@ -808,7 +760,6 @@ func (a *App) saveBytesToGallery(data []byte, ext string) error {
 	return utils.WriteFileAtomic(dest, data, 0644)
 }
 
-// AddToGallery открывает диалог выбора картинки и добавляет её в галерею; возвращает обновлённую галерею.
 func (a *App) AddToGallery() ([]GalleryItem, error) {
 	path, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
 		Title: "Добавить фон в галерею",
@@ -832,7 +783,6 @@ func (a *App) AddToGallery() ([]GalleryItem, error) {
 	return a.GetGallery(), nil
 }
 
-// SaveCardToGallery сохраняет текущую картинку карточки в галерею; возвращает обновлённую галерею.
 func (a *App) SaveCardToGallery(key string) ([]GalleryItem, error) {
 	matches, _ := filepath.Glob(cardBgGlob(key))
 	if len(matches) == 0 {
@@ -848,10 +798,9 @@ func (a *App) SaveCardToGallery(key string) ([]GalleryItem, error) {
 	return a.GetGallery(), nil
 }
 
-// ApplyGalleryToCard применяет фон из галереи (по id) к карточке; возвращает data-URI.
 func (a *App) ApplyGalleryToCard(cardKey, galleryID string) (string, error) {
 	cardKey = sanitizeCardKey(cardKey)
-	galleryID = sanitizeCardKey(galleryID) // id — это unixnano, только цифры
+	galleryID = sanitizeCardKey(galleryID)
 	if cardKey == "" || galleryID == "" {
 		return "", fmt.Errorf("некорректные параметры")
 	}
@@ -863,7 +812,7 @@ func (a *App) ApplyGalleryToCard(cardKey, galleryID string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	// удаляем прежний фон карточки и кладём новый
+
 	if old, _ := filepath.Glob(cardBgGlob(cardKey)); old != nil {
 		for _, f := range old {
 			_ = os.Remove(f)
@@ -877,7 +826,6 @@ func (a *App) ApplyGalleryToCard(cardKey, galleryID string) (string, error) {
 	return "data:" + mimeForExt(ext) + ";base64," + base64.StdEncoding.EncodeToString(data), nil
 }
 
-// DeleteFromGallery удаляет фон из галереи по id; возвращает обновлённую галерею.
 func (a *App) DeleteFromGallery(galleryID string) []GalleryItem {
 	galleryID = sanitizeCardKey(galleryID)
 	matches, _ := filepath.Glob(filepath.Join(galleryDir(), galleryID+".*"))
@@ -951,8 +899,6 @@ func (a *App) SaveUwpExemptions(sids []string) error {
 	return sys.SaveUwpExemptions(sids)
 }
 
-// --- Config Management ---
-
 func (a *App) GetDNSConfig() (*clash.DNSConfig, error) {
 	return clash.GetDNSConfig()
 }
@@ -1019,8 +965,6 @@ func (a *App) StartClash(id string) error {
 	return nil
 }
 
-// --- Extra Utilities ---
-
 func (a *App) GetCoreVersion() string {
 	status := runtimeassets.GetStatus(a.ctx)
 	core := status.Assets[runtimeassets.AssetCore]
@@ -1049,7 +993,6 @@ func (a *App) GetProxyDelay(proxyName, testUrl string) (int, error) {
 	return clash.GetProxyDelay(a.ctx, proxyName, testUrl, 8000)
 }
 
-// Deprecated: use new AddRule/DeleteRule/SaveRuleSection
 func (a *App) GetCustomRules(id string) ([]string, error) {
 	data, err := a.GetRulePageData(id)
 	if err != nil {
@@ -1058,7 +1001,6 @@ func (a *App) GetCustomRules(id string) ([]string, error) {
 	return data.EffectiveRules, nil
 }
 
-// Deprecated: use new AddRule/DeleteRule/SaveRuleSection
 func (a *App) SaveCustomRules(id string, rules []string) error {
 	item, _ := clash.FindSubIndexByID(id)
 	if item.Type == "remote" {
@@ -1067,12 +1009,9 @@ func (a *App) SaveCustomRules(id string, rules []string) error {
 	return a.SaveRuleSection(id, "local", rules)
 }
 
-// Deprecated: no longer needed in V2 rule engine
 func (a *App) SyncRules(id string) error {
 	return fmt.Errorf("функция синхронизации правил устарела")
 }
-
-// --- Rule V2 API ---
 
 func (a *App) GetRulePageData(id string) (clash.RulePageData, error) {
 	var res clash.RulePageData
@@ -1095,7 +1034,6 @@ func (a *App) GetRulePageData(id string) (clash.RulePageData, error) {
 			return nil
 		}
 
-		// Remote
 		overlay, err := clash.LoadRuleOverlay(id)
 		if err != nil {
 			return err
@@ -1205,7 +1143,7 @@ func (a *App) DeleteRule(id string, section string, index int) error {
 		}
 
 		if section == "subscription" {
-			// Moving from subscription to overlay.delete
+
 			root, err := clash.ReadWorkingRootWithRecovery(id)
 			if err != nil {
 				return err
@@ -1217,7 +1155,6 @@ func (a *App) DeleteRule(id string, section string, index int) error {
 				return err
 			}
 
-			// Get visible base rules
 			visibleRules := clash.ApplyDeleteOnly(workingRules, overlay.Delete)
 
 			if index >= 0 && index < len(visibleRules) {
@@ -1289,14 +1226,10 @@ func (a *App) SaveRuleSection(id string, section string, rules []string) error {
 	})
 }
 
-// --- App routing (маршрутизация по приложениям) ---
-
-// ListInstalledApps сканирует установленные приложения (ярлыки меню Пуск).
 func (a *App) ListInstalledApps() ([]sys.AppInfo, error) {
 	return sys.ListInstalledApps()
 }
 
-// SelectAppExe открывает диалог выбора .exe вручную и возвращает AppInfo.
 func (a *App) SelectAppExe() (sys.AppInfo, error) {
 	path, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
 		Title: "Выберите приложение",
@@ -1310,12 +1243,10 @@ func (a *App) SelectAppExe() (sys.AppInfo, error) {
 	return sys.AppInfoForExe(path), nil
 }
 
-// GetAppRouting возвращает текущую настройку маршрутизации по приложениям для конфигурации.
 func (a *App) GetAppRouting(id string) (clash.AppRouting, error) {
 	return clash.LoadAppRouting(id)
 }
 
-// SetAppRouting сохраняет настройку и, если конфигурация активна и запущена, перезапускает ядро.
 func (a *App) SetAppRouting(id string, mode string, apps []string) error {
 	if err := clash.SaveAppRouting(id, clash.AppRouting{Mode: mode, Apps: apps}); err != nil {
 		return err
@@ -1390,8 +1321,6 @@ func (a *App) GetAppVersion() string {
 	return version.AppVersion
 }
 
-// --- Delay Test ---
-
 func (a *App) TestAllProxies(nodeNames []string) {
 	go a.core.Delay.TestAllProxies(a.ctx, nodeNames)
 }
@@ -1401,8 +1330,6 @@ func (a *App) TestProxy(name string) (int, error) {
 	defer cancel()
 	return a.core.Delay.TestProxy(ctx, name)
 }
-
-// --- Updates (Core & App) ---
 
 func (a *App) UpdateCoreComponentAsync() {
 	a.core.UpdateCoreComponentAsync(a.ctx)
@@ -1420,7 +1347,6 @@ func (a *App) UpdateAllGeoDatabasesAsync() {
 	a.core.UpdateAllGeoDatabasesAsync(a.ctx)
 }
 
-// ClearFinishedUpdateTasks clears completed, failed, or cancelled tasks
 func (a *App) ClearFinishedUpdateTasks() {
 	if a.core != nil && a.core.UpdateTasks != nil {
 		a.core.UpdateTasks.ClearFinished()
@@ -1458,31 +1384,25 @@ func (a *App) ApplyAppUpdate(path string) error {
 		return fmt.Errorf("пакет обновления не найден: %v", err)
 	}
 
-	// 标记：下次启动后清理这个安装包
 	if err := markAppliedUpdateForCleanup(path); err != nil {
 		logger.Errorf("не удалось записать маркер очистки обновления: %v", err)
 	}
 
-	// 停止托盘，避免安装期间继续触发操作
 	if a.tray != nil {
 		a.tray.Stop()
 	}
 
-	// 停止内核与流量流
 	if a.core != nil {
 		a.core.StopTrafficStream()
 		a.core.StopCoreService()
 	}
 
-	// 兜底清理系统代理
 	sys.ClearOwnedSystemProxy()
 
-	// 启动安装包
 	if err := sys.ShellOpen(path); err != nil {
 		return fmt.Errorf("не удалось запустить установщик: %v", err)
 	}
 
-	// 退出当前程序，让安装程序接管
 	runtime.Quit(a.ctx)
 	return nil
 }
@@ -1525,8 +1445,6 @@ func removeEmptyDir(path string) error {
 	}
 	return nil
 }
-
-// --- Backup ---
 
 func (a *App) ExportBackup() (string, error) {
 	savePath, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
@@ -1603,7 +1521,6 @@ func (a *App) safeQuit() {
 		}
 	}()
 
-	// 强制退出兜底：8秒后强制结束进程
 	go func() {
 		time.Sleep(8 * time.Second)
 		logger.Warnf("таймаут штатного выхода, принудительно завершаем процесс")

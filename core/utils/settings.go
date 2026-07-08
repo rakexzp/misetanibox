@@ -10,7 +10,6 @@ import (
 
 var settingsMu sync.Mutex
 
-// LoadSetting 泛型读取：优先 user -> 其次 default -> 兜底生成 default
 func LoadSetting[T any](fileName string, defaultData T) (*T, error) {
 	settingsMu.Lock()
 	defer settingsMu.Unlock()
@@ -21,34 +20,30 @@ func LoadSetting[T any](fileName string, defaultData T) (*T, error) {
 
 	result := defaultData
 
-	// 1. 尝试读取用户的自定义修改
 	if data, err := os.ReadFile(userPath); err == nil {
 		if json.Unmarshal(data, &result) == nil {
-			// 自动修补：将合并了默认值的完整结构重新写回硬盘，补齐缺失字段
+
 			patchedBytes, _ := json.MarshalIndent(result, "", "  ")
 			_ = WriteFileAtomic(userPath, patchedBytes, 0644)
 			return &result, nil
 		}
 	}
 
-	// 2. 尝试读取默认配置
 	if data, err := os.ReadFile(defaultPath); err == nil {
 		if json.Unmarshal(data, &result) == nil {
-			// 自动修补默认配置文件
+
 			patchedBytes, _ := json.MarshalIndent(result, "", "  ")
 			_ = WriteFileAtomic(defaultPath, patchedBytes, 0644)
 			return &result, nil
 		}
 	}
 
-	// 3. 都没找到，初始化默认配置文件 (只在第一次运行时触发)
 	defaultBytes, _ := json.MarshalIndent(defaultData, "", "  ")
 	_ = WriteFileAtomic(defaultPath, defaultBytes, 0644)
 
 	return &defaultData, nil
 }
 
-// SaveSetting 保存设置，永远只写入 user 文件中
 func SaveSetting[T any](fileName string, data *T) error {
 	settingsMu.Lock()
 	defer settingsMu.Unlock()
@@ -75,7 +70,6 @@ func SaveSetting[T any](fileName string, data *T) error {
 	return WriteFileAtomic(userPath, bytes, 0644)
 }
 
-// ResetSetting 恢复默认：直接删除 user 文件即可
 func ResetSetting(fileName string) {
 	settingsMu.Lock()
 	defer settingsMu.Unlock()

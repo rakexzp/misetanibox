@@ -4,7 +4,6 @@ import './style.css'
 import { initStore } from './store'
 import { EventsEmit } from '../wailsjs/runtime/runtime'
 
-// 拦截全局 console 输出，推送到统一日志流
 const setupConsoleInterception = () => {
   const originalConsole = {
     log: console.log,
@@ -28,7 +27,6 @@ const setupConsoleInterception = () => {
       if (typeof arg === 'object' && arg !== null) {
         try {
           const str = JSON.stringify(arg);
-          // 很多对象如 DOM 节点或带不可枚举属性的对象 stringify 会变成 '{}'
           return str === '{}' ? String(arg) : str;
         } catch (e) {
           return String(arg);

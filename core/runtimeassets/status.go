@@ -15,7 +15,6 @@ const (
 	RepairForce       RepairMode = "force"
 )
 
-// GetStatus 获取当前所有运行期组件资产的完整健康度状态
 func GetStatus(ctx context.Context) RuntimeAssetStatus {
 	assets := map[AssetKey]AssetHealth{
 		AssetCore:    CheckCore(ctx),
@@ -41,22 +40,18 @@ func GetStatus(ctx context.Context) RuntimeAssetStatus {
 	}
 }
 
-// EnsureReady 检查并尝试在资产状态不满足要求时，自动从只读种子库拉起覆盖修复
 func EnsureReady(ctx context.Context, req Requirement, mode RepairMode) (RuntimeAssetStatus, error) {
-	// 1. 获取当前最新状态
+
 	status := GetStatus(ctx)
 
-	// 2. 如果所需资产已经完全就绪，并且不处于 Force（强制覆盖）状态，则直接放行
 	if requirementSatisfied(status, req) && mode != RepairForce {
 		return status, nil
 	}
 
-	// 3. 从内置 seed 进行同步修复（只修当前场景需要的资产）
 	if err := RepairFromSeed(ctx, req, mode); err != nil {
 		return GetStatus(ctx), err
 	}
 
-	// 4. 同步完成后再次检测最新状态并评估
 	status = GetStatus(ctx)
 
 	if req.NeedCore && !status.CoreReady {

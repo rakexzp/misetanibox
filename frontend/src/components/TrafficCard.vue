@@ -23,8 +23,7 @@
     </div>
 
     <div class="wave-row">
-      <!-- 上传 -->
-      <div class="wave-col">
+            <div class="wave-col">
         <div class="wave-label-row">
           <span class="speed-label">Скорость отдачи</span>
           <strong class="speed-val">{{ traffic.up }}</strong>
@@ -37,8 +36,7 @@
         <span class="total-label">Всего {{ traffic.uploadTotal || '0 B' }}</span>
       </div>
 
-      <!-- 下载 -->
-      <div class="wave-col">
+            <div class="wave-col">
         <div class="wave-label-row">
           <span class="speed-label">Скорость загрузки</span>
           <strong class="speed-val">{{ traffic.down }}</strong>

@@ -9,7 +9,6 @@ import (
 	"time"
 )
 
-// 哨兵错误
 var (
 	ErrNoActiveConfig        = errors.New("no active config selected")
 	ErrHelperInstallRequired = errors.New("helper_install_required")
@@ -79,13 +78,12 @@ func (s *CoreSupervisor) Stop() {
 	}
 }
 
-// ReconcileAsync 异步触发 reconcile，使用独立 timeout ctx
 func (s *CoreSupervisor) ReconcileAsync(reason string) {
 	ctx, cancel := context.WithTimeout(s.ctx, 8*time.Second)
 	req := reconcileRequest{Reason: reason, Ctx: ctx}
 	select {
 	case s.reconcileCh <- req:
-		// cancel will be called by context timeout after 8s
+
 		_ = cancel
 	default:
 		cancel()
@@ -114,7 +112,6 @@ func (s *CoreSupervisor) loop() {
 	}
 }
 
-// Reconcile 执行状态调和，使用传入的操作级 ctx
 func (s *CoreSupervisor) Reconcile(ctx context.Context, reason string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -175,7 +172,6 @@ func (s *CoreSupervisor) buildRuntimePlan(desired DesiredState, _ AppBehavior, r
 		Reason:       reason,
 	}
 
-	// 检查是否需要重启（TUN 变化或配置变化）
 	appState := s.controller.GetAppState()
 	if appState.IsRunning && (desired.Tun != appState.Tun || desired.ActiveConfig != appState.ActiveConfig) {
 		plan.RestartRequired = true

@@ -19,10 +19,10 @@ import (
 )
 
 var (
-	coreVersionRe         = regexp.MustCompile(`v?\d+\.\d+\.\d+(?:[-+][^\s]+)?`)
-	coreVersionCache      string
-	coreVersionCacheTime  time.Time
-	coreVersionCacheMu    sync.Mutex
+	coreVersionRe        = regexp.MustCompile(`v?\d+\.\d+\.\d+(?:[-+][^\s]+)?`)
+	coreVersionCache     string
+	coreVersionCacheTime time.Time
+	coreVersionCacheMu   sync.Mutex
 )
 
 func CheckCore(ctx context.Context) AssetHealth {

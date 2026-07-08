@@ -70,7 +70,6 @@ func resolveAppDir() string {
 		dir = filepath.Dir(exePath)
 	}
 
-	// 兼容 Wails Dev 模式与 Go 临时目录
 	if strings.Contains(exePath, "go-build") ||
 		strings.Contains(os.TempDir(), dir) ||
 		strings.Contains(exePath, "wails-dev") {
@@ -80,7 +79,6 @@ func resolveAppDir() string {
 		}
 	}
 
-	// 兼容 build/bin 本地直接运行测试
 	if filepath.Base(dir) == "bin" && filepath.Base(filepath.Dir(dir)) == "build" {
 		dir = filepath.Dir(filepath.Dir(dir))
 	}
@@ -140,7 +138,6 @@ func parseDataDirArg() string {
 	return ""
 }
 
-// GetAppDir 返回程序所在目录 (只读)
 func GetAppDir() string {
 	return appDir
 }
@@ -165,13 +162,10 @@ func GetPidFilePath() string {
 	return filepath.Join(GetRuntimeDir(), "clash.pid")
 }
 
-// GetCoreBinDir 返回运行时 clash.exe 所在目录 (可写)
 func GetCoreBinDir() string {
 	return filepath.Join(dataDir, "core", "bin")
 }
 
-// GetLegacyDataCoreBinDir 返回旧的 clash.exe 所在目录 (只读，仅用于迁移)
-// 实际返回旧版 Roaming 路径下的 core/bin
 func GetLegacyDataCoreBinDir() string {
 	if legacyDataDir != "" {
 		return filepath.Join(legacyDataDir, "core", "bin")
@@ -179,32 +173,26 @@ func GetLegacyDataCoreBinDir() string {
 	return filepath.Join(dataDir, "core", "bin")
 }
 
-// GetDataDir 返回全局用户数据目录 (动态决定)
 func GetDataDir() string {
 	return dataDir
 }
 
-// GetLegacyDataDir 返回旧的 AppData 目录 (只读，仅用于迁移或诊断)
 func GetLegacyDataDir() string {
 	return legacyDataDir
 }
 
-// GetProfilesDir 返回存放 index.json 的目录
 func GetProfilesDir() string {
 	return filepath.Join(dataDir, "profiles")
 }
 
-// GetSubscriptionsDir 返回存放 YAML 和 Rules 文件的目录
 func GetSubscriptionsDir() string {
 	return filepath.Join(dataDir, "Subscriptions")
 }
 
-// GetSettingsDir 返回设置文件夹的绝对路径
 func GetSettingsDir() string {
 	return filepath.Join(dataDir, "Settings")
 }
 
-// SanitizeFilename 🛡️ 防御路径穿越：确保文件名不会逃逸出目标目录
 func SanitizeFilename(name string) (string, error) {
 	safe := filepath.Base(filepath.Clean(name))
 	if safe == "." || safe == "/" || safe == "\\" {
@@ -213,7 +201,6 @@ func SanitizeFilename(name string) (string, error) {
 	return safe, nil
 }
 
-// GetGlobalTheme 读取全局主题配置
 func GetGlobalTheme() string {
 	themeFile := filepath.Join(GetDataDir(), "theme_setting.txt")
 	if data, err := os.ReadFile(themeFile); err == nil {
@@ -222,13 +209,11 @@ func GetGlobalTheme() string {
 	return "dark"
 }
 
-// SaveGlobalTheme 保存全局主题配置
 func SaveGlobalTheme(theme string) error {
 	themeFile := filepath.Join(GetDataDir(), "theme_setting.txt")
 	return os.WriteFile(themeFile, []byte(theme), 0644)
 }
 
-// IsPackagedInstall 判断是否为安装包模式（非开发环境）
 func IsPackagedInstall() bool {
 	if _, err := os.Stat(filepath.Join(appDir, "install-profile.json")); err == nil {
 		return true

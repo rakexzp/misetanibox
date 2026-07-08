@@ -9,11 +9,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// ConfigTextResult 配置文本读取结果
 type ConfigTextResult struct {
 	ID      string `json:"id"`
 	Name    string `json:"name"`
-	Type    string `json:"type"` // local / remote / runtime
+	Type    string `json:"type"`
 	Content string `json:"content"`
 	Path    string `json:"path"`
 }
@@ -28,7 +27,6 @@ func resolveConfigType(id string) string {
 	return "local"
 }
 
-// ReadConfigText 读取配置文件文本内容
 func ReadConfigText(id string) (ConfigTextResult, error) {
 	normalizedID, configPath, err := ProfilePathByIDStrict(id)
 	if err != nil {
@@ -49,7 +47,6 @@ func ReadConfigText(id string) (ConfigTextResult, error) {
 	}, nil
 }
 
-// SaveConfigText 保存配置文件文本内容
 func SaveConfigText(id string, content string) error {
 	return WithRuleStorageLock(func() error {
 		item, _ := FindSubIndexByID(id)
@@ -96,7 +93,6 @@ func SaveConfigText(id string, content string) error {
 	})
 }
 
-// ValidateConfigText 校验 YAML 语法
 func ValidateConfigText(content string) error {
 	var root map[string]interface{}
 	if err := yaml.Unmarshal([]byte(content), &root); err != nil {
@@ -108,7 +104,6 @@ func ValidateConfigText(content string) error {
 	return nil
 }
 
-// GetConfigFilePath 获取配置文件路径
 func GetConfigFilePath(id string) string {
 	_, configPath, err := ProfilePathByIDStrict(id)
 	if err != nil {
@@ -117,7 +112,6 @@ func GetConfigFilePath(id string) string {
 	return configPath
 }
 
-// IsConfigEditable 判断配置是否可编辑
 func IsConfigEditable(id string) bool {
 	_, configPath, err := ProfilePathByIDStrict(id)
 	if err != nil {
@@ -130,7 +124,6 @@ func IsConfigEditable(id string) bool {
 func GetEditableConfigs() []ConfigTextResult {
 	var results []ConfigTextResult
 
-	// 订阅配置
 	items := ListSubIndex()
 	for _, item := range items {
 		if IsConfigEditable(item.ID) {

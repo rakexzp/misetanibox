@@ -6,9 +6,8 @@ import (
 	"goclashz/core/clash"
 )
 
-// SaveConfigText 保存配置文件文本，并在必要时触发重载与事件
 func (c *Controller) SaveConfigText(ctx context.Context, id string, content string) error {
-	// 调用底层无副作用的纯保存方法（已改为 Strict 路径）
+
 	if err := clash.SaveConfigText(id, content); err != nil {
 		return err
 	}

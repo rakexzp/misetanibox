@@ -142,7 +142,6 @@ const resetSlider = () => {
   sliderVisible.value = false;
   nextTick(() => {
     updateSlider();
-    // 强制触发一次重排，让浏览器“记住”此时无动画的起始位置
     if (tabsTrackRef.value) void tabsTrackRef.value.offsetHeight;
     
     requestAnimationFrame(() => {
@@ -156,7 +155,6 @@ watch(currentGroup, (v) => { if (v) localStorage.setItem('goclashz_proxyGroup', 
 watch(() => localGroups.value.length, () => { resetSlider(); });
 onMounted(() => resetSlider());
 onActivated(() => {
-  // Give browser time to restore DOM and scroll positions before re-enabling animation
   setTimeout(() => { sliderReady.value = true; }, 50);
 });
 onDeactivated(() => {
@@ -225,14 +223,11 @@ const filteredAndSortedNodes = computed(() => {
   return nodes;
 });
 
-// 计算当前要显示的组的数据
 const activeGroupData = computed(() => {
   return localGroups.value.find(g => g.name === currentGroup.value);
 });
 
-// 加载数据
 const loadData = async () => {
-  // 👇 新增：预加载配置以决定样式和保留逻辑
   try {
     const bh = await (API.GetAppBehavior as any)();
     if (bh) {
@@ -255,20 +250,16 @@ const loadData = async () => {
 
         const isGroupType = ['Selector', 'URLTest', 'Fallback', 'LoadBalance', 'Smart'].includes(item.type);
         const isSystemReserved = ['GLOBAL', 'DIRECT', 'REJECT'].includes(name);
-        // группы с hidden:true в конфиге не показываем (внутренние регион-группы и т.п.)
         const isHidden = item.hidden === true;
 
         if (isGroupType && !isSystemReserved && !isHidden) {
           const proxies = (item.all || []).map((memberName: string) => {
-            // 【核心修改】：同时去 data.proxies 和 data.groups 中查找节点详情
             const detail = (data.proxies && data.proxies[memberName]) || (data.groups && data.groups[memberName]);
             
             return {
               name: memberName,
-              // 如果找到了真实详情，就取它的 type (如 vless, hysteria2)，否则回退到 PROXY
               type: detail && detail.type ? detail.type.toUpperCase() : 'PROXY',
               now: item.now,
-              // 移除 delay: null, 交由 globalState.proxyDelays 全局接管
               testing: false
             };
           });
@@ -298,7 +289,6 @@ const isManuallySelectableGroup = (type: string) => {
   return ['Selector', 'Fallback'].includes(type);
 };
 
-// 选中节点
 const selectNode = async (groupName: string, nodeName: string) => {
   const targetGroup = localGroups.value.find(g => g.name === groupName);
   
@@ -309,11 +299,8 @@ const selectNode = async (groupName: string, nodeName: string) => {
   try {
     await API.SelectProxy(groupName, nodeName);
     
-    // 🚀 核心修复：以内核返回的真实 now 为准，不再本地乐观修改
-    // 重新拉取一次数据确保同步
     await loadData();
     
-    // 触发刷新出站 IP
     scheduleOutboundIPRefresh('node-switch', {
       force: true,
       delay: 1200,
@@ -325,11 +312,9 @@ const selectNode = async (groupName: string, nodeName: string) => {
   }
 };
 
-// 🎯 修复：增加对运行状态和配置变化的响应式刷新，打通离线态与运行态的数据源切换
 const stopRunningWatch = watch(
   () => globalState.isRunning,
   async (running) => {
-    // 只有当状态发生变化时才 reload，避免不必要的请求
     await loadData();
   }
 );
@@ -341,7 +326,6 @@ const stopActiveConfigWatch = watch(
   }
 );
 
-// 测速当前选中的组
 const testAllDelays = async () => {
   if (!activeGroupData.value || isTesting.value) return;
 
@@ -365,7 +349,6 @@ const testAllDelays = async () => {
   }
 };
 
-// 单点测速
 const testSingleDelay = async (node: any) => {
   if (node.testing || isTesting.value) return;
   
@@ -373,12 +356,8 @@ const testSingleDelay = async (node: any) => {
 
   try {
     await API.TestProxy(node.name);
-    // 🛡️ 核心修复：不再手动调用 updateProxyDelay
-    // 因为后端会通过 proxy-delay-update 事件发送归一化后的 leaf 和 group 派生结果
-    // 这样能确保主页面和组页面数据百分之百同步，且处理了嵌套组的派生逻辑
   } catch (e) {
     const msg = String(e);
-    // 🛡️ 核心修复：如果是 busy 状态（说明已在批量测速中），则静默退出，不要覆盖已有结果为 0
     if (msg.includes('DELAY_TEST_BUSY') || msg.includes('busy')) {
       return;
     }
@@ -393,7 +372,6 @@ const formatDelay = (delayInfo: any) => {
   if (!delayInfo) return '--';
   const { delay, status } = delayInfo;
   
-  // 🚀 核心优化：只要存在大于 0 的历史有效延迟，就优先展示数字，避免测速波动导致的结果瞬间消失
   if (delay > 0) return `${delay}ms`;
   
   if (status === 'timeout') return 'Таймаут';
@@ -401,7 +379,6 @@ const formatDelay = (delayInfo: any) => {
   return 'Ошибка';
 };
 
-// 👇 改写颜色计算逻辑
 const getDelayColorClass = (delayInfo: any) => {
   if (!delayInfo || delayInfo.delay === null) return isColorMode.value ? 'c-unknown' : 't-unknown';
   const { delay, status } = delayInfo;
@@ -414,7 +391,6 @@ const getDelayColorClass = (delayInfo: any) => {
 };
 
 onMounted(async () => {
-  // 🎯 接收并保存取消函数
   unsubStart = EventsOn("proxy-test-start", (nodeName: string) => {
     if (!localGroups.value) return;
     localGroups.value.forEach(g => {
@@ -426,7 +402,6 @@ onMounted(async () => {
     });
   });
 
-  // 接收到“结果”信号，仅负责关掉 UI 上的转圈动画
   unsubUpdate = EventsOn("proxy-delay-update", (data: any) => {
     if (!data || !localGroups.value) return;
     localGroups.value.forEach(g => {
@@ -445,7 +420,6 @@ onMounted(async () => {
   unsubFinish = (EventsOn as any)("proxy-test-finished", () => {
     isTesting.value = false;
     
-    // 🚀 核心修复：清理所有组内节点的转圈状态，防止长尾节点卡死
     localGroups.value.forEach(g => {
       if (!g.proxies) return;
       g.proxies.forEach((n: any) => {
@@ -454,12 +428,9 @@ onMounted(async () => {
     });
   });
 
-  // 🚀 新增：轻量化策略组状态同步，处理 Fallback/URLTest 的自动切换
   unsubProxyState = (EventsOn as any)("proxy-state-sync", async (states: any[]) => {
     if (!Array.isArray(states)) return;
 
-    // 🛡️ 核心优化：如果收到一个当前 UI 中不存在的组（可能是配置切换后的残余或新发现的组）
-    // 则执行全量 reload 以确保拓扑结构百分之百对齐
     const knownNames = new Set(localGroups.value.map(g => g.name));
     const hasUnknown = states.some((s: any) => s && s.name && !knownNames.has(s.name));
     if (hasUnknown) {
@@ -750,28 +721,24 @@ onUnmounted(() => {
   color: var(--accent-fg); 
 }
 
-/* 🎯 修复：保持字重一致，仅通过不透明度拉开深浅，避免黑色模式下字体显得过细 */
 .node-item.active .t-fast { color: var(--accent-fg) !important; opacity: 1; font-weight: 700; }
 .node-item.active .t-mid { color: var(--accent-fg) !important; opacity: 0.6; font-weight: 700; }
 .node-item.active .t-slow { color: var(--accent-fg) !important; opacity: 0.3; font-weight: 700; }
 .node-item.active .t-fail { color: var(--accent-fg) !important; opacity: 1; font-weight: 700; }
 .node-item.active .t-unknown { color: var(--accent-fg) !important; opacity: 0.3; font-weight: 700; }
 
-/* 确保选中节点（active）的图标完全不透明且使用反色（白色） */
 .node-item.active .ping-idle {
   color: var(--accent-fg) !important; /* 在日间模式选中时为白色 */
   opacity: 1 !important;
   transform: none !important;        /* 选中后禁止悬停缩放，保持静止 */
 }
 
-/* 彻底移除选中状态下延迟框的背景色块 */
 .node-item.active .n-latency-box,
 .node-item.active .n-latency-box:hover {
   background: transparent !important;
   transform: none !important;
 }
 
-/* 确保测速中的动画在选中态也是反色 */
 .node-item.active .scanner-track {
   stroke: var(--accent-fg) !important;
   stroke-opacity: 0.15; /* 🚀 核心：让底圈更浅、更通透 */
@@ -787,13 +754,9 @@ onUnmounted(() => {
 
 .node-meta { display: flex; align-items: center; }
 
-/* ================================ */
-/* 协议标签：精确视觉对齐方案          */
-/* ================================ */
 .n-protocol {
   font-size: 0.65rem; 
   font-weight: 800;
-  /* 修正圆角：从 Pill 形状改为 4px 小圆角，与 12px 的卡片外框形成视觉嵌套感 */
   border-radius: 4px; 
   padding: 1px 6px; 
   width: fit-content;
@@ -802,20 +765,14 @@ onUnmounted(() => {
   align-items: center;
 }
 
-/* 情况 1：未选中的节点卡片 */
-/* 照抄顶部“已选中的代理组 Tab”的高亮逻辑 */
 .node-item:not(.active) .n-protocol {
   background: var(--surface-panel); 
   color: var(--text-main);
 }
 
-/* 情况 2：已选中的节点卡片 (反色态) */
-/* 严格照抄 Overview.vue 中 .on .icon-ring 的夜间/激活模式处理逻辑 */
 .node-item.active .n-protocol { 
-  /* 这里的 rgba(128, 128, 128, 0.25) 是 Overview 中定义的标准半透明遮罩 */
   background: rgba(128, 128, 128, 0.25) !important; 
   color: var(--accent-fg) !important;
-  /* 确保完全没有边框或阴影干扰，保持通透感 */
   box-shadow: none; 
   border: none;
 }
@@ -875,9 +832,6 @@ onUnmounted(() => {
 }
 .idle-icon { width: 14px; height: 14px; }
 
-/* ================================ */
-/* 延迟颜色逻辑: 默认深浅 vs 绿黄红      */
-/* ================================ */
 .n-delay {
   display: flex;
   align-items: center;
@@ -886,20 +840,17 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
-/* 默认：三级深浅逻辑 */
 .t-fast { color: var(--text-main); font-weight: 700; }   /* 0-300ms 最深 */
 .t-mid { color: var(--text-sub); }                      /* 300-600ms 中等 */
 .t-slow { color: var(--text-muted); opacity: 0.7; }     /* >600ms 最浅 */
 .t-fail { color: var(--text-main); font-weight: 700; }  /* 超时 最深 */
 .t-unknown { color: var(--text-muted); }
 
-/* 彩色逻辑：必须加更高权重，防止被 .active 覆盖 */
 .c-fast { color: #10b981 !important; font-weight: 700; } /* 绿 */
 .c-mid { color: #f59e0b !important; font-weight: 700; }  /* 黄 */
 .c-slow { color: #ef4444 !important; font-weight: 700; } /* 红 */
 .c-fail { color: #ef4444 !important; font-weight: 800; } /* 红，加粗 */
 .c-unknown { color: var(--text-muted); }
-
 
 @keyframes rotate {
   100% { transform: rotate(360deg); }

@@ -17,6 +17,6 @@ func HideCommandWindow(cmd *exec.Cmd, extraFlags uint32) {
 	}
 
 	cmd.SysProcAttr.HideWindow = true
-	// CREATE_NO_WINDOW = 0x08000000
+
 	cmd.SysProcAttr.CreationFlags = 0x08000000 | extraFlags
 }

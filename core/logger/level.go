@@ -22,7 +22,7 @@ func NormalizeLevel(s string) string {
 	case "error", "fatal", "panic":
 		return "error"
 	default:
-		return "info" // unknown -> info
+		return "info"
 	}
 }
 

@@ -13,14 +13,12 @@ type WailsEventSink struct {
 	ctx context.Context
 }
 
-// SetContext sets the context for the event sink
 func (s *WailsEventSink) SetContext(ctx context.Context) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.ctx = ctx
 }
 
-// Emit 实现 EventSink 接口，带指针接收者和 nil 安全检查
 func (s *WailsEventSink) Emit(name string, args ...any) {
 	if s == nil {
 		return

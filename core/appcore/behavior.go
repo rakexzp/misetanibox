@@ -8,15 +8,15 @@ import (
 )
 
 type AppBehavior struct {
-	SilentStart        bool   `json:"silentStart"` // 静默启动 (不弹窗，直接进托盘)
-	CloseToTray        bool   `json:"closeToTray"` // 点击关闭时隐藏到托盘
-	ColorDelay         bool   `json:"colorDelay"`  // 显色彩色延迟数字
+	SilentStart        bool   `json:"silentStart"`
+	CloseToTray        bool   `json:"closeToTray"`
+	ColorDelay         bool   `json:"colorDelay"`
 	DelayRetention     bool   `json:"delayRetention"`
 	DelayRetentionTime string `json:"delayRetentionTime"`
-	LogLevel           string `json:"logLevel"`    // 日志等级
-	AppLogLevel        string `json:"appLogLevel"` // 软件日志等级
+	LogLevel           string `json:"logLevel"`
+	AppLogLevel        string `json:"appLogLevel"`
 	HideLogs           bool   `json:"hideLogs"`
-	SubUA              string `json:"subUA"` // 订阅更新 User-Agent
+	SubUA              string `json:"subUA"`
 
 	ActiveConfig string `json:"activeConfig"`
 	ActiveMode   string `json:"activeMode"`
@@ -26,23 +26,19 @@ type AppBehavior struct {
 	MmdbLink    string `json:"mmdbLink"`
 	AsnLink     string `json:"asnLink"`
 
-	AutoUpdate      bool   `json:"autoUpdate"`      // 是否开启自动更新
-	UpdateMethod    string `json:"updateMethod"`    // 检查更新方式: "startup" (每次启动) 或 "scheduled" (定时)
-	UpdateInterval  int    `json:"updateInterval"`  // 检查间隔时间 (天)
-	LastUpdateCheck int64  `json:"lastUpdateCheck"` // 上次检查更新的时间戳 (Unix秒)
+	AutoUpdate      bool   `json:"autoUpdate"`
+	UpdateMethod    string `json:"updateMethod"`
+	UpdateInterval  int    `json:"updateInterval"`
+	LastUpdateCheck int64  `json:"lastUpdateCheck"`
 
-	// 👇 新增：自动测速控制
 	AutoDelayTest         bool `json:"autoDelayTest"`
 	AutoDelayTestInterval int  `json:"autoDelayTestInterval"`
 
-	// 👇 新增：流量统计模式
 	ProxyTrafficOnly bool `json:"proxyTrafficOnly"`
 
-	// 👇 新增：开机自启 (Task Scheduler)
 	StartupWithOS    bool `json:"startupWithOS"`
 	RestoreOnStartup bool `json:"restoreOnStartup"`
 
-	// 👇 新增：长连接保护
 	LongConnectionProtection bool `json:"longConnectionProtection"`
 	DeferRestartWhenActive   bool `json:"deferRestartWhenActive"`
 	LongConnectionMinSeconds int  `json:"longConnectionMinSeconds"`
@@ -54,16 +50,16 @@ type BehaviorStore struct {
 }
 
 func NewBehaviorStore() *BehaviorStore {
-	// 1. 旧版本配置文件平滑迁移逻辑
+
 	oldPath := filepath.Join(utils.GetDataDir(), "behavior.json")
 	if _, err := os.Stat(oldPath); err == nil {
 		newPath := filepath.Join(utils.GetSettingsDir(), "user_behavior.json")
-		// 如果旧文件存在，且新文件不存在，则将其移动过去
+
 		if _, err := os.Stat(newPath); os.IsNotExist(err) {
 			_ = os.MkdirAll(utils.GetSettingsDir(), 0755)
 			_ = os.Rename(oldPath, newPath)
 		} else {
-			// 如果新文件已存在，直接删掉废弃的旧文件
+
 			_ = os.Remove(oldPath)
 		}
 	}
@@ -102,7 +98,6 @@ func (s *BehaviorStore) SetActiveConfig(id string) error {
 func (s *BehaviorStore) Load() error {
 	defaults := s.Default()
 
-	// 使用统一的 LoadSetting 机制 (注意这里传入指针)
 	cfg, err := utils.LoadSetting("behavior", defaults)
 	if err != nil {
 		s.mu.Lock()
@@ -122,7 +117,6 @@ func (s *BehaviorStore) Save() error {
 	cfg := s.cache
 	s.mu.RUnlock()
 
-	// 使用统一的 SaveSetting 机制
 	return utils.SaveSetting("behavior", &cfg)
 }
 
