@@ -42,3 +42,5 @@ build/bin/
 
 mobile/node_modules/
 mobile/android/
+
+mobile/core/mihomo.aar
