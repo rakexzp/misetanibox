@@ -488,6 +488,22 @@
           <div class="glass-card setting-group scrollable">
             <div class="setting-item">
               <div class="info">
+                <h4>Порт локального прокси (Mixed Port)</h4>
+                <p>SOCKS5 и HTTP на этом порту (127.0.0.1). По умолчанию 7890.</p>
+              </div>
+              <input
+                type="number" min="1" max="65535"
+                class="modern-input"
+                style="text-align: center; width: 110px; font-size: 0.95rem; padding: 10px 12px;"
+                v-model.number="netConfig.mixedPort"
+                @change="saveNet"
+                placeholder="7890"
+              />
+            </div>
+            <div class="divider"></div>
+
+            <div class="setting-item">
+              <div class="info">
                 <h4>Поддержка IPv6</h4>
                 <p>Ядро будет резолвить и обрабатывать IPv6. Без поддержки в сети возможны лаги.</p>
               </div>
@@ -1626,6 +1642,7 @@ const dnsConfig = ref<any>({
 });
 
 const netConfig = ref({
+  mixedPort: 7890,
   ipv6: false,
   allowLan: false,
   externalController: '127.0.0.1:9090',
