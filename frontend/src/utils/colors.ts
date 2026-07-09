@@ -28,17 +28,23 @@ function luminance(hex: string) {
 }
 function contrastFg(hex: string) { return luminance(hex) > 0.55 ? '#111111' : '#FFFFFF'; }
 
-// вывести все переменные интерфейса из трёх опорных цветов
+// осветлить/затемнить цвет (к белому если тёмный, к чёрному если светлый) — для оттенков фона
+function shade(hex: string, amt: number) {
+  return mix(hex, luminance(hex) < 0.5 ? '#FFFFFF' : '#000000', amt);
+}
+
+// вывести все переменные из трёх ОПОРНЫХ цветов, но независимо:
+// фон/поверхности — только из bg; буквы — только из text; акцент — сам по себе.
 export function derivePalette(c: CustomColors): Record<string, string> {
   const { accent, text, bg } = c;
   return {
     '--app-bg': bg,
-    '--surface-panel': mix(bg, text, 0.05),
-    '--surface': mix(bg, text, 0.09),
-    '--surface-hover': mix(bg, text, 0.14),
+    '--surface-panel': shade(bg, 0.06),
+    '--surface': shade(bg, 0.11),
+    '--surface-hover': shade(bg, 0.16),
     '--text-main': text,
-    '--text-sub': mix(text, bg, 0.42),
-    '--text-muted': mix(text, bg, 0.66),
+    '--text-sub': mix(text, bg, 0.40),
+    '--text-muted': mix(text, bg, 0.62),
     '--accent': accent,
     '--accent-fg': contrastFg(accent),
     '--status-online': accent,
