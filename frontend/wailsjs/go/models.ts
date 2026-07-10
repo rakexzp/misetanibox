@@ -334,6 +334,17 @@ export namespace appcore {
 
 export namespace clash {
 	
+	export class ProxyChain {
+	    name: string;
+	    nodes: string[];
+	    static createFrom(source: any = {}) { return new ProxyChain(source); }
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.nodes = source["nodes"];
+	    }
+	}
+	
 	export class AppRouting {
 	    mode: string;
 	    apps: string[];

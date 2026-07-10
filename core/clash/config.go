@@ -476,6 +476,7 @@ func BuildRuntimeConfig(id string, mode string, logLevel string, tunEnabled bool
 	}
 
 	injectSmartGroup(root)
+	injectChains(root)
 
 	if IsSmartCoreActive() && IsSmartRouteActive() {
 		rewriteRulesToSmart(root)

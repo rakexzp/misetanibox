@@ -892,6 +892,20 @@ func (a *App) WorkshopPublish(manifestJSON string, imagesDataURI []string) (stri
 }
 func (a *App) WorkshopFetchImage(url string) (string, error) { return workshop.FetchImage(url) }
 
+// --- Конструктор цепочек прокси (relay) ---
+
+func (a *App) GetProxyChains() []clash.ProxyChain { return clash.GetChains() }
+
+func (a *App) SaveProxyChains(chains []clash.ProxyChain) error {
+	if err := clash.SaveChains(chains); err != nil {
+		return err
+	}
+	if clash.IsRunning() {
+		return a.core.RestartCoreWithReason(a.ctx, "chains")
+	}
+	return nil
+}
+
 func (a *App) RepairDataDirPermission() error {
 	if !sys.CheckAdmin() {
 		return sys.RunElevatedWithArgsWait("--repair-permissions")

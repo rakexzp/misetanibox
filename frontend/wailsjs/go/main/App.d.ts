@@ -235,3 +235,5 @@ export function WorkshopReport(arg1:number,arg2:string):Promise<string>;
 export function WorkshopPublish(arg1:string,arg2:Array<string>):Promise<string>;
 export function WorkshopFetchImage(arg1:string):Promise<string>;
 export function SetCardBgData(arg1:string,arg2:string):Promise<string>;
+export function GetProxyChains():Promise<Array<clash.ProxyChain>>;
+export function SaveProxyChains(arg1:Array<clash.ProxyChain>):Promise<void>;

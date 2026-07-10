@@ -106,6 +106,10 @@
               </div>
             </div>
 
+            <div v-else-if="currentTab === 'chains'" key="chains" class="view-transition-wrapper">
+              <ChainBuilder />
+            </div>
+
             <div v-else-if="currentTab === 'workshop'" key="workshop" class="view-transition-wrapper">
               <Workshop />
             </div>
@@ -156,6 +160,7 @@ import Sidebar from './components/Sidebar.vue';
 import LiteApp from './components/LiteApp.vue';
 import Overview from './components/Overview.vue';
 import Workshop from './components/Workshop.vue';
+import ChainBuilder from './components/ChainBuilder.vue';
 import Proxies from './components/Proxies.vue';
 import Subscriptions from './components/Subscriptions.vue';
 import Connections from './components/Connections.vue';
@@ -305,6 +310,7 @@ let unsubUpdateError: (() => void) | null = null;
 const menu = [
   { id: 'home', label: 'Консоль', icon: ICONS.home },
   { id: 'proxies', label: 'Прокси-узлы', icon: ICONS.proxies },
+  { id: 'chains', label: 'Цепочки', icon: ICONS.connections },
   { id: 'connections', label: 'Соединения', icon: ICONS.connections },
   { id: 'logs', label: 'Журнал', icon: ICONS.logs },
   { id: 'rules', label: 'Правила', icon: ICONS.rules },

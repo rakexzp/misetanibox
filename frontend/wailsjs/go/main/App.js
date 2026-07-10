@@ -501,3 +501,11 @@ export function WorkshopFetchImage(arg1) {
 export function SetCardBgData(arg1, arg2) {
   return window['go']['main']['App']['SetCardBgData'](arg1, arg2);
 }
+
+export function GetProxyChains() {
+  return window['go']['main']['App']['GetProxyChains']();
+}
+
+export function SaveProxyChains(arg1) {
+  return window['go']['main']['App']['SaveProxyChains'](arg1);
+}
