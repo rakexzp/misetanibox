@@ -68,9 +68,24 @@ jobs:
           tar -czf Misetanibox_linux_amd64.tar.gz Misetanibox
           ls -la
 
-      - name: Upload artifact
+      - name: Build .deb and Arch package (nfpm)
+        run: |
+          set -e
+          go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
+          export PATH="$(go env GOPATH)/bin:$PATH"
+          export VERSION="${GITHUB_REF_NAME#linux-v}"
+          case "$VERSION" in ''|linux-*|*[!0-9.]*) VERSION="0.0.0" ;; esac
+          echo "package version: $VERSION"
+          nfpm package -f packaging/nfpm.yaml -p deb -t "dist/Misetanibox_${VERSION}_amd64.deb"
+          nfpm package -f packaging/nfpm.yaml -p archlinux -t "dist/Misetanibox_${VERSION}_x86_64.pkg.tar.zst"
+          ls -la dist/
+
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Misetanibox_linux_amd64
-          path: dist/Misetanibox_linux_amd64.tar.gz
+          path: |
+            dist/Misetanibox_linux_amd64.tar.gz
+            dist/*.deb
+            dist/*.pkg.tar.zst
           retention-days: 14

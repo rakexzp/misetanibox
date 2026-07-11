@@ -1,0 +1,44 @@
+name: misetanibox
+arch: amd64
+platform: linux
+version: ${VERSION}
+version_schema: none
+section: net
+priority: optional
+maintainer: rakexzp
+description: |
+  Misetanibox — VPN-клиент на ядре Mihomo (Clash Meta).
+  Русский интерфейс, TUN, подписки, цепочки прокси, каталог тем.
+vendor: rakexzp
+homepage: https://github.com/rakexzp/misetanibox
+license: MIT
+
+contents:
+  - src: ./build/bin/Misetanibox
+    dst: /opt/misetanibox/misetanibox
+    file_info:
+      mode: 0755
+  - src: ./build/linux/core/clash
+    dst: /opt/misetanibox/seed/core/bin/clash
+    file_info:
+      mode: 0755
+  - src: ./packaging/misetanibox.desktop
+    dst: /usr/share/applications/misetanibox.desktop
+  - src: ./build/appicon.png
+    dst: /usr/share/icons/hicolor/512x512/apps/misetanibox.png
+  - src: /opt/misetanibox/misetanibox
+    dst: /usr/bin/misetanibox
+    type: symlink
+
+overrides:
+  deb:
+    depends:
+      - libwebkit2gtk-4.1-0
+      - libgtk-3-0
+    recommends:
+      - policykit-1
+  archlinux:
+    depends:
+      - webkit2gtk-4.1
+      - gtk3
+      - polkit

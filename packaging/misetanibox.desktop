@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Misetanibox
+GenericName=VPN Client
+Comment=VPN-клиент на ядре Mihomo (Clash Meta)
+Exec=misetanibox
+Icon=misetanibox
+Terminal=false
+Type=Application
+Categories=Network;Utility;
+StartupWMClass=Misetanibox
