@@ -26,7 +26,7 @@ var (
 )
 
 func CheckCore(ctx context.Context) AssetHealth {
-	path := filepath.Join(utils.GetCoreBinDir(), "clash.exe")
+	path := filepath.Join(utils.GetCoreBinDir(), coreBinName)
 	return checkCoreByPath(ctx, path)
 }
 
@@ -51,10 +51,10 @@ func checkCoreByPath(ctx context.Context, path string) AssetHealth {
 	h.Size = info.Size()
 	h.ModTime = info.ModTime().Unix()
 
-	if err := utils.ValidateWindowsPE(path, 5*1024*1024, 300*1024*1024); err != nil {
+	if err := validateCoreBinary(path); err != nil {
 		h.ErrorCode = ErrInvalidPE
 		h.Error = err.Error()
-		h.Hint = "Текущий clash.exe повреждён или не является исполняемым файлом Windows amd64."
+		h.Hint = "Файл ядра повреждён или не является исполняемым файлом для текущей ОС."
 		return h
 	}
 
@@ -122,6 +122,13 @@ func readCoreVersion(path string) (string, error) {
 }
 
 func CheckWintun() AssetHealth {
+	if !wintunNeeded {
+		// на Linux/macOS wintun не требуется — считаем готовым
+		h := baseHealth(AssetWintun, "Wintun (не требуется на этой ОС)", "", true)
+		h.Valid = true
+		h.Ready = true
+		return h
+	}
 	path := filepath.Join(utils.GetCoreBinDir(), "wintun.dll")
 	return checkWintunByPath(path)
 }

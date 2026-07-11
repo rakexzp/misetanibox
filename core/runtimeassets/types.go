@@ -63,8 +63,8 @@ type Requirement struct {
 
 var (
 	RequireCoreOnly = Requirement{NeedCore: true}
-	RequireTun      = Requirement{NeedCore: true, NeedWintun: true}
-	RequireAll      = Requirement{NeedCore: true, NeedWintun: true, NeedGeo: true}
+	RequireTun      = Requirement{NeedCore: true, NeedWintun: wintunNeeded}
+	RequireAll      = Requirement{NeedCore: true, NeedWintun: wintunNeeded, NeedGeo: true}
 	RequireGeoOnly  = Requirement{NeedGeo: true}
 )
 

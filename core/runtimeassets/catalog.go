@@ -17,8 +17,8 @@ type RequiredAssetDef struct {
 }
 
 var RequiredAssets = []RequiredAssetDef{
-	{Key: AssetCore, Name: "clash.exe", Label: "Ядро Mihomo", Required: true},
-	{Key: AssetWintun, Name: "wintun.dll", Label: "DLL драйвера Wintun", Required: true},
+	{Key: AssetCore, Name: coreBinName, Label: "Ядро Mihomo", Required: true},
+	{Key: AssetWintun, Name: "wintun.dll", Label: "DLL драйвера Wintun", Required: wintunNeeded},
 	{Key: AssetGeoIP, Name: "geoip.metadb", Label: "GeoIP", Required: false},
 	{Key: AssetGeoSite, Name: "geosite.dat", Label: "GeoSite", Required: false},
 	{Key: AssetMMDB, Name: "country.mmdb", Label: "MMDB", Required: false},
@@ -188,8 +188,8 @@ func normalizeAssetName(s string) string {
 
 func canonicalAssetName(name string) string {
 	switch normalizeAssetName(name) {
-	case "clash.exe", "mihomo.exe", "mihomo-windows-amd64.exe":
-		return "clash.exe"
+	case "clash", "clash.exe", "mihomo", "mihomo.exe", "mihomo-windows-amd64.exe", "mihomo-linux-amd64", "mihomo-linux-amd64-compatible":
+		return coreBinName
 	case "wintun.dll":
 		return "wintun.dll"
 	case "geoip.metadb":
