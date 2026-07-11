@@ -34,7 +34,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             build-essential pkg-config \
-            libgtk-3-dev libwebkit2gtk-4.1-dev
+            libgtk-3-dev libwebkit2gtk-4.1-dev \
+            bubblewrap xdg-dbus-proxy
 
       - name: Install Wails CLI
         run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
@@ -105,12 +106,18 @@ jobs:
           cp build/linux/core/clash AppDir/usr/bin/seed/core/bin/clash
           chmod +x AppDir/usr/bin/misetanibox AppDir/usr/bin/seed/core/bin/clash
 
-          # вспомогательные процессы WebKit (иначе окно белое) + хук с путём
+          # вспомогательные процессы WebKit + bwrap (иначе "unable to spawn a new child process")
           WKDIR="/usr/lib/x86_64-linux-gnu/webkit2gtk-4.1"
           [ -d "$WKDIR" ] && cp -r "$WKDIR"/* AppDir/usr/lib/webkit2gtk-4.1/ || echo "no webkit libexec at $WKDIR"
-          cat > AppDir/apprun-hooks/webkit.sh <<'HOOK'
+          cp "$(command -v bwrap)" AppDir/usr/bin/ 2>/dev/null || echo "no bwrap"
+          cp "$(command -v xdg-dbus-proxy)" AppDir/usr/bin/ 2>/dev/null || echo "no dbus-proxy"
+          # хук сортируется после gtk-хука; отключаем песочницу webkit (в AppImage её не собрать)
+          cat > AppDir/apprun-hooks/zz-misebox-webkit.sh <<'HOOK'
           export WEBKIT_EXEC_PATH="${APPDIR}/usr/lib/webkit2gtk-4.1"
           export WEBKIT_DISABLE_COMPOSITING_MODE=1
+          export WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1
+          export WEBKIT_FORCE_SANDBOX=0
+          export PATH="${APPDIR}/usr/bin:${PATH}"
           HOOK
 
           export DEPLOY_GTK_VERSION=3
