@@ -80,6 +80,51 @@ jobs:
           nfpm package -f packaging/nfpm.yaml -p archlinux -t "dist/Misetanibox_${VERSION}_x86_64.pkg.tar.zst"
           ls -la dist/
 
+      - name: Build AppImage (single self-contained file)
+        run: |
+          set -e
+          export VERSION="${GITHUB_REF_NAME#linux-v}"
+          case "$VERSION" in ''|linux-*|*[!0-9.]*) VERSION="0.0.0" ;; esac
+          WS="$GITHUB_WORKSPACE"
+
+          # инструменты (извлекаем, т.к. в CI нет FUSE)
+          cd /tmp
+          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-gtk/releases/download/continuous/linuxdeploy-plugin-gtk.sh
+          wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-gtk.sh appimagetool-x86_64.AppImage
+          ./linuxdeploy-x86_64.AppImage --appimage-extract >/dev/null && mv squashfs-root ld
+          ./appimagetool-x86_64.AppImage --appimage-extract >/dev/null && mv squashfs-root ait
+          cp linuxdeploy-plugin-gtk.sh ld/usr/bin/ 2>/dev/null || cp linuxdeploy-plugin-gtk.sh ld/
+
+          # AppDir
+          cd "$WS"
+          rm -rf AppDir
+          mkdir -p AppDir/usr/bin/seed/core/bin AppDir/apprun-hooks AppDir/usr/lib/webkit2gtk-4.1
+          cp build/bin/Misetanibox AppDir/usr/bin/misetanibox
+          cp build/linux/core/clash AppDir/usr/bin/seed/core/bin/clash
+          chmod +x AppDir/usr/bin/misetanibox AppDir/usr/bin/seed/core/bin/clash
+
+          # вспомогательные процессы WebKit (иначе окно белое) + хук с путём
+          WKDIR="/usr/lib/x86_64-linux-gnu/webkit2gtk-4.1"
+          [ -d "$WKDIR" ] && cp -r "$WKDIR"/* AppDir/usr/lib/webkit2gtk-4.1/ || echo "no webkit libexec at $WKDIR"
+          cat > AppDir/apprun-hooks/webkit.sh <<'HOOK'
+          export WEBKIT_EXEC_PATH="${APPDIR}/usr/lib/webkit2gtk-4.1"
+          export WEBKIT_DISABLE_COMPOSITING_MODE=1
+          HOOK
+
+          export DEPLOY_GTK_VERSION=3
+          export PATH="/tmp/ld/usr/bin:$PATH"
+          /tmp/ld/AppRun --appdir AppDir \
+            -e AppDir/usr/bin/misetanibox \
+            -d packaging/misetanibox.desktop \
+            -i build/appicon.png --icon-filename misetanibox \
+            --plugin gtk
+
+          ARCH=x86_64 /tmp/ait/AppRun --no-appstream AppDir "dist/Misetanibox-${VERSION}-x86_64.AppImage"
+          chmod +x "dist/Misetanibox-${VERSION}-x86_64.AppImage"
+          ls -la dist/
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -88,4 +133,5 @@ jobs:
             dist/Misetanibox_linux_amd64.tar.gz
             dist/*.deb
             dist/*.pkg.tar.zst
+            dist/*.AppImage
           retention-days: 14
