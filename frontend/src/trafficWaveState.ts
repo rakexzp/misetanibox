@@ -2,8 +2,8 @@
 import { reactive } from 'vue';
 
 const WAVE = {
-  sampleIntervalMs: 900,
-  maxPoints: 96,
+  sampleIntervalMs: 2200,
+  maxPoints: 44,
 
   lowFlowCeil: 96 * 1024,
   lowFlowMaxRatio: 0.22,
@@ -122,20 +122,39 @@ const pushVisualSamples = () => {
   s.smoothedDownloadRatios = smoothSamples(s.downloadRatios);
 };
 
+// экономный режим анимаций — отключает волну целиком (localStorage mise_economy)
+function economyOn(): boolean {
+  try { return localStorage.getItem('mise_economy') === '1'; } catch { return false; }
+}
+
+// пересчёт нужен только когда есть подписчики, окно видимо и не эконом-режим —
+// иначе постоянная перерисовка зря грузит GPU (особенно в трее)
+function scheduleSampler() {
+  if (sampleTimer !== null) {
+    clearInterval(sampleTimer);
+    sampleTimer = null;
+  }
+  if (refCount <= 0) return;
+  if (typeof document !== 'undefined' && document.hidden) return;
+  if (economyOn()) return;
+  sampleTimer = window.setInterval(pushVisualSamples, WAVE.sampleIntervalMs);
+}
+
 export function startWaveSampling() {
   refCount++;
-  if (sampleTimer === null) {
-    sampleTimer = window.setInterval(pushVisualSamples, WAVE.sampleIntervalMs);
-  }
+  scheduleSampler();
 }
 
 export function stopWaveSampling() {
   refCount--;
-  if (refCount <= 0 && sampleTimer !== null) {
-    clearInterval(sampleTimer);
-    sampleTimer = null;
-    refCount = 0;
-  }
+  if (refCount < 0) refCount = 0;
+  scheduleSampler();
+}
+
+// на смену видимости (свернули в трей / вернули) и на смену эконом-режима
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', scheduleSampler);
+  window.addEventListener('mise-economy-change', scheduleSampler as EventListener);
 }
 
 export function updateLatestTraffic(upRaw: number, downRaw: number) {

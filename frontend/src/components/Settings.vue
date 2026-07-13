@@ -62,6 +62,16 @@
               <div class="info"><p>Цвета применяются поверх светлой/тёмной темы. Скоро — публикация в Мастерскую.</p></div>
               <button class="action-btn" @click="resetColors">Сбросить</button>
             </div>
+            <div class="setting-item">
+              <div class="info">
+                <h4>Экономный режим анимаций</h4>
+                <p>Отключает волну трафика и свечение орба — меньше нагрузки на видеокарту. Пригодится, если приложение греет GPU.</p>
+              </div>
+              <label class="modern-switch">
+                <input type="checkbox" :checked="economy" @change="toggleEconomy">
+                <span class="slider"></span>
+              </label>
+            </div>
           </div>
 
           <div class="glass-card setting-group">
@@ -1291,6 +1301,7 @@ import * as API from '../../wailsjs/go/main/App';
 import { BrowserOpenURL, EventsOn } from '../../wailsjs/runtime/runtime';
 import { showAlert, showConfirm, globalState, setUiMode } from '../store';
 import { getSavedColors, saveColors, type CustomColors } from '../utils/colors';
+import { economyEnabled, setEconomy } from '../utils/perf';
 import { formatBytes, formatSpeed, formatEtaTime, formatRelativeTime } from '../utils/format';
 import { ICONS } from '../utils/icons';
 import appLogo from '../assets/logo.ico';
@@ -1325,6 +1336,10 @@ const resetColors = () => {
   saveColors(null);
   Object.assign(colors, themeColorDefaults());
 };
+
+// экономный режим анимаций (меньше нагрузки на GPU)
+const economy = ref(economyEnabled());
+const toggleEconomy = () => { economy.value = !economy.value; setEconomy(economy.value); };
 
 const showResetConfirm = ref(false);
 const resetModule = ref('');

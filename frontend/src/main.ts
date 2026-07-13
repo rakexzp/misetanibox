@@ -3,6 +3,7 @@ import App from './App.vue'
 import './style.css'
 import { initStore } from './store'
 import { initColors } from './utils/colors'
+import { initPerf } from './utils/perf'
 import { EventsEmit } from '../wailsjs/runtime/runtime'
 
 const setupConsoleInterception = () => {
@@ -71,5 +72,6 @@ const setupConsoleInterception = () => {
 setupConsoleInterception();
 initStore(); // 启动全局监听
 initColors(); // применить пользовательскую покраску
+initPerf(); // экономия GPU: пауза анимаций в трее + эконом-режим
 
 createApp(App).mount('#app')

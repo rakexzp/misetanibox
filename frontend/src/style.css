@@ -175,6 +175,18 @@ textarea,
     -webkit-backdrop-filter: none !important;
 }
 
+/* Экономия GPU: окно свёрнуто/в трее — пауза всех непрерывных анимаций */
+body.is-hidden *,
+body.is-hidden *::before,
+body.is-hidden *::after {
+    animation-play-state: paused !important;
+}
+
+/* Экономный режим — убрать тяжёлый непрерывный глоу (волна отключается в JS) */
+body.economy .orb-glow {
+    display: none !important;
+}
+
 html,
 body,
 #app {
