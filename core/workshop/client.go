@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const BaseURL = "http://files.geodema.network/workshop/api"
+const BaseURL = "https://files.geodema.network/workshop/api"
 
 func client() *http.Client { return &http.Client{Timeout: 30 * time.Second} }
 

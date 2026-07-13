@@ -17,8 +17,8 @@ import (
 const (
 	smartCoreSettingKey = "smart_core"
 
-	smartMirrorZip   = "http://files.geodema.network/misetani/mihomo-smart-windows.zip"
-	smartMirrorModel = "http://files.geodema.network/misetani/Model.bin"
+	smartMirrorZip   = "https://files.geodema.network/misetani/mihomo-smart-windows.zip"
+	smartMirrorModel = "https://files.geodema.network/misetani/Model.bin"
 
 	smartGithubZip   = "https://github.com/vernesong/mihomo/releases/download/Prerelease-Alpha/mihomo-windows-amd64-compatible-alpha-smart-3e709f6.zip"
 	smartModelGithub = "https://github.com/vernesong/mihomo/releases/download/LightGBM-Model/Model.bin"

@@ -27,7 +27,7 @@ var strictVersionRe = regexp.MustCompile(`(?i)(?:^|[^0-9])v?(\d+\.\d+(?:\.\d+)?(
 
 func CheckAppUpdate(ctx context.Context, currentVersion string, strategy func() DownloadStrategy) (*AppUpdateInfo, error) {
 
-	apiURL := "http://files.geodema.network/misetani/update.json"
+	apiURL := "https://files.geodema.network/misetani/update.json"
 
 	clients := BuildOrderedClients(strategy, 60*time.Second)
 
