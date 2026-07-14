@@ -110,6 +110,7 @@ type Controller struct {
 	coreLifecycleMu   sync.Mutex
 	componentUpdateMu sync.Mutex
 	sysProxyActive    bool
+	lastSysProxyApply time.Time
 	tunActive         bool
 
 	autoTestQuit chan struct{}
@@ -717,13 +718,29 @@ func (c *Controller) reconcileSystemProxy(plan RuntimePlan) error {
 
 func (c *Controller) ensureSystemProxyEnabled() error {
 	port := clash.GetProxyPort()
+	target := fmt.Sprintf("127.0.0.1:%d", port)
 	current, err := sys.GetSystemProxyState()
-	if err == nil && current.Enabled && current.Server == fmt.Sprintf("127.0.0.1:%d", port) {
+
+	// Уже наш прокси стоит? Проверяем устойчиво (Contains, а не байт-в-байт ==) —
+	// per-connection WinINet API пишет ProxyServer не всегда точь-в-точь, и строгое ==
+	// приводило к переустановке прокси каждый тик watchdog'а (5с), а каждая переустановка
+	// шлёт INTERNET_OPTION_SETTINGS_CHANGED → приложения сбрасывают соединения («рвётся по дикому»).
+	if err == nil && current.Enabled && strings.Contains(current.Server, target) {
 		c.mu.Lock()
 		c.sysProxyActive = true
 		c.mu.Unlock()
 		return nil
 	}
+
+	// Дебаунс: не переустанавливать прокси чаще раза в 30с, даже если проверка не сошлась —
+	// защита от флапа, если реестр отдаёт нестандартный формат.
+	c.mu.Lock()
+	if c.sysProxyActive && time.Since(c.lastSysProxyApply) < 30*time.Second {
+		c.mu.Unlock()
+		return nil
+	}
+	c.lastSysProxyApply = time.Now()
+	c.mu.Unlock()
 
 	err = sys.EnableSystemProxy(
 		"127.0.0.1",
