@@ -61,10 +61,8 @@ func main() {
 		}
 	}()
 
-	// разгрузка GPU: отключить композитинг WebKit (не весь GPU), если включено в настройках
-	if v, err := utils.LoadSetting("gpu_saver", false); err == nil && v != nil && *v {
-		os.Setenv("WEBKIT_DISABLE_COMPOSITING_MODE", "1")
-	}
+	// На Linux Wails по умолчанию ставит WebviewGpuPolicyNever (GPU-ускорение вебвью выключено),
+	// так что отдельная разгрузка GPU не требуется — проблема нагрева актуальна для Windows.
 
 	exePath, _ := os.Executable()
 	isDebugMode := false

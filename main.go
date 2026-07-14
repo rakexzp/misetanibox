@@ -43,9 +43,12 @@ func main() {
 		}
 	}()
 
-	// разгрузка GPU: точечно отключить композитинг WebView2 (не весь GPU), если включено в настройках
-	if v, err := utils.LoadSetting("gpu_saver", false); err == nil && v != nil && *v {
-		os.Setenv("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", "--disable-gpu-compositing")
+	// разгрузка GPU: читаем настройку; применим через WebviewGpuIsDisabled ниже.
+	// (env WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS не годится — go-webview2 сам её перезатирает,
+	//  webviewloader/native_module.go:160; рабочий путь — опция Wails WebviewGpuIsDisabled)
+	gpuSaverOn := false
+	if v, err := utils.LoadSetting("gpu_saver", false); err == nil && v != nil {
+		gpuSaverOn = *v
 	}
 
 	exePath, _ := os.Executable()
@@ -228,8 +231,9 @@ func main() {
 			app,
 		},
 		Windows: &windows.Options{
-			Theme:             windows.SystemDefault,
-			DisableWindowIcon: false,
+			Theme:                windows.SystemDefault,
+			DisableWindowIcon:    false,
+			WebviewGpuIsDisabled: gpuSaverOn,
 		},
 	})
 
