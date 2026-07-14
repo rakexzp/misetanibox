@@ -1,16 +1,20 @@
 {
   "name": "misetanibox-mobile",
-  "version": "0.1.0",
+  "version": "1.6.0",
   "private": true,
+  "description": "Misetanibox Android — Capacitor + Mihomo TUN",
   "scripts": {
-    "cap:add": "cap add android",
-    "cap:sync": "cap sync android"
+    "cap:sync": "cap sync android",
+    "cap:copy": "cap copy android",
+    "cap:open": "cap open android"
   },
   "dependencies": {
-    "@capacitor/android": "^6.1.2",
-    "@capacitor/core": "^6.1.2"
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/status-bar": "^8.0.0"
   },
   "devDependencies": {
-    "@capacitor/cli": "^6.1.2"
+    "@capacitor/cli": "^8.0.0"
   }
 }

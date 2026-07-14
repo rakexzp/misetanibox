@@ -116,16 +116,19 @@
             <button class="lite-seg-btn" :class="{ active: addMode === 'dns' }" @click="addMode = 'dns'">Через DNS</button>
           </div>
 
-          <label class="lite-field-label">{{ addMode === 'dns' ? 'Домен (TXT-запись)' : 'Ссылка на подписку' }}</label>
+          <label class="lite-field-label">{{ addMode === 'dns' ? 'Домен (TXT-запись)' : 'Ссылка или путь к файлу' }}</label>
           <input
             v-model="subUrl"
             class="lite-input"
-            :placeholder="addMode === 'dns' ? 'sub.example.com' : 'https://...'"
+            :placeholder="addMode === 'dns' ? 'sub.example.com' : 'https://… или C:\\…\\sub.txt'"
             :disabled="adding"
             @keyup.enter="addSub"
           />
           <p v-if="addMode === 'dns'" class="lite-field-hint">
             Конфиг или ссылка берутся из DNS TXT-записи домена (через зашифрованный DNS) — обходит блокировку самого адреса подписки.
+          </p>
+          <p v-else class="lite-field-hint">
+            Можно вставить https-ссылку или путь к локальному .txt (внутри — URL подписки) / YAML Clash.
           </p>
           <label class="lite-field-label">Название (необязательно)</label>
           <input

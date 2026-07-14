@@ -1,21 +1,37 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# --- Capacitor / WebView bridge ---
+-keep class com.getcapacitor.** { *; }
+-keep class com.capacitorjs.** { *; }
+-dontwarn com.getcapacitor.**
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# --- Misetanibox app ---
+-keep class com.misetanibox.app.** { *; }
+-keep class com.misetanibox.app.**.** { *; }
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# CameraX / ML Kit barcode
+-keep class com.google.mlkit.** { *; }
+-keep class com.google.android.gms.internal.mlkit_vision_barcode.** { *; }
+-dontwarn com.google.mlkit.**
+-keep class androidx.camera.** { *; }
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# --- gomobile / mihomo native bridge ---
+-keep class mobilecore.** { *; }
+-keep class go.** { *; }
+-keepclassmembers class * {
+    native <methods>;
+}
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
+
+# --- Android / Kotlin ---
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
+-keep class kotlin.** { *; }
+-keep class kotlin.Metadata { *; }
+-dontwarn kotlin.**
+-dontwarn org.jetbrains.annotations.**
+
+# Keep enums
+-keepclassmembers enum * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+}

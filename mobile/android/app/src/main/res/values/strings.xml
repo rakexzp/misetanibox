@@ -2,6 +2,7 @@
 <resources>
     <string name="app_name">Misetanibox</string>
     <string name="title_activity_main">Misetanibox</string>
-    <string name="package_name">network.geodema.misetanibox</string>
-    <string name="custom_url_scheme">network.geodema.misetanibox</string>
+    <string name="package_name">com.misetanibox.app</string>
+    <string name="custom_url_scheme">com.misetanibox.app</string>
+    <string name="widget_description">Статус VPN и быстрое вкл/выкл</string>
 </resources>

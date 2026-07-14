@@ -23,7 +23,7 @@ html,body{height:100%}
 body{background:var(--bg);color:var(--fg);font-family:'Inter Tight',sans-serif;overflow:hidden}
 .app{display:flex;flex-direction:column;height:100dvh}
 .mono{font-family:'JetBrains Mono',monospace}
-.head{display:flex;align-items:center;justify-content:space-between;padding:10px 24px 0;flex:none}
+.head{display:flex;align-items:center;justify-content:space-between;padding:calc(10px + env(safe-area-inset-top,0px)) 24px 0;flex:none}
 .brand{display:flex;align-items:center;gap:9px}
 .brand img{width:22px;height:22px;border-radius:6px;border:1px solid var(--ln)}
 .brand-col{display:flex;flex-direction:column;gap:2px;line-height:1}
@@ -87,6 +87,11 @@ body{background:var(--bg);color:var(--fg);font-family:'Inter Tight',sans-serif;o
 .sub-seg-btn.active{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 .sub-modal-hint{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--mut);margin-top:12px}
 .sub-input{width:100%;margin-top:16px;padding:14px;background:transparent;border:1px solid var(--ln);border-radius:var(--rad);color:var(--fg);font-family:'JetBrains Mono',monospace;font-size:13px}
+.about-card{margin:12px 24px 24px;padding:18px;border:1px solid var(--ln);border-radius:var(--rad)}
+.about-card .line{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.06em;color:var(--dim);margin-top:10px;line-height:1.6}
+.about-card .line:first-child{margin-top:0;color:var(--fg);font-weight:700;font-size:14px;letter-spacing:.1em}
+.traf-rates{display:flex;gap:18px;margin-top:6px}
+.traf-rates span{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mut);letter-spacing:.06em}
 .sub-input:focus{outline:none;border-color:var(--fg)}
 .sub-modal-btns{display:flex;gap:10px;margin-top:16px}
 .sub-btn{flex:1;padding:14px;border-radius:var(--rad);font-weight:600;font-size:14px;cursor:pointer;border:1px solid var(--ln);background:transparent;color:var(--fg)}
@@ -94,18 +99,16 @@ body{background:var(--bg);color:var(--fg);font-family:'Inter Tight',sans-serif;o
 .list-note{padding:20px 24px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;color:var(--mut);line-height:1.7}
 .dbg{margin:12px 24px 0;padding:10px 12px;border:1px solid var(--ln);border-radius:var(--rad);font-family:'JetBrains Mono',monospace;font-size:9.5px;line-height:1.5;color:var(--dim);white-space:pre-wrap;word-break:break-word;max-height:120px;overflow:auto;display:none}
 .dbg.on{display:block}
-.back-row{display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:4px}
-.back-row .bk{font-size:22px;line-height:1;color:var(--mut)}
-.apps-search{width:100%;margin:14px 0 6px;padding:12px 14px;background:transparent;border:1px solid var(--ln);border-radius:var(--rad);color:var(--fg);font-family:'JetBrains Mono',monospace;font-size:13px}
-.apps-search:focus{outline:none;border-color:var(--fg)}
-.app-row{display:flex;align-items:center;gap:13px;padding:12px 4px;border-bottom:1px solid var(--ln);cursor:pointer}
-.app-mono{width:34px;height:34px;flex:none;border-radius:9px;background:var(--ln);color:var(--fg);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;text-transform:uppercase}
-.app-row .grow{min-width:0}
-.app-row .t{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.app-row .s{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.04em;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.chk{width:24px;height:24px;flex:none;border:1px solid var(--ln);border-radius:7px;display:flex;align-items:center;justify-content:center;color:transparent;font-size:15px;font-weight:900}
-.chk.on{background:var(--fg);border-color:var(--fg);color:var(--bg)}
-.split-off .app-list{opacity:.4;pointer-events:none}
+.home-actions{display:flex;flex-wrap:wrap;gap:8px;padding:16px 24px 0}
+.chip{flex:1;min-width:calc(50% - 4px);padding:11px 10px;border:1px solid var(--ln);border-radius:var(--rad);background:transparent;color:var(--fg);font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;cursor:pointer;text-align:center}
+.chip:active{background:var(--ln)}
+.ip-line{padding:10px 24px 0;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;color:var(--dim)}
+.ip-line b{color:var(--fg);font-weight:600}
+.app-check{width:22px;height:22px;border:1px solid var(--ln);border-radius:4px;flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--bg);background:transparent}
+.app-check.on{background:var(--fg);border-color:var(--fg)}
+.seg-mini{display:flex;gap:6px;padding:8px 24px 4px;flex-wrap:wrap}
+.seg-mini button{padding:8px 10px;border:1px solid var(--ln);border-radius:var(--rad);background:transparent;color:var(--mut);font-size:11px;font-weight:600;cursor:pointer}
+.seg-mini button.active{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 </style>
 </head>
 <body>
@@ -123,7 +126,7 @@ body{background:var(--bg);color:var(--fg);font-family:'Inter Tight',sans-serif;o
     </div>
     <div class="connect" id="connect" onclick="toggleConnect()">
       <div class="big" id="connect-big">ПОДКЛЮ-<br>ЧИТЬСЯ</div>
-      <div class="sub"><span>ТАП — ЗАПУСК ТУННЕЛЯ</span><span id="mode-lbl" onclick="event.stopPropagation();cycleMode()">ПРАВИЛА</span></div>
+      <div class="sub"><span>ТАП — ЗАПУСК · РЕЖИМ →</span><span id="mode-lbl" onclick="event.stopPropagation();cycleMode()">ПРАВИЛА</span></div>
     </div>
     <div id="dbg" class="dbg" onclick="copyDbg()"></div>
     <div class="server-blk" onclick="go('servers')">
@@ -135,65 +138,103 @@ body{background:var(--bg);color:var(--fg);font-family:'Inter Tight',sans-serif;o
     </div>
     <div class="sess">
       <div class="cell"><div class="k">СЕССИЯ</div><div class="v" id="sess-time">00:00</div></div>
-      <div class="cell" style="text-align:right"><div class="k">ТРАФИК</div><div class="v" id="sess-data">0 МБ</div></div>
+      <div class="cell" style="text-align:right"><div class="k">ТРАФИК</div><div class="v" id="sess-data">0 МБ</div>
+        <div class="traf-rates"><span id="rate-down">↓ 0</span><span id="rate-up">↑ 0</span></div>
+      </div>
     </div>
+    <div class="ip-line">IP · <b id="home-ip">—</b></div>
+    <div class="home-actions">
+      <button class="chip" type="button" onclick="event.stopPropagation();checkIp()">ПРОВЕРИТЬ IP</button>
+      <button class="chip" type="button" onclick="event.stopPropagation();reconnect()">ПЕРЕПОДКЛЮЧИТЬ</button>
+      <button class="chip" type="button" onclick="event.stopPropagation();resetStats()">СБРОС СТАТИСТИКИ</button>
+      <button class="chip" type="button" onclick="event.stopPropagation();go('servers')">СМЕНИТЬ СЕРВЕР</button>
+    </div>
+    <div class="sec-sub" style="padding-top:18px">АКТИВНЫЕ СОЕДИНЕНИЯ</div>
+    <div id="home-conns"><div class="list-note">Появятся после подключения VPN.</div></div>
   </div>
 
   <!-- СЕРВЕРЫ -->
   <div class="view hidden" id="view-servers">
     <div class="sec-title">Серверы</div>
     <div class="sec-sub" id="servers-sub">НЕ ПОДКЛЮЧЕНО</div>
+    <input id="servers-search" class="sub-input" style="margin:8px 24px;width:calc(100% - 48px)" type="search" placeholder="Поиск сервера…" oninput="filterServerList()" autocapitalize="off">
+    <div class="seg-mini">
+      <button type="button" id="sort-name" class="active" onclick="setServerSort('name')">Имя</button>
+      <button type="button" id="sort-ping" onclick="setServerSort('ping')">Пинг</button>
+      <button type="button" id="sort-fav" onclick="setServerSort('fav')">★ Избранное</button>
+    </div>
     <div id="server-list"></div>
   </div>
 
   <!-- ПОДПИСКИ -->
   <div class="view hidden" id="view-subs">
     <div class="sec-title">Подписки</div>
-    <div class="sec-sub">MIHOMO / CLASH</div>
-    <div class="row" id="subs-active" style="display:none" onclick="addSubscription()"><span class="flag" style="background:var(--ok)"></span><div class="grow"><div class="t">Моя подписка</div><div class="s">АКТИВНА · НАЖМИ ДЛЯ СМЕНЫ</div></div><span class="chev">›</span></div>
-    <div class="row" style="color:var(--dim)" onclick="addSubscription()"><div class="grow"><div class="t">+ Добавить подписку</div><div class="s">ССЫЛКА НА КОНФИГ</div></div></div>
+    <div class="sec-sub" id="subs-count">НЕСКОЛЬКО ССЫЛОК</div>
+    <div id="subs-list"></div>
+    <div class="row" style="color:var(--dim)" onclick="addSubscription()"><div class="grow"><div class="t">+ Добавить подписку</div><div class="s">HTTPS · DNS TXT · QR · БУФЕР</div></div></div>
+    <div class="row" onclick="importFromClipboard()"><div class="grow"><div class="t">Из буфера обмена</div><div class="s">ССЫЛКА ИЛИ КЛЮЧИ vless/ss/…</div></div><span class="chev">⧉</span></div>
+    <div class="row" onclick="importFromQr()"><div class="grow"><div class="t">Сканировать QR</div><div class="s">ВСТРОЕННАЯ КАМЕРА</div></div><span class="chev">▦</span></div>
+    <div class="row" onclick="refreshAllSubs()"><div class="grow"><div class="t">Обновить все</div><div class="s">ПЕРЕЗАГРУЗИТЬ СПИСКИ СЕРВЕРОВ</div></div><span class="chev">⟳</span></div>
   </div>
 
   <!-- ПРАВИЛА -->
   <div class="view hidden" id="view-rules">
     <div class="sec-title">Правила</div>
-    <div class="sec-sub" id="rules-sub">НЕ ПОДКЛЮЧЕНО</div>
+    <div class="sec-sub" id="rules-sub">РЕЖИМ · ГРУППЫ</div>
+    <div class="list-note" id="rules-mode-hint" style="padding-top:8px">Переключатель режима — на главной (тап «ПРАВИЛА / ГЛОБАЛЬНО»).</div>
+    <div id="rules-groups"></div>
     <div id="rules-list"></div>
+  </div>
+
+  <!-- ПРИЛОЖЕНИЯ (split tunneling) -->
+  <div class="view hidden" id="view-apps">
+    <div class="sec-title">Приложения</div>
+    <div class="sec-sub" id="apps-sub">SPLIT TUNNELING</div>
+    <div class="seg-mini">
+      <button type="button" id="split-all" class="active" onclick="setSplitMode('all')">Все</button>
+      <button type="button" id="split-exclude" onclick="setSplitMode('exclude')">Кроме выбранных</button>
+      <button type="button" id="split-include" onclick="setSplitMode('include')">Только выбранные</button>
+    </div>
+    <div class="list-note" id="split-hint">VPN для всех приложений (кроме Misetanibox).</div>
+    <div class="row"><div class="grow"><div class="t">Системные приложения</div><div class="s">ПОКАЗАТЬ / СКРЫТЬ</div></div><button class="toggle on" id="tog-sysapps" onclick="toggleSysApps(this)"></button></div>
+    <input id="apps-search" class="sub-input" style="margin:8px 24px;width:calc(100% - 48px)" type="search" placeholder="Поиск приложения…" oninput="filterAppList()" autocapitalize="off">
+    <div class="row" onclick="loadAppList(true)"><div class="grow"><div class="t">Обновить список</div><div class="s" id="apps-count">ВСЕ УСТАНОВЛЕННЫЕ</div></div><span class="chev">⟳</span></div>
+    <div id="apps-list"><div class="list-note">Откройте этот экран на телефоне — список подтянется.</div></div>
   </div>
 
   <!-- НАСТРОЙКИ -->
   <div class="view hidden" id="view-settings">
     <div class="sec-title">Настройки</div>
-    <div class="sec-sub" id="ver-sub">MISETANIBOX</div>
-    <div class="row"><div class="grow"><div class="t">Режим TUN</div><div class="s">ПОЛНЫЙ ПЕРЕХВАТ ТРАФИКА</div></div><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
-    <div class="row" onclick="go('apps')"><div class="grow"><div class="t">Раздельный туннель</div><div class="s" id="split-sub">ПО ПРИЛОЖЕНИЯМ · ВЫКЛ</div></div><span class="chev">›</span></div>
-    <div class="row"><div class="grow"><div class="t">Автозапуск</div><div class="s">ПРИ ВКЛЮЧЕНИИ УСТРОЙСТВА</div></div><button class="toggle" onclick="this.classList.toggle('on')"></button></div>
+    <div class="sec-sub" id="ver-sub">MISETANIBOX · 1.6.0</div>
+    <div class="row"><div class="grow"><div class="t">Автозапуск</div><div class="s">ПОСЛЕ ПЕРЕЗАГРУЗКИ</div></div><button class="toggle" id="tog-autostart" onclick="toggleAutostart(this)"></button></div>
+    <div class="row"><div class="grow"><div class="t">Kill Switch</div><div class="s">АВТОПЕРЕПОДКЛЮЧЕНИЕ · BLOKING TUN</div></div><button class="toggle" id="tog-kill" onclick="toggleKillSwitch(this)"></button></div>
+    <div class="row"><div class="grow"><div class="t">Биометрия / PIN</div><div class="s">ВХОД В ПРИЛОЖЕНИЕ</div></div><button class="toggle" id="tog-bio" onclick="toggleBiometric(this)"></button></div>
+    <div class="row"><div class="grow"><div class="t">Авто по сети</div><div class="s">ДОМАШНИЙ WI‑FI → ВЫКЛ · ОСТАЛЬНОЕ → VPN</div></div><button class="toggle" id="tog-netauto" onclick="toggleNetAuto(this)"></button></div>
+    <div class="row" onclick="editTrustedWifi()"><div class="grow"><div class="t">Домашний Wi‑Fi (SSID)</div><div class="s" id="ssid-summary">СПИСОК ЧЕРЕЗ ЗАПЯТУЮ</div></div><span class="chev">✎</span></div>
+    <div class="row"><div class="grow"><div class="t">Автосмена сервера</div><div class="s">ПИНГ &gt; 500 МС → FASTEST</div></div><button class="toggle" id="tog-autosrv" onclick="toggleAutoServer(this)"></button></div>
+    <div class="row" onclick="openSystemVpnSettings()"><div class="grow"><div class="t">Always-on VPN (система)</div><div class="s">БЛОКИРОВКА БЕЗ VPN В ANDROID</div></div><span class="chev">›</span></div>
+    <div class="row" onclick="go('apps')"><div class="grow"><div class="t">Приложения (split)</div><div class="s" id="split-summary">VPN ДЛЯ ВСЕХ</div></div><span class="chev">›</span></div>
+    <div class="row" onclick="showPeriodStats()"><div class="grow"><div class="t">Статистика день/неделя</div><div class="s" id="period-stats">—</div></div><span class="chev">›</span></div>
+    <div class="row" onclick="cycleDnsPreset()"><div class="grow"><div class="t">DNS-режим</div><div class="s" id="dns-summary">АВТО</div></div><span class="chev">↻</span></div>
+    <div class="row" onclick="runDiagnostics()"><div class="grow"><div class="t">Диагностика подключения</div><div class="s">INTERNET · DNS · IP · ЯДРО</div></div><span class="chev">🩺</span></div>
     <div class="row"><div class="grow"><div class="t">Тема</div><div class="s">ТЁМНАЯ / СВЕТЛАЯ</div></div><span class="chev" onclick="toggleTheme()">◐</span></div>
-    <div class="row"><div class="grow"><div class="t">О приложении</div><div class="s">ВЕРСИЯ · ЛИЦЕНЗИЯ · АВТОРЫ</div></div><span class="chev">›</span></div>
-  </div>
-
-  <!-- РАЗДЕЛЬНЫЙ ТУННЕЛЬ ПО ПРИЛОЖЕНИЯМ -->
-  <div class="view hidden" id="view-apps">
-    <div class="back-row" onclick="go('settings')"><span class="bk">‹</span><div class="sec-title" style="margin:0">Раздельный туннель</div></div>
-    <div class="sec-sub">КАКИЕ ПРИЛОЖЕНИЯ ИДУТ ЧЕРЕЗ VPN</div>
-    <div class="sub-seg" style="margin-top:14px">
-      <button class="sub-seg-btn" id="split-off" onclick="setSplitMode('off')">Все через VPN</button>
-      <button class="sub-seg-btn" id="split-bypass" onclick="setSplitMode('bypass')">Мимо VPN</button>
-      <button class="sub-seg-btn" id="split-only" onclick="setSplitMode('only')">Только VPN</button>
+    <div class="row" onclick="closeAllConns()"><div class="grow"><div class="t">Сбросить соединения</div><div class="s">КАК НА ПК · CLOSE ALL</div></div><span class="chev">×</span></div>
+    <div class="row" onclick="resetStats()"><div class="grow"><div class="t">Сбросить статистику</div><div class="s">СЕССИЯ · СЧЁТЧИКИ</div></div><span class="chev">↺</span></div>
+    <div class="row" onclick="showAbout()"><div class="grow"><div class="t">О приложении</div><div class="s" id="about-sub">v1.6.0</div></div><span class="chev">›</span></div>
+    <div id="about-panel" class="about-card hidden">
+      <div class="line">Misetanibox v1.6.0</div>
     </div>
-    <div class="list-note" id="split-hint" style="padding:12px 4px">Весь трафик идёт через VPN.</div>
-    <input id="apps-search" class="apps-search" type="text" placeholder="Поиск приложения…" autocapitalize="off" autocorrect="off" spellcheck="false" oninput="renderAppList()">
-    <div class="app-list" id="app-list"><div class="list-note">Загрузка списка приложений…</div></div>
   </div>
 
   <div class="sub-modal hidden" id="sub-modal" onclick="if(event.target===this)closeSubModal()">
     <div class="sub-modal-card">
       <div class="sub-modal-title">Подписка</div>
       <div class="sub-seg">
-        <button class="sub-seg-btn active" id="seg-url" onclick="setSubMode('url')">По ссылке</button>
-        <button class="sub-seg-btn" id="seg-dns" onclick="setSubMode('dns')">Через DNS</button>
+        <button class="sub-seg-btn active" id="seg-url" onclick="setSubMode('url')">Ссылка</button>
+        <button class="sub-seg-btn" id="seg-dns" onclick="setSubMode('dns')">DNS</button>
+        <button class="sub-seg-btn" id="seg-clip" onclick="setSubMode('clip')">Буфер</button>
       </div>
-      <div class="sub-modal-hint" id="sub-hint">Ссылка на mihomo/clash-конфиг</div>
+      <div class="sub-modal-hint" id="sub-hint">Ссылка на mihomo/clash-конфиг (https://…)</div>
       <input id="sub-input" class="sub-input" type="text" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://...">
       <div class="sub-modal-btns">
         <button class="sub-btn ghost" onclick="closeSubModal()">Отмена</button>
@@ -223,23 +264,83 @@ function toast(msg){
 }
 
 // ---------- определение страны по имени ноды ----------
-const FLAG_NAMES={us:['united states','usa','сша','америк'],gb:['united kingdom','britain','england','uk','британ','англи','лондон'],de:['germany','герман','франкфурт','frankfurt'],nl:['netherlands','нидерланд','амстердам','amsterdam'],fr:['france','франц','париж'],ru:['russia','росси','москв','moscow'],ua:['ukraine','украин'],se:['sweden','швеци'],fi:['finland','финлянд','helsinki'],no:['norway','норвег'],dk:['denmark','дани'],pl:['poland','польш'],ch:['switzerland','швейцар'],at:['austria','австри'],es:['spain','испани'],it:['italy','итали'],pt:['portugal','португал'],tr:['turkey','турци','istanbul'],jp:['japan','япони','tokyo'],hk:['hong kong','гонконг'],sg:['singapore','сингапур'],kr:['korea','корея'],tw:['taiwan','тайван'],cn:['china','китай'],in:['india','инди'],au:['australia','австрал'],ca:['canada','канад'],br:['brazil','бразил'],ae:['emirates','dubai','оаэ','эмират','дубай'],il:['israel','израил'],cz:['czech','чехи','prague'],ro:['romania','румын'],lv:['latvia','латви','riga'],lt:['lithuania','литв'],ee:['estonia','эстони'],kz:['kazakhstan','казахстан'],ge:['georgia','грузи'],am:['armenia','армени'],az:['azerbaijan','азербайдж'],by:['belarus','беларус']};
+const FLAG_NAMES={
+  us:['united states','usa','сша','америк','america'],
+  gb:['united kingdom','britain','england','uk','британ','англи','лондон'],
+  de:['germany','герман','франкфурт','frankfurt','berlin'],
+  nl:['netherlands','нидерланд','амстердам','amsterdam','holland'],
+  fr:['france','франц','париж','paris'],
+  ru:['russia','росси','москв','moscow'],
+  ua:['ukraine','украин','kyiv','киев'],
+  se:['sweden','швеци','stockholm'],
+  fi:['finland','финлянд','helsinki'],
+  no:['norway','норвег','oslo'],
+  dk:['denmark','дани','copenhagen'],
+  pl:['poland','польш','warsaw'],
+  ch:['switzerland','швейцар','zurich'],
+  at:['austria','австри','vienna'],
+  es:['spain','испани','madrid'],
+  it:['italy','итали','milan','rome'],
+  pt:['portugal','португал','lisbon'],
+  tr:['turkey','турци','istanbul'],
+  jp:['japan','япони','tokyo'],
+  hk:['hong kong','гонконг'],
+  sg:['singapore','сингапур'],
+  kr:['korea','корея','seoul'],
+  tw:['taiwan','тайван','taipei'],
+  cn:['china','китай'],
+  in:['india','инди','mumbai'],
+  au:['australia','австрал','sydney'],
+  ca:['canada','канад','toronto'],
+  br:['brazil','бразил'],
+  ae:['emirates','dubai','оаэ','эмират','дубай'],
+  il:['israel','израил'],
+  cz:['czech','чехи','prague'],
+  ro:['romania','румын','bucharest'],
+  lv:['latvia','латви','riga'],
+  lt:['lithuania','литв','vilnius'],
+  ee:['estonia','эстони','tallinn'],
+  kz:['kazakhstan','казахстан'],
+  ge:['georgia','грузи','tbilisi'],
+  am:['armenia','армени'],
+  az:['azerbaijan','азербайдж'],
+  by:['belarus','беларус','minsk'],
+  bg:['bulgaria','болгар','sofia','софи','bg'],
+  md:['moldova','молдав'],
+  rs:['serbia','серби'],
+  hr:['croatia','хорват'],
+  sk:['slovakia','словаки'],
+  si:['slovenia','словени'],
+  hu:['hungary','венгри','budapest'],
+  gr:['greece','греци','athens'],
+  ie:['ireland','ирланд','dublin'],
+  be:['belgium','бельги'],
+  th:['thailand','таиланд','bangkok'],
+  vn:['vietnam','вьетнам'],
+  id:['indonesia','индонез'],
+  my:['malaysia','малайз'],
+  ph:['philippines','филиппин']
+};
 const FLAG_CODES=new Set(Object.keys(FLAG_NAMES));
 function countryCode(name){
   if(!name) return null;
-  // эмодзи-флаг
+  // эмодзи-флаг (всегда, даже если кода нет в FLAG_NAMES — иначе BG/др. пропадают)
   const arr=Array.from(name);
   for(let i=0;i<arr.length-1;i++){
     const a=arr[i].codePointAt(0),b=arr[i+1].codePointAt(0);
     if(a>=0x1f1e6&&a<=0x1f1ff&&b>=0x1f1e6&&b<=0x1f1ff){
-      const c=String.fromCharCode(97+(a-0x1f1e6))+String.fromCharCode(97+(b-0x1f1e6));
-      if(c==='uk') return 'gb';
-      if(FLAG_CODES.has(c)) return c;
+      let c=String.fromCharCode(97+(a-0x1f1e6))+String.fromCharCode(97+(b-0x1f1e6));
+      if(c==='uk') c='gb';
+      return c;
     }
   }
   const lo=name.toLowerCase();
   for(const [code,words] of Object.entries(FLAG_NAMES)) for(const w of words) if(lo.includes(w)) return code;
-  for(const tok of lo.split(/[^a-z]+/)){ if(tok==='uk') return 'gb'; if(tok.length===2&&FLAG_CODES.has(tok)) return tok; }
+  for(const tok of lo.split(/[^a-zа-яё]+/i)){
+    const t=tok.toLowerCase();
+    if(t==='uk') return 'gb';
+    if(t.length===2&&FLAG_CODES.has(t)) return t;
+  }
   return null;
 }
 function flagImg(name,cls){
@@ -247,34 +348,67 @@ function flagImg(name,cls){
   return c ? `<img class="${cls}" src="flags/${c}.svg" alt="">` : `<span class="${cls}" style="background:var(--ln)"></span>`;
 }
 function cleanName(name){
-  return Array.from(name||'').filter(ch=>{const cp=ch.codePointAt(0);return !(cp>=0x1f1e6&&cp<=0x1f1ff);}).join('').replace(/^[\s|·・•\-–—_]+/,'').trim()||name;
+  let s=Array.from(name||'').filter(ch=>{const cp=ch.codePointAt(0);return !(cp>=0x1f1e6&&cp<=0x1f1ff);}).join('');
+  s=s.replace(/^\[S\d+·[^\]]*\]\s*/,'').replace(/^\[\d+\]\s*/,'').replace(/^\[([^\]]+)\]\s*/,'');
+  s=s.replace(/^[\s|·・•\-–—_⚡]+/,'').replace(/\s+/g,' ').trim();
+  return s||name;
 }
 function pingColor(p){return (p>0&&p<80)?'var(--ok)':(p<180)?'var(--mid)':'var(--bad)'}
 
 let tab='home';
 function go(t){
   tab=t;
+  // apps is under settings, not bottom nav
   for(const v of document.querySelectorAll('.view')) v.classList.add('hidden');
-  document.getElementById('view-'+t).classList.remove('hidden');
-  for(const b of document.querySelectorAll('.nav button')) b.classList.toggle('active', b.dataset.tab===t);
+  const view=document.getElementById('view-'+t);
+  if(view) view.classList.remove('hidden');
+  for(const b of document.querySelectorAll('.nav button')){
+    const navTab=b.dataset.tab;
+    b.classList.toggle('active', navTab===t || (t==='apps' && navTab==='settings'));
+  }
   if(t==='servers'){ connected ? loadProxies() : previewServers(); }
   if(t==='rules') loadRules();
-  if(t==='apps') openAppsScreen();
+  if(t==='subs') renderSubs();
+  if(t==='apps'){ renderSplitModeUi(); loadAppList(false); }
+  if(t==='settings') updateSplitSummary();
+}
+function pingButtonHtml(extraNote){
+  const pinging=!!window._pinging;
+  const note=extraNote||(connected?'ВРУЧНУЮ · ПО ПОДПИСКАМ':'НУЖЕН VPN');
+  return `<div class="row" onclick="pingAll()"><div class="grow"><div class="t">${pinging?'Проверка…':'Проверить задержки'}</div><div class="s">${note}</div></div><span class="chev">⟳</span></div>`;
 }
 async function loadRules(){
-  const sub=document.getElementById('rules-sub'), list=document.getElementById('rules-list');
-  if(!connected){ sub.textContent='НЕ ПОДКЛЮЧЕНО'; list.innerHTML='<div class="list-note">Правила ядра доступны после подключения.</div>'; return; }
+  const sub=document.getElementById('rules-sub'), list=document.getElementById('rules-list'), groupsEl=document.getElementById('rules-groups');
+  applyModeLabel();
+  if(!connected){
+    sub.textContent='НЕ ПОДКЛЮЧЕНО';
+    if(groupsEl) groupsEl.innerHTML='';
+    list.innerHTML='<div class="list-note">После подключения: группы AI / Discord / Telegram / YouTube / Россия / Зарубежные (rules.md).</div>';
+    return;
+  }
+  sub.textContent = curMode()==='global' ? 'ГЛОБАЛЬНО · ОДИН СЕРВЕР' : (curMode()==='direct' ? 'DIRECT · БЕЗ ПРОКСИ' : 'ПРАВИЛА · SPLIT');
+  if(groupsEl){
+    const pr=await core('GET','/proxies');
+    const px=(pr.data&&pr.data.proxies)||{};
+    const rows=RULE_GROUPS.map(g=>{
+      const info=px[g];
+      const now=info&&info.now ? info.now : '—';
+      return `<div class="row"><div class="grow"><div class="t">${g}</div><div class="s">${String(now).replace(/</g,'&lt;')}</div></div></div>`;
+    }).join('');
+    groupsEl.innerHTML='<div class="sec-sub" style="padding-top:12px">ГРУППЫ</div>'+rows;
+  }
   const r=await core('GET','/rules');
-  if(!r.ok||!r.data||!r.data.rules){ sub.textContent='—'; list.innerHTML='<div class="list-note">Не удалось получить правила.</div>'; return; }
+  if(!r.ok||!r.data||!r.data.rules){ list.innerHTML='<div class="list-note">Список правил ядра недоступен.</div>'; return; }
   const rules=r.data.rules;
-  sub.textContent=rules.length+' ПРАВИЛ';
-  list.innerHTML=rules.slice(0,400).map(x=>
-    `<div class="row"><div class="grow"><div class="t" style="font-size:13px">${(x.payload||'MATCH').replace(/</g,'&lt;')}</div><div class="s">${x.type} → ${x.proxy}</div></div></div>`
-  ).join('');
+  list.innerHTML='<div class="sec-sub" style="padding-top:16px">'+rules.length+' ПРАВИЛ ЯДРА</div>'+
+    rules.slice(0,300).map(x=>
+      `<div class="row"><div class="grow"><div class="t" style="font-size:13px">${(x.payload||'MATCH').replace(/</g,'&lt;')}</div><div class="s">${x.type} → ${x.proxy}</div></div></div>`
+    ).join('');
 }
 
 // ---------- Capacitor: нативный VPN-плагин ----------
-const BUILD = 'android-v0.4.2';
+const BUILD = '1.6.0';
+const APP_AUTHOR = 'Misetanibox';
 const Cap = window.Capacitor;
 const platform = (Cap && Cap.getPlatform) ? Cap.getPlatform() : 'web';
 const isNative = !!(Cap && Cap.isNativePlatform ? Cap.isNativePlatform() : (platform && platform!=='web'));
@@ -311,7 +445,53 @@ function getHwid(){
   if(!h){ h = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())+Math.random()); localStorage.setItem('mise_hwid', h); }
   return h;
 }
-function getSubUrl(){ return localStorage.getItem('mise_subUrl') || ''; }
+function uid(){ return Math.random().toString(36).slice(2,10); }
+function loadSubs(){
+  try{
+    const raw=localStorage.getItem('mise_subs');
+    if(raw){ const a=JSON.parse(raw); if(Array.isArray(a)) return a; }
+  }catch(e){}
+  // migrate single sub
+  const one=localStorage.getItem('mise_subUrl')||'';
+  if(one){
+    const a=[{id:uid(), name:'Подписка 1', url:one, enabled:true}];
+    localStorage.setItem('mise_subs', JSON.stringify(a));
+    return a;
+  }
+  return [];
+}
+function saveSubs(list){ localStorage.setItem('mise_subs', JSON.stringify(list)); }
+function getSubs(){ return loadSubs(); }
+function getEnabledSubs(){ return getSubs().filter(s=>s.enabled && s.url && /^https?:\/\//i.test(s.url)); }
+function getEnabledSubUrls(){ return getEnabledSubs().map(s=>s.url); }
+function getEnabledSubsPayload(){
+  return getEnabledSubs().map((s,i)=>{
+    let label=s.name||'';
+    if(!label || /^Подписка\s*\d*$/i.test(label) || /^Sub\s*\d*$/i.test(label)){
+      try{ label=new URL(s.url).host.replace(/^www\./,''); }catch(e){ label='S'+(i+1); }
+    }
+    return {url:s.url, label:String(label).slice(0,24), kind:'remote'};
+  });
+}
+function getSubUrl(){ const u=getEnabledSubUrls(); return u[0]||''; }
+/** Keep https + local:// (clipboard/QR bodies). Drop empty/broken entries. */
+function purgeLocalFileSubs(){
+  const all=getSubs();
+  const next=all.filter(s=>s && s.url && (/^https?:\/\//i.test(s.url) || /^local:\/\//i.test(s.url)));
+  if(next.length!==all.length){
+    saveSubs(next);
+    localStorage.setItem('mise_subUrl', getSubUrl());
+    dbg('purged invalid subs: '+(all.length-next.length));
+  }
+}
+function clearStalePreferred(validNames){
+  const pref=getPreferred();
+  if(!pref) return;
+  if(Array.isArray(validNames) && validNames.length && !validNames.includes(pref)){
+    localStorage.removeItem('mise_preferred');
+    dbg('сброшен preferred (нет в текущих подписках): '+pref);
+  }
+}
 
 // ---------- каомодзи-мордочка под брендом ----------
 const FACE_HAPPY=['^o^','^q^','^_^','XD','>ᴗ<','•‿•','\\o/','^ᴗ^'];
@@ -348,12 +528,12 @@ function setUiConnected(on){
     document.getElementById('servers-sub').textContent='ЗАГРУЗКА';
     setServersNote('Ядро скачивает подписку…');
     waitForServers();
-    setTimeout(applyModeToCore, 2500);
   }else{
     big.innerHTML='ПОДКЛЮ-<br>ЧИТЬСЯ'; sv.textContent='○ ОТКЛЮЧЕНО'; sv.style.color='';
     clearInterval(sessTimer); sessTimer=null; document.getElementById('sess-time').textContent='00:00';
     stopTraffic();
     updateHomeServer('', null);
+    const hip=document.getElementById('home-ip'); if(hip) hip.textContent='—';
     renderCachedServers();
   }
 }
@@ -368,12 +548,9 @@ async function toggleConnect(){
     return;
   }
   const sub=getSubUrl();
-  if(!sub){ toast('Сначала добавьте подписку'); go('subs'); openSubModal(); return; }
+  if(!getEnabledSubs().length){ toast('Сначала добавьте подписку'); go('subs'); openSubModal(); return; }
   setStatusText('◌ ПОДКЛЮЧЕНИЕ…'); dbg('Vpn.start(sub='+sub.substr(0,28)+'…)');
-  const sm=splitMode();
-  const sApps=sm==='off'?[]:[...splitSelected];
-  dbg('split='+sm+' apps='+sApps.length);
-  try{ const r=await Vpn.start({ subUrl: sub, hwid: getHwid(), splitMode: sm, splitApps: sApps }); dbg('start() вернул: '+JSON.stringify(r||{})); }
+  try{ const payload=getEnabledSubsPayload(); const r=await Vpn.start({ subUrl: (payload[0]&&payload[0].url)||'', subsJson: JSON.stringify(payload), hwid: getHwid(), mode: curMode() }); dbg('start() subs='+payload.length+' '+payload.map(p=>p.label).join(',')); }
   catch(e){ setStatusText('○ ОТКЛЮЧЕНО'); dbg('start() REJECT: '+(e&&e.message?e.message:e)); toast('Ошибка старта: '+(e&&e.message?e.message:e)); }
 }
 
@@ -397,30 +574,148 @@ function updateHomeServer(name, ping){
 }
 
 function setServersNote(txt){ document.getElementById('server-list').innerHTML='<div class="list-note">'+txt+'</div>'; }
+let nodeMeta={}; // name -> {type,network}
+function escAttr(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
+function isGroupName(n){
+  return /^(DIRECT|REJECT|REJECT-DROP|PASS|PASS-RULE|COMPATIBLE|GLOBAL|PROXY|Fastest|Зарубежные|Российские|AI|Discord|Telegram|YouTube|Игры|Torrent)$/i.test(n)
+    || /сайты|торрент|игры|fastest|compatible/i.test(n);
+}
+async function refreshNodeMeta(){
+  const r=await core('GET','/providers/proxies');
+  const map={};
+  if(r.ok && r.data && r.data.providers){
+    for(const [pn,pv] of Object.entries(r.data.providers)){
+      if(pn==='default') continue;
+      for(const px of (pv.proxies||[])){
+        if(!px||!px.name) continue;
+        const hist=(px.history&&px.history.length)?px.history[px.history.length-1]:null;
+        map[px.name]={ type:px.type||'', network:px.network||'', provider:pn, delay: hist&&typeof hist.delay==='number'?hist.delay:undefined, alive: px.alive };
+        if(hist&&typeof hist.delay==='number') delays[px.name]=hist.delay;
+      }
+    }
+  }
+  nodeMeta=map;
+}
+let lastServerNodes=[];
+let lastServerNow='';
+let serverSort='name'; // name | ping | fav
+function getFavorites(){
+  try{ const a=JSON.parse(localStorage.getItem('mise_favs')||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; }
+}
+function saveFavorites(a){ localStorage.setItem('mise_favs', JSON.stringify(a)); }
+function isFav(name){ return getFavorites().includes(name); }
+function toggleFav(name, ev){
+  if(ev){ ev.stopPropagation(); ev.preventDefault(); }
+  let a=getFavorites();
+  if(a.includes(name)) a=a.filter(x=>x!==name); else a.push(name);
+  saveFavorites(a);
+  if(connected) renderServerList(lastServerNodes, lastServerNow); else renderCachedServers();
+}
+function setServerSort(mode){
+  serverSort=mode==='ping'?'ping':(mode==='fav'?'fav':'name');
+  for(const id of ['sort-name','sort-ping','sort-fav']){
+    const el=document.getElementById(id);
+    if(el) el.classList.toggle('active', id==='sort-'+serverSort || (serverSort==='name'&&id==='sort-name') || (serverSort==='ping'&&id==='sort-ping') || (serverSort==='fav'&&id==='sort-fav'));
+  }
+  if(connected) renderServerList(lastServerNodes, lastServerNow); else renderCachedServers();
+}
+function filterServerList(){
+  if(connected) renderServerList(lastServerNodes, lastServerNow); else renderCachedServers();
+}
+function applyServerFilters(nodes){
+  const q=(document.getElementById('servers-search')?.value||'').trim().toLowerCase();
+  let list=nodes.slice();
+  if(q) list=list.filter(n=>cleanName(n).toLowerCase().includes(q) || n.toLowerCase().includes(q));
+  const favs=new Set(getFavorites());
+  if(serverSort==='fav'){
+    list=list.filter(n=>favs.has(n)).concat(list.filter(n=>!favs.has(n)));
+  } else if(serverSort==='ping'){
+    list.sort((a,b)=>{
+      const da=delays[a], db=delays[b];
+      const va=(da>0)?da:99999, vb=(db>0)?db:99999;
+      return va-vb;
+    });
+  } else {
+    list.sort((a,b)=>cleanName(a).localeCompare(cleanName(b),'ru'));
+  }
+  // favorites always pin to top when sort name
+  if(serverSort==='name'){
+    list=list.filter(n=>favs.has(n)).concat(list.filter(n=>!favs.has(n)));
+  }
+  return list;
+}
+function serverRowHtml(n, active){
+  const d=delays[n];
+  const meta=nodeMeta[n]||{};
+  const lab=nodeMetaLabel(meta);
+  const disp=cleanName(n).replace(/^\[S\d+·[^\]]*\]\s*/,'').replace(/^\[([^\]]+)\]\s*/,'');
+  const ping = d===undefined?'' : (d>0?`<span class="ping" style="color:${pingColor(d)}">${d} мс</span>`:`<span class="ping" style="color:var(--bad)">timeout</span>`);
+  const star=isFav(n)?'★':'☆';
+  const subl=[active?'● ВЫБРАН':'', lab, isFav(n)?'ИЗБР':''].filter(Boolean).join(' · ');
+  return `<div class="row" onclick="selectNode('${escAttr(n)}')">
+    <span class="chev" style="font-size:18px;color:${isFav(n)?'var(--mid)':'var(--mut)'}" onclick="toggleFav('${escAttr(n)}',event)">${star}</span>
+    ${flagImg(n,'flag')}<div class="grow"><div class="t">${disp.replace(/</g,'&lt;')}</div><div class="s">${subl}</div></div>${ping}</div>`;
+}
+function renderServerList(nodes, now){
+  lastServerNodes=nodes||[];
+  lastServerNow=now||'';
+  const nSub=getEnabledSubs().length;
+  const filtered=applyServerFilters(lastServerNodes);
+  document.getElementById('servers-sub').textContent=filtered.length+(filtered.length!==lastServerNodes.length?'/'+lastServerNodes.length:'')+' УЗЛОВ · '+nSub+' ПОДП.';
+  function subKey(name){
+    const m=String(name).match(/^\[([^\]]+)\]\s*/);
+    if(m) return m[1];
+    const meta=nodeMeta[name];
+    if(meta && meta.provider) return meta.provider;
+    return nSub<=1 ? (getEnabledSubsPayload()[0]?.label || 'Подписка') : 'Прочее';
+  }
+  let html=pingButtonHtml(lastServerNodes.length+' УЗЛОВ');
+  if(serverSort==='ping' || serverSort==='fav' || (document.getElementById('servers-search')?.value||'').trim()){
+    html+=filtered.map(n=>serverRowHtml(n, n===now)).join('');
+  } else {
+    const groups=new Map();
+    for(const n of filtered){
+      const k=subKey(n);
+      if(!groups.has(k)) groups.set(k,[]);
+      groups.get(k).push(n);
+    }
+    for(const [gname, list] of groups){
+      html+=`<div class="sec-sub" style="padding-top:14px;border-top:1px solid var(--ln);margin-top:4px">📦 ${String(gname).replace(/</g,'&lt;')} · ${list.length}</div>`;
+      html+=list.map(n=>serverRowHtml(n, n===now)).join('');
+    }
+  }
+  if(!filtered.length) html+='<div class="list-note">Ничего не найдено по фильтру.</div>';
+  document.getElementById('server-list').innerHTML=html;
+  updateHomeServer(now, delays[now]);
+}
 async function loadProxies(){
   if(!connected) return;
   const r=await core('GET','/proxies');
   if(!r.ok || !r.data){
     document.getElementById('servers-sub').textContent='ПОДКЛЮЧЕНИЕ…';
-    setServersNote('Ядро ещё поднимается… подождите пару секунд. Если долго — проверьте подписку.');
+    setServersNote('Ядро ещё поднимается… подождите пару секунд.');
     return;
   }
   const g=r.data.proxies && r.data.proxies[GROUP];
   if(!g || !g.all || !g.all.length){
     document.getElementById('servers-sub').textContent='ЗАГРУЗКА';
-    setServersNote('Подписка загружается ядром. Если остаётся пусто — вероятно ссылка недоступна или не отдаёт clash/mihomo/v2ray-конфиг.');
+    setServersNote('Подписки загружаются… Если пусто — проверьте ссылки.');
     return;
   }
-  try{ localStorage.setItem('mise_lastServers', JSON.stringify({all:g.all, now:g.now})); }catch(e){}
-  document.getElementById('servers-sub').textContent=g.all.length+' УЗЛОВ';
-  document.getElementById('server-list').innerHTML=
-    `<div class="row" onclick="pingAll()"><div class="grow"><div class="t">Проверить задержки</div><div class="s">ПИНГ ВСЕХ УЗЛОВ</div></div><span class="chev">⟳</span></div>`+
-    g.all.map(n=>{
-      const active=n===g.now, d=delays[n];
-      const ping = d===undefined?'' : (d>0?`<span class="ping" style="color:${pingColor(d)}">${d} мс</span>`:`<span class="ping" style="color:var(--bad)">—</span>`);
-      return `<div class="row" onclick="selectNode('${n.replace(/'/g,"\\'")}')">${flagImg(n,'flag')}<div class="grow"><div class="t">${cleanName(n)}</div><div class="s">${active?'● ВЫБРАН':''}</div></div>${ping}</div>`;
-    }).join('');
-  updateHomeServer(g.now, delays[g.now]);
+  await refreshNodeMeta();
+  let nodes=g.all.filter(n=>!isGroupName(n));
+  if(nodes.length===1 && /compatible/i.test(nodes[0])) nodes=[];
+  if(!nodes.length){
+    document.getElementById('servers-sub').textContent='НЕТ УЗЛОВ';
+    setServersNote('Провайдер не отдал серверы (COMPATIBLE). Переимпортируйте .txt с ключами и переподключите VPN.');
+    dbg('PROXY only COMPATIBLE / empty — subscription provider failed');
+    return;
+  }
+  try{
+    localStorage.setItem('mise_lastServers', JSON.stringify({all:nodes.slice(0,800), now:g.now}));
+  }catch(e){ dbg('lastServers save: '+e); }
+  clearStalePreferred(nodes);
+  renderServerList(nodes, g.now);
 }
 // показать сохранённый список серверов, когда туннель выключен
 function renderCachedServers(){
@@ -428,204 +723,533 @@ function renderCachedServers(){
   const cached = raw ? safeJson(raw) : null;
   const sub=document.getElementById('servers-sub'), list=document.getElementById('server-list');
   if(!cached || !cached.all || !cached.all.length){
-    sub.textContent='НЕ ПОДКЛЮЧЕНО'; list.innerHTML='<div class="list-note">Подключитесь, чтобы увидеть серверы подписки.</div>'; return;
+    sub.textContent='НЕ ПОДКЛЮЧЕНО';
+    list.innerHTML=pingButtonHtml('НУЖЕН VPN')+'<div class="list-note">Подключите VPN, чтобы видеть серверы и проверять задержки.</div>';
+    return;
   }
-  sub.textContent=cached.all.length+' УЗЛОВ · ОФФЛАЙН';
-  list.innerHTML='<div class="list-note">Список из прошлой сессии. Подключитесь, чтобы выбрать сервер и замерить пинг.</div>'+
-    cached.all.map(n=>{
-      const active=n===cached.now;
-      return `<div class="row" style="opacity:.6">${flagImg(n,'flag')}<div class="grow"><div class="t">${cleanName(n)}</div><div class="s">${active?'● БЫЛ ВЫБРАН':''}</div></div></div>`;
-    }).join('');
+  lastServerNodes=cached.all;
+  lastServerNow=cached.now||'';
+  const filtered=applyServerFilters(cached.all);
+  sub.textContent=filtered.length+'/'+cached.all.length+' УЗЛОВ · ОФФЛАЙН';
+  list.innerHTML=pingButtonHtml('НУЖЕН VPN')+
+    '<div class="list-note">Список из прошлой сессии. ★ — избранное. Пинг — после VPN.</div>'+
+    filtered.map(n=>serverRowHtml(n, n===cached.now)).join('');
 }
 
 // ---------- превью серверов из подписки (без запуска VPN) ----------
 function b64decode(s){ try{ return decodeURIComponent(escape(atob(s.replace(/\s+/g,'')))); }catch(e){ try{ return atob(s.replace(/\s+/g,'')); }catch{ return ''; } } }
 function parseV2rayNames(text){
-  const t=text.trim(); let body=t;
+  return parseV2rayEntries(text).map(e=>e.name);
+}
+const SHARE_SCHEME_RE=/^(vless|vmess|ss|ssr|trojan|hysteria2?(?:\+realm)?|hy2(?:\+realm)?|tuic|wireguard|wg|anytls|mieru|mierus|socks5?):\/\//i;
+function schemeOfShareLine(line){
+  const m=String(line||'').trim().match(SHARE_SCHEME_RE);
+  if(!m) return '';
+  let s=m[1].toLowerCase();
+  if(s.startsWith('hy2')||s.startsWith('hysteria2')) return 'hysteria2';
+  if(s==='wg') return 'wireguard';
+  if(s==='mierus') return 'mieru';
+  return s;
+}
+function parseV2rayEntries(text){
+  const t=String(text||'').trim(); let body=t;
   if(/^[A-Za-z0-9+/=\s]+$/.test(t) && t.length>40){ const d=b64decode(t); if(d.includes('://')) body=d; }
-  if(!body.includes('://')) return [];
-  const names=[];
+  if(!SHARE_SCHEME_RE.test(body) && !/vless:\/\/|ss:\/\/|hy2:\/\//i.test(body)) return [];
+  const out=[];
+  let i=0;
   for(const line of body.split(/\r?\n/)){
-    const l=line.trim(); const h=l.indexOf('#'); if(!l.includes('://')||h<0) continue;
-    try{ names.push(decodeURIComponent(l.slice(h+1))); }catch{ names.push(l.slice(h+1)); }
+    const l=line.trim();
+    if(!l || l.startsWith('#')) continue;
+    if(!SHARE_SCHEME_RE.test(l)) continue;
+    i++;
+    const type=schemeOfShareLine(l);
+    const h=l.indexOf('#');
+    let name;
+    if(h>=0 && h<l.length-1){
+      try{ name=decodeURIComponent(l.slice(h+1)); }catch{ name=l.slice(h+1); }
+    } else {
+      name=(type||'node')+'-'+i;
+    }
+    out.push({name, type, network: type==='hysteria2'||type==='hysteria'||type==='tuic'?'udp':''});
+  }
+  return out;
+}
+function parseClashNames(text){
+  // Only real proxy list items: "- name: ..."  (NOT servername/public-key/etc.)
+  if(!/proxies\s*:/.test(text)) return [];
+  const m=text.match(/(?:^|\n)proxies\s*:\s*\n([\s\S]*?)(?:\n(?:proxy-groups|proxy-providers|rules|rule-providers|script|hosts|dns|tun)\s*:|\s*$)/);
+  const block = m ? m[1] : text;
+  const names=[];
+  const re=/(?:^|\n)\s*-\s*name:\s*(.+)/g; let x;
+  while((x=re.exec(block))){
+    let n=x[1].trim();
+    if((n.startsWith('"')&&n.endsWith('"'))||(n.startsWith("'")&&n.endsWith("'"))) n=n.slice(1,-1);
+    n=n.replace(/\s+#.*$/,'').trim();
+    if(!n) continue;
+    // skip nested groups sometimes listed under proxies by mistake
+    if(/^(DIRECT|REJECT|PROXY|GLOBAL|Pass)$/i.test(n)) continue;
+    names.push(n);
   }
   return names;
 }
-function parseClashNames(text){
-  if(!/proxies\s*:/.test(text)) return [];
-  const m=text.match(/(?:^|\n)proxies\s*:\s*\n([\s\S]*?)(?:\n[a-zA-Z][\w-]*\s*:|\s*$)/);
-  const block = m ? m[1] : '';
-  const names=[]; const re=/\bname\s*:\s*(['"]?)([^'"\n,}]+)\1/g; let x;
-  while((x=re.exec(block))){ const n=x[2].trim(); if(n) names.push(n); }
-  return names;
+function parseClashProxyDetails(text){
+  // returns [{name,type,network}] from proxies: block
+  const out=[];
+  if(!/proxies\s*:/.test(text)) return out;
+  const m=text.match(/(?:^|\n)proxies\s*:\s*\n([\s\S]*?)(?:\n(?:proxy-groups|proxy-providers|rules|rule-providers|script|hosts|dns|tun)\s*:|\s*$)/);
+  const block=m?m[1]:'';
+  const items=block.split(/(?=\n\s*-\s*name:)/);
+  for(const it of items){
+    const nm=it.match(/(?:^|\n)\s*-\s*name:\s*(.+)/);
+    if(!nm) continue;
+    let name=nm[1].trim().replace(/^['"]|['"]$/g,'').replace(/\s+#.*$/,'').trim();
+    const type=(it.match(/(?:^|\n)\s*type:\s*(\S+)/)||[])[1]||'';
+    const network=(it.match(/(?:^|\n)\s*network:\s*(\S+)/)||[])[1]||'';
+    if(name) out.push({name,type,network});
+  }
+  return out;
 }
-function parseSubNames(text){ const v=parseV2rayNames(text); return v.length?v:parseClashNames(text); }
-
-function getPreferred(){ return localStorage.getItem('mise_preferred'); }
+function parseSubNames(text){
+  const details=parseClashProxyDetails(text);
+  if(details.length) return details.map(d=>d.name);
+  const v=parseV2rayNames(text); return v;
+}
+function nodeMetaLabel(meta){
+  if(!meta) return '';
+  let t=(meta.type||'').toLowerCase();
+  const n=(meta.network||'').toLowerCase();
+  // normalize type names for UI
+  if(t==='shadowsocks' || t==='ss') t='ss';
+  if(t==='hysteria2' || t==='hy2') t='hysteria2';
+  if(t==='wireguard') t='wg';
+  if(n==='grpc') return (t?t+'/':'')+'grpc';
+  if(n==='ws') return (t?t+'/':'')+'ws';
+  if(n==='h2' || n==='http') return (t?t+'/':'')+n;
+  if(n&&n!=='tcp' && n!=='udp') return (t?t+'/':'')+n;
+  return t||'';
+}
+function getPreferred(){ return localStorage.getItem('mise_preferred') || ''; }
+function setPreferred(name){
+  if(!name){ localStorage.removeItem('mise_preferred'); localStorage.removeItem('mise_preferred_key'); return; }
+  localStorage.setItem('mise_preferred', name);
+  localStorage.setItem('mise_preferred_key', cleanName(name).toLowerCase());
+}
+function getPreferredKey(){ return (localStorage.getItem('mise_preferred_key')||'').toLowerCase(); }
+function resolvePreferredInList(nodes){
+  if(!nodes || !nodes.length) return null;
+  const pref=getPreferred();
+  if(pref && nodes.includes(pref)) return pref;
+  const key=getPreferredKey() || (pref ? cleanName(pref).toLowerCase() : '');
+  if(!key) return null;
+  let hit=nodes.find(n=>cleanName(n).toLowerCase()===key);
+  if(hit) return hit;
+  hit=nodes.find(n=>{
+    const c=cleanName(n).toLowerCase();
+    return c===key || c.endsWith(key) || key.endsWith(c) || c.includes(key) || key.includes(c);
+  });
+  return hit||null;
+}
+function clearStalePreferred(validNames){
+  if(!Array.isArray(validNames) || !validNames.length) return;
+  const resolved=resolvePreferredInList(validNames);
+  if(!resolved){
+    if(validNames.length>=1 && getPreferred()){
+      dbg('preferred нет в списке, сброс: '+getPreferred());
+      setPreferred('');
+    }
+  } else if(resolved !== getPreferred()){
+    localStorage.setItem('mise_preferred', resolved);
+  }
+}
+async function applyServerSelection(name, opts){
+  if(!name) return false;
+  setPreferred(name);
+  if(curMode()==='direct') return true;
+  const r=await core('PUT','/proxies/'+encodeURIComponent(GROUP),{name});
+  if(!r.ok){ dbg('apply PROXY fail '+name+' '+JSON.stringify(r)); return false; }
+  await core('PUT','/proxies/'+encodeURIComponent('Зарубежные'),{name:'PROXY'});
+  if(curMode()==='global' || (opts&&opts.global)){
+    await core('PUT','/proxies/'+encodeURIComponent('GLOBAL'),{name});
+  }
+  dbg('apply server OK: '+name);
+  return true;
+}
 function preSelect(name){
-  localStorage.setItem('mise_preferred', name); toast('Сервер по умолчанию: '+cleanName(name));
-  const c=safeJson(localStorage.getItem('mise_lastServers')); if(c&&c.all) renderPreviewServers(c.all);
+  setPreferred(name); toast('Сервер по умолчанию: '+cleanName(name));
+  const cached=safeJson(localStorage.getItem('mise_lastServers')); if(cached&&cached.all) renderPreviewServers(cached.all);
 }
 function renderPreviewServers(names){
   const pref=getPreferred();
   document.getElementById('servers-sub').textContent=names.length+' УЗЛОВ · ПРЕВЬЮ';
   document.getElementById('server-list').innerHTML=
-    '<div class="list-note">Пинг и подключение — после запуска VPN. Тап — выбрать сервер по умолчанию.</div>'+
+    '<div class="list-note">Пинг — после VPN. Тап — сервер по умолчанию. Тип (vless/grpc/hysteria) под именем.</div>'+
     names.map(n=>{
       const active=n===pref;
-      return `<div class="row" onclick="preSelect('${n.replace(/'/g,"\\'")}')">${flagImg(n,'flag')}<div class="grow"><div class="t">${cleanName(n)}</div><div class="s">${active?'● ВЫБРАН':''}</div></div></div>`;
+      const lab=nodeMetaLabel(nodeMeta[n]||{});
+      const subl=[active?'● ВЫБРАН':'', lab].filter(Boolean).join(' · ');
+      return `<div class="row" onclick="preSelect('${escAttr(n)}')">${flagImg(n,'flag')}<div class="grow"><div class="t">${cleanName(n).replace(/</g,'&lt;')}</div><div class="s">${subl}</div></div></div>`;
     }).join('');
 }
 async function previewServers(){
-  const sub=getSubUrl();
+  const enabled=getEnabledSubs();
+  const payload=getEnabledSubsPayload();
   const subEl=document.getElementById('servers-sub'), list=document.getElementById('server-list');
-  if(!sub){ subEl.textContent='НЕТ ПОДПИСКИ'; list.innerHTML='<div class="list-note">Добавьте подписку на вкладке «Подписки».</div>'; return; }
-  if(!Vpn || !Vpn.fetchSub){ renderCachedServers(); return; }
-  subEl.textContent='ЗАГРУЗКА…'; list.innerHTML='<div class="list-note">Загружаю список серверов из подписки…</div>';
-  const r=await Vpn.fetchSub({url:sub, hwid:getHwid()});
-  if(!r || r.status<200 || r.status>=300 || !r.body){ dbg('fetchSub status='+(r&&r.status)+' err='+((r&&r.error)||'')); renderCachedServers(); return; }
-  const names=parseSubNames(r.body); dbg('превью: '+names.length+' серверов из подписки');
-  if(!names.length){ subEl.textContent='—'; list.innerHTML='<div class="list-note">Не удалось разобрать список. Формат подписки не распознан (не clash/v2ray).</div>'; return; }
-  localStorage.setItem('mise_lastServers', JSON.stringify({all:names, now:getPreferred()}));
-  renderPreviewServers(names);
+  if(!payload.length){ subEl.textContent='НЕТ ПОДПИСКИ'; list.innerHTML=pingButtonHtml()+'<div class="list-note">Добавьте и включите подписки на вкладке «Подписки».</div>'; return; }
+  subEl.textContent='ЗАГРУЗКА…'; list.innerHTML=pingButtonHtml()+'<div class="list-note">Загружаю серверы из '+payload.length+' подписок…</div>';
+  const sections=[]; // {label, names:[]}
+  for(let i=0;i<payload.length;i++){
+    const {url,label}=payload[i];
+    const sub=enabled[i]||{};
+    const tag='S'+(i+1)+'·'+label;
+    const names=[];
+    try{
+      let text='';
+      if(url && /^local:\/\//i.test(url)){
+        const lid=url.replace(/^local:\/\//i,'');
+        if(Vpn && Vpn.getSubBody){
+          const r=await Vpn.getSubBody({id:lid});
+          text=(r&&r.body)||'';
+        } else {
+          text=localStorage.getItem('mise_body_'+lid)||'';
+        }
+        if(!text){ sections.push({label:tag, names:[], err:true}); continue; }
+      } else if(Vpn && Vpn.fetchSub && url && /^https?:\/\//i.test(url)){
+        const r=await Vpn.fetchSub({url, hwid:getHwid()});
+        if(!r || r.status<200 || r.status>=300 || !r.body){ dbg('fetchSub fail '+label+' st='+(r&&r.status)); sections.push({label:tag, names:[], err:true}); continue; }
+        text=r.body;
+      } else {
+        sections.push({label:tag, names:[], err:true}); continue;
+      }
+      if(!text){ sections.push({label:tag, names:[], err:true}); continue; }
+      const details=parseClashProxyDetails(text);
+      if(details.length){
+        for(const d of details){
+          const full='['+tag+'] '+d.name;
+          names.push(full);
+          nodeMeta[full]={type:d.type,network:d.network,provider:'sub'+i, subLabel:tag};
+          nodeMeta[d.name]={type:d.type,network:d.network,provider:'sub'+i, subLabel:tag};
+        }
+      } else {
+        const entries=parseV2rayEntries(text);
+        if(entries.length){
+          for(const e of entries){
+            const full='['+tag+'] '+e.name;
+            names.push(full);
+            nodeMeta[full]={type:e.type, network:e.network, provider:'sub'+i, subLabel:tag};
+            nodeMeta[e.name]={type:e.type, network:e.network, provider:'sub'+i, subLabel:tag};
+          }
+        } else {
+          for(const n of parseSubNames(text)){
+            const full='['+tag+'] '+n;
+            names.push(full);
+          }
+        }
+      }
+      dbg('preview '+tag+' keys='+names.length);
+    }catch(e){ dbg('fetchSub err '+e); sections.push({label:tag, names:[], err:true}); continue; }
+    sections.push({label:tag, names});
+  }
+  const all=sections.flatMap(s=>s.names);
+  dbg('превью: '+all.length+' серверов / '+payload.length+' подп.');
+  if(!all.length){ subEl.textContent='—'; list.innerHTML='<div class="list-note">Не удалось разобрать подписки.</div>'; return; }
+  clearStalePreferred(all);
+  localStorage.setItem('mise_lastServers', JSON.stringify({all, now:getPreferred(), sections}));
+  // render grouped
+  const pref=getPreferred();
+  subEl.textContent=all.length+' УЗЛОВ · '+payload.length+' ПОДП. · ПРЕВЬЮ';
+  let html=pingButtonHtml('НУЖЕН VPN')+'<div class="list-note">Превью списков. Пинг — после подключения VPN.</div>';
+  for(const sec of sections){
+    html+=`<div class="sec-sub" style="padding-top:14px;border-top:1px solid var(--ln)">📦 ${sec.label.replace(/</g,'&lt;')} · ${sec.names.length}${sec.err?' · ошибка':''}</div>`;
+    html+=sec.names.map(n=>{
+      const active=n===pref;
+      const lab=nodeMetaLabel(nodeMeta[n]||{});
+      const disp=cleanName(n).replace(/^\[S\d+·[^\]]*\]\s*/,'').replace(/^\[([^\]]+)\]\s*/,'');
+      return `<div class="row" onclick="preSelect('${escAttr(n)}')">${flagImg(n,'flag')}<div class="grow"><div class="t">${disp.replace(/</g,'&lt;')}</div><div class="s">${[active?'● ВЫБРАН':'',lab].filter(Boolean).join(' · ')}</div></div></div>`;
+    }).join('');
+  }
+  list.innerHTML=html;
 }
+
+
 // после коннекта ждём, пока ядро скачает подписку и поднимет API
 async function waitForServers(){
-  for(let i=0;i<20;i++){
+  for(let i=0;i<24;i++){
     if(!connected) return;
     const r=await core('GET','/proxies');
     if(r.ok && r.data){
       const g=r.data.proxies && r.data.proxies[GROUP];
       if(g && g.all && g.all.length){
-        const pref=getPreferred();
-        if(pref && g.all.includes(pref) && pref!==g.now){ await core('PUT','/proxies/'+encodeURIComponent(GROUP),{name:pref}); }
+        let nodes=g.all.filter(n=>!isGroupName(n));
+        if(!nodes.length) nodes=g.all.slice();
+        let target=resolvePreferredInList(nodes);
+        if(target){
+          await applyServerSelection(target);
+        } else {
+          await core('PUT','/proxies/'+encodeURIComponent('Зарубежные'),{name:'PROXY'});
+          if(curMode()==='global' && g.now){
+            await core('PUT','/proxies/'+encodeURIComponent('GLOBAL'),{name:g.now});
+          }
+          await core('PATCH','/configs',{mode:curMode()});
+        }
+        if(target){
+          await sleep(800);
+          await applyServerSelection(target);
+          await sleep(1500);
+          await applyServerSelection(target);
+        }
         loadProxies(); return;
       }
-      if(i===3){ core('PUT','/providers/proxies/main'); } // подтолкнуть обновление провайдера
     }
     loadProxies();
-    await sleep(1500);
+    await sleep(1200);
   }
 }
 async function selectNode(name){
-  const r=await core('PUT','/proxies/'+encodeURIComponent(GROUP),{name});
-  if(r.ok){ localStorage.setItem('mise_preferred', name); toast('Сервер: '+cleanName(name)); loadProxies(); }
-  else toast('Не удалось выбрать сервер');
+  if(!name) return;
+  setPreferred(name);
+  if(!connected){
+    toast('Будет: '+cleanName(name)+' (после подключения)');
+    try{ loadProxies(); }catch(e){}
+    return;
+  }
+  const ok=await applyServerSelection(name);
+  if(ok){
+    toast((curMode()==='global'?'Глобально: ':'Сервер: ')+cleanName(name));
+    loadProxies();
+  } else toast('Не удалось выбрать сервер');
 }
 async function pingAll(){
-  if(!connected) return;
-  const r=await core('GET','/proxies');
-  const g=r.data && r.data.proxies && r.data.proxies[GROUP];
-  if(!g||!g.all||!g.all.length){ toast('Нет серверов'); return; }
-  toast('Проверка задержек…');
-  await Promise.all(g.all.map(async n=>{
-    const rr=await core('GET','/proxies/'+encodeURIComponent(n)+'/delay?timeout=3000&url='+encodeURIComponent('http://www.gstatic.com/generate_204'));
-    delays[n]=(rr.data && typeof rr.data.delay==='number')?rr.data.delay:-1;
-  }));
-  loadProxies();
+  // Старая проверка: только при включённом VPN, healthcheck + delay
+  if(!connected){ toast('Сначала подключите VPN'); return; }
+  if(window._pinging) return;
+  window._pinging=true;
+  try{
+    const r=await core('GET','/proxies');
+    const g=r.data && r.data.proxies && r.data.proxies[GROUP];
+    if(!g||!g.all||!g.all.length){ toast('Нет серверов'); return; }
+    let nodes=g.all.filter(n=>!isGroupName(n) && !/compatible/i.test(n));
+    if(!nodes.length) nodes=g.all.filter(n=>!isGroupName(n));
+    if(!nodes.length){ toast('Нет узлов'); return; }
+    toast('Проверка '+nodes.length+' узлов…');
+    loadProxies();
+    // 1) provider-level healthcheck
+    const prov=await core('GET','/providers/proxies');
+    if(prov.ok && prov.data && prov.data.providers){
+      const names=Object.keys(prov.data.providers).filter(n=>n!=='default');
+      await Promise.all(names.map(n=>core('GET','/providers/proxies/'+encodeURIComponent(n)+'/healthcheck')));
+    }
+    // 2) per-node delay
+    const url=encodeURIComponent('https://www.gstatic.com/generate_204');
+    const conc=4;
+    for(let i=0;i<nodes.length;i+=conc){
+      const batch=nodes.slice(i,i+conc);
+      await Promise.all(batch.map(async n=>{
+        try{
+          const rr=await core('GET','/proxies/'+encodeURIComponent(n)+'/delay?timeout=5000&url='+url);
+          if(rr.data && typeof rr.data.delay==='number') delays[n]=rr.data.delay;
+          else delays[n]=-1;
+        }catch(e){ delays[n]=-1; }
+      }));
+      loadProxies();
+    }
+    await refreshNodeMeta();
+    loadProxies();
+    const ok=nodes.filter(n=>delays[n]>0).length;
+    toast('Готово: '+ok+'/'+nodes.length+' ответили');
+  } finally {
+    window._pinging=false;
+    loadProxies();
+  }
 }
-
-// ---------- подписка (модалка вместо prompt) ----------
-function addSubscription(){ openSubModal(); }
-function openSubModal(){
-  const inp=document.getElementById('sub-input'); inp.value=getSubUrl();
+// ---------- подписки (несколько) ----------
+let editingSubId=null;
+function addSubscription(){ editingSubId=null; openSubModal(); }
+function openSubModal(prefill){
+  const inp=document.getElementById('sub-input');
+  inp.value=prefill||'';
+  setSubMode(editingSubId ? 'url' : (subMode==='dns'?'dns':'url'));
   document.getElementById('sub-modal').classList.remove('hidden');
+  const title=document.querySelector('.sub-modal-title');
+  if(title) title.textContent = editingSubId ? 'Изменить подписку' : 'Новая подписка';
   setTimeout(()=>inp.focus(),50);
 }
-function closeSubModal(){ document.getElementById('sub-modal').classList.add('hidden'); }
+function closeSubModal(){
+  document.getElementById('sub-modal').classList.add('hidden');
+  editingSubId=null;
+  window._ssidEdit=false;
+  window._dnsEdit=false;
+}
 function renderSubs(){
-  const el=document.getElementById('subs-active');
-  if(el) el.style.display = getSubUrl() ? 'flex' : 'none';
-}
-
-// ---------- режим маршрутизации ----------
-const MODES=[{v:'rule',l:'ПРАВИЛА'},{v:'global',l:'ГЛОБАЛЬНО'},{v:'direct',l:'ПРЯМОЙ'}];
-function curMode(){ return localStorage.getItem('mise_mode')||'rule'; }
-function applyModeLabel(){ const m=MODES.find(x=>x.v===curMode())||MODES[0]; const el=document.getElementById('mode-lbl'); if(el) el.textContent=m.l; }
-async function applyModeToCore(){
-  if(!connected) return;
-  await core('PATCH','/configs',{mode:curMode()});
-}
-async function cycleMode(){
-  const i=MODES.findIndex(x=>x.v===curMode()); const next=MODES[(i+1)%MODES.length];
-  localStorage.setItem('mise_mode', next.v); applyModeLabel();
-  if(connected){ await applyModeToCore(); }
-  toast('Режим: '+next.l);
-}
-
-// ---------- раздельный туннель по приложениям ----------
-let appsCache=null; // [{package,label}]
-const splitSelected=new Set(JSON.parse(localStorage.getItem('mise_splitApps')||'[]'));
-function splitMode(){ return localStorage.getItem('mise_splitMode')||'off'; }
-const SPLIT_HINTS={
-  off:'Весь трафик идёт через VPN.',
-  bypass:'Отмеченные приложения идут МИМО VPN (напрямую), остальное — через VPN.',
-  only:'Через VPN идут ТОЛЬКО отмеченные приложения, остальное — напрямую.'
-};
-function splitModeLabel(){ return {off:'ВЫКЛ',bypass:'МИМО VPN',only:'ТОЛЬКО VPN'}[splitMode()]||'ВЫКЛ'; }
-function refreshSplitSub(){ const el=document.getElementById('split-sub'); if(el) el.textContent='ПО ПРИЛОЖЕНИЯМ · '+splitModeLabel(); }
-function applySplitModeUi(){
-  const m=splitMode();
-  for(const k of ['off','bypass','only']) document.getElementById('split-'+k).classList.toggle('active',k===m);
-  const h=document.getElementById('split-hint'); if(h) h.textContent=SPLIT_HINTS[m];
-  document.getElementById('view-apps').classList.toggle('split-off', m==='off');
-  refreshSplitSub();
-}
-function setSplitMode(m){
-  localStorage.setItem('mise_splitMode',m); applySplitModeUi();
-  if(m!=='off' && !appsCache) loadAppList();
-  if(connected) toast('Применится при следующем подключении');
-}
-async function openAppsScreen(){
-  applySplitModeUi();
-  if(!appsCache) await loadAppList(); else renderAppList();
-}
-async function loadAppList(){
-  const list=document.getElementById('app-list');
-  if(!Vpn || !Vpn.listApps){ list.innerHTML='<div class="list-note">Список приложений доступен только в приложении на устройстве.</div>'; return; }
-  list.innerHTML='<div class="list-note">Загрузка списка приложений…</div>';
-  try{
-    const r=await Vpn.listApps();
-    appsCache=(r&&r.apps?r.apps:[]).slice().sort((a,b)=>(a.label||'').localeCompare(b.label||'',undefined,{sensitivity:'base'}));
-  }catch(e){ appsCache=[]; dbg('listApps err: '+e); }
-  renderAppList();
-}
-function renderAppList(){
-  const list=document.getElementById('app-list'); if(!list) return;
-  if(!appsCache){ return; }
-  if(!appsCache.length){ list.innerHTML='<div class="list-note">Не удалось получить список приложений.</div>'; return; }
-  const q=(document.getElementById('apps-search').value||'').trim().toLowerCase();
-  // выбранные — наверх, затем по алфавиту
-  const items=appsCache.filter(a=>!q || (a.label||'').toLowerCase().includes(q) || (a.package||'').toLowerCase().includes(q))
-    .sort((a,b)=>{ const sa=splitSelected.has(a.package)?0:1, sb=splitSelected.has(b.package)?0:1; return sa-sb || (a.label||'').localeCompare(b.label||'',undefined,{sensitivity:'base'}); });
-  if(!items.length){ list.innerHTML='<div class="list-note">Ничего не найдено.</div>'; return; }
-  list.innerHTML=items.map(a=>{
-    const on=splitSelected.has(a.package);
-    const mono=(a.label||a.package||'?').trim().charAt(0);
-    return `<div class="app-row" onclick="toggleApp('${a.package.replace(/'/g,"\\'")}')">
-      <div class="app-mono">${mono.replace(/</g,'&lt;')}</div>
-      <div class="grow"><div class="t">${(a.label||a.package).replace(/</g,'&lt;')}</div><div class="s">${a.package.replace(/</g,'&lt;')}</div></div>
-      <div class="chk${on?' on':''}">✓</div></div>`;
+  const list=document.getElementById('subs-list');
+  const cnt=document.getElementById('subs-count');
+  if(!list) return;
+  const subs=getSubs();
+  if(cnt) cnt.textContent = subs.length ? (subs.length+' ПОДПИС'+ (subs.length===1?'КА':(subs.length<5?'КИ':'ОК'))) : 'НЕТ ПОДПИСОК';
+  if(!subs.length){ list.innerHTML='<div class="list-note">Добавьте https-ссылку на конфиг или DNS-домен. Несколько подписок можно комбинировать.</div>'; return; }
+  list.innerHTML=subs.map(s=>{
+    let host='';
+    try{ host=new URL(s.url).host; }catch{ host=(s.url||'').slice(0,48); }
+    const st=s.enabled?'● ВКЛ':'○ ВЫКЛ';
+    return `<div class="row">
+      <div class="grow" onclick="editSub('${s.id}')"><div class="t">${(s.name||'Подписка').replace(/</g,'&lt;')}</div><div class="s">${st} · ${String(host).replace(/</g,'&lt;')}</div></div>
+      <button class="toggle ${s.enabled?'on':''}" onclick="event.stopPropagation();toggleSub('${s.id}',this)"></button>
+      <span class="chev" onclick="event.stopPropagation();removeSub('${s.id}')" title="Удалить">×</span>
+    </div>`;
   }).join('');
 }
-function toggleApp(pkg){
-  if(splitSelected.has(pkg)) splitSelected.delete(pkg); else splitSelected.add(pkg);
-  localStorage.setItem('mise_splitApps', JSON.stringify([...splitSelected]));
-  renderAppList(); refreshSplitSub();
-  if(connected) toast('Применится при следующем подключении');
+function editSub(id){
+  const s=getSubs().find(x=>x.id===id); if(!s) return;
+  editingSubId=id; setSubMode('url'); openSubModal(s.url);
+}
+function toggleSub(id, el){
+  const subs=getSubs();
+  const s=subs.find(x=>x.id===id); if(!s) return;
+  s.enabled=!s.enabled;
+  if(el) el.classList.toggle('on', s.enabled);
+  saveSubs(subs); localStorage.setItem('mise_subUrl', getSubUrl()); renderSubs(); syncNativePrefs();
+  toast(s.enabled?'Подписка включена · переподключите VPN':'Подписка выключена · переподключите VPN');
+}
+function removeSub(id){
+  const subs=getSubs().filter(x=>x.id!==id);
+  saveSubs(subs); localStorage.setItem('mise_subUrl', getSubUrl()); localStorage.removeItem('mise_preferred'); renderSubs(); syncNativePrefs(); toast('Подписка удалена · переподключите VPN');
+}
+async function refreshAllSubs(){
+  if(!getEnabledSubs().length){ toast('Нет включённых подписок'); return; }
+  toast('Обновляю подписки…');
+  localStorage.removeItem('mise_lastServers');
+  await previewServers();
+  if(connected){
+    toast('Переподключите VPN, чтобы применить новый список');
+  } else {
+    toast('Списки обновлены');
+  }
+}
+// ---------- режим: ПРАВИЛА / ГЛОБАЛЬНО / DIRECT ----------
+const MODES=[{v:'rule',l:'ПРАВИЛА'},{v:'global',l:'ГЛОБАЛЬНО'},{v:'direct',l:'DIRECT'}];
+const RULE_GROUPS=['Зарубежные','Российские','AI','Discord','Telegram','YouTube','Игры','Torrent'];
+function curMode(){
+  const m=(localStorage.getItem('mise_mode')||'rule').toLowerCase();
+  if(m==='global'||m==='direct') return m;
+  return 'rule';
+}
+function applyModeLabel(){
+  const m=MODES.find(x=>x.v===curMode())||MODES[0];
+  const el=document.getElementById('mode-lbl'); if(el) el.textContent=m.l;
+  const hint=document.getElementById('rules-mode-hint');
+  if(hint){
+    if(curMode()==='global') hint.textContent='ГЛОБАЛЬНО: весь трафик через выбранный сервер.';
+    else if(curMode()==='direct') hint.textContent='DIRECT: VPN включён, трафик идёт напрямую (тест / DNS / логи).';
+    else hint.textContent='ПРАВИЛА: RU/DIRECT · зарубежное → выбранный сервер / группы.';
+  }
+}
+async function applyModeToCore(){
+  if(!connected) return;
+  const mode=curMode();
+  const r=await core('PATCH','/configs',{mode});
+  if(!r.ok){ toast('Не удалось сменить режим'); dbg('mode patch fail '+JSON.stringify(r)); return; }
+  if(mode==='direct'){ loadRules(); return; }
+  const pr=await core('GET','/proxies');
+  const g=pr.data&&pr.data.proxies&&pr.data.proxies[GROUP];
+  const nodes=(g&&g.all?g.all:[]).filter(n=>!isGroupName(n));
+  const target=resolvePreferredInList(nodes) || (g&&g.now) || null;
+  if(target) await applyServerSelection(target);
+  else await core('PUT','/proxies/'+encodeURIComponent('Зарубежные'),{name:'PROXY'});
+  loadRules();
+}
+async function cycleMode(){
+  const order=['rule','global','direct'];
+  const i=order.indexOf(curMode());
+  const next=order[(i+1)%order.length];
+  localStorage.setItem('mise_mode', next); applyModeLabel(); syncNativePrefs();
+  const labels={rule:'Правила: split по сайтам',global:'Глобально: один сервер',direct:'Direct: без прокси (VPN up)'};
+  if(connected){
+    await applyModeToCore();
+    toast(labels[next]||next);
+  } else {
+    toast('Режим: '+(MODES.find(x=>x.v===next)||{}).l+' (при подключении)');
+  }
 }
 
-// ---------- подписка: URL / DNS TXT ----------
-let subMode='url';
-function setSubMode(m){
-  subMode=m;
-  document.getElementById('seg-url').classList.toggle('active',m==='url');
-  document.getElementById('seg-dns').classList.toggle('active',m==='dns');
-  const hint=document.getElementById('sub-hint'), inp=document.getElementById('sub-input');
-  if(m==='dns'){ hint.textContent='Домен с TXT-записью (обход блокировки адреса)'; inp.placeholder='sub.example.com'; }
-  else { hint.textContent='Ссылка на mihomo/clash-конфиг'; inp.placeholder='https://...'; }
+// ---------- IP / reconnect / stats (Phase A) ----------
+async function checkIp(){
+  const el=document.getElementById('home-ip');
+  if(el) el.textContent='…';
+  try{
+    if(Vpn && Vpn.checkOutboundIp){
+      const r=await Vpn.checkOutboundIp();
+      if(r && r.ok && r.ip){
+        if(el) el.textContent=r.ip+(r.viaProxy?' · proxy':'');
+        toast('IP: '+r.ip);
+        return;
+      }
+      toast('IP: '+(r&&r.error?r.error:'ошибка'));
+      if(el) el.textContent='—';
+      return;
+    }
+    const r=await fetch('https://api.ipify.org?format=json');
+    const j=await r.json();
+    if(el) el.textContent=j.ip||'—';
+    toast('IP: '+(j.ip||'?'));
+  }catch(e){
+    if(el) el.textContent='—';
+    toast('Не удалось проверить IP');
+  }
 }
-// резолв TXT через DoH (Cloudflare → Yandex, RU-иммунный)
+async function reconnect(){
+  if(!isNative || !Vpn){ toast('Только в приложении'); return; }
+  if(!getEnabledSubs().length){ toast('Нет подписки'); go('subs'); return; }
+  setStatusText('◌ ПЕРЕПОДКЛЮЧЕНИЕ…');
+  dbg('reconnect');
+  try{
+    if(connected){ try{ await Vpn.stop(); }catch(e){} await sleep(700); }
+    const payload=getEnabledSubsPayload();
+    await Vpn.start({ subUrl:(payload[0]&&payload[0].url)||'', subsJson:JSON.stringify(payload), hwid:getHwid(), mode:curMode() });
+    toast('Переподключение…');
+  }catch(e){
+    setStatusText('○ ОТКЛЮЧЕНО');
+    toast('Ошибка: '+(e&&e.message?e.message:e));
+  }
+}
+async function resetStats(){
+  totalUp=0; totalDown=0; prevUp=0; prevDown=0; prevTs=Date.now();
+  if(sessTimer){ sessStart=Date.now(); }
+  const st=document.getElementById('sess-time'); if(st) st.textContent='00:00';
+  const el=document.getElementById('sess-data'); if(el) el.textContent='0 Б';
+  const ru=document.getElementById('rate-up'); if(ru) ru.textContent='↑ 0';
+  const rd=document.getElementById('rate-down'); if(rd) rd.textContent='↓ 0';
+  if(connected){
+    try{ await core('DELETE','/connections'); }catch(e){}
+  }
+  toast('Статистика сброшена');
+}
+
+// ---------- подписка: только HTTPS URL / DNS TXT (без файлов) ----------
+let subMode='url';
+function extractHttpUrl(text){
+  if(!text) return '';
+  const s=String(text).replace(/^\uFEFF/,'').trim();
+  if(/^https?:\/\//i.test(s) && !/[\r\n]/.test(s)) return s.replace(/^["']|["']$/g,'');
+  const m=s.match(/https?:\/\/[^\s"'<>]+/i);
+  return m ? m[0].replace(/[),.;]+$/,'') : '';
+}
+function setSubMode(m){
+  subMode = (m==='dns') ? 'dns' : (m==='clip' ? 'clip' : 'url');
+  const su=document.getElementById('seg-url'), sd=document.getElementById('seg-dns'), sc=document.getElementById('seg-clip');
+  if(su) su.classList.toggle('active', subMode==='url');
+  if(sd) sd.classList.toggle('active', subMode==='dns');
+  if(sc) sc.classList.toggle('active', subMode==='clip');
+  const hint=document.getElementById('sub-hint'), inp=document.getElementById('sub-input');
+  if(subMode==='dns'){
+    if(hint) hint.textContent='Домен с TXT-записью (обход блокировки адреса)';
+    if(inp){ inp.placeholder='sub.example.com'; inp.type='text'; }
+  } else if(subMode==='clip'){
+    if(hint) hint.textContent='Вставьте https-ссылку или строки vless/ss/hy2…';
+    if(inp){ inp.placeholder='https://… или ключи'; inp.type='text'; }
+  } else {
+    if(hint) hint.textContent='Ссылка на mihomo/clash-конфиг (https://…)';
+    if(inp){ inp.placeholder='https://...'; inp.type='text'; }
+  }
+}
 async function resolveDnsTxt(domain){
   const providers=['https://cloudflare-dns.com/dns-query','https://common.dot.dns.yandex.net/dns-query','https://dns.google/resolve'];
   for(const base of providers){
@@ -637,53 +1261,660 @@ async function resolveDnsTxt(domain){
   }
   return '';
 }
-
+function finishSubSave(msg){
+  localStorage.setItem('mise_subUrl', getSubUrl());
+  closeSubModal(); renderSubs(); syncNativePrefs();
+  toast(msg||'Подписка сохранена · переподключите VPN');
+  go('servers');
+  if(!connected) previewServers();
+}
+function commitSubUrl(url, preferredName){
+  url=String(url||'').trim();
+  if(!url){ toast('Пустая ссылка'); return false; }
+  if(!/^https?:\/\//i.test(url)){ toast('Нужна ссылка https://…'); return false; }
+  const subs=getSubs();
+  if(editingSubId){
+    const s=subs.find(x=>x.id===editingSubId);
+    if(s){
+      s.url=url; s.kind='remote'; delete s.body; delete s.keyCount;
+      if(preferredName) s.name=preferredName;
+      else if(!s.name||/^Подписка|^Sub/i.test(s.name)){
+        try{ s.name=new URL(url).host; }catch{ s.name='Подписка'; }
+      }
+    }
+  } else {
+    let name=preferredName||'';
+    if(!name){ try{ name=new URL(url).host; }catch(e){ name='Подписка '+(subs.length+1); } }
+    subs.push({id:uid(), name, url, kind:'remote', enabled:true});
+  }
+  saveSubs(subs);
+  finishSubSave('Подписка сохранена · переподключите VPN');
+  return true;
+}
 async function saveSubModal(){
+  if(window._ssidEdit){
+    const raw=document.getElementById('sub-input').value.trim();
+    localStorage.setItem('mise_ssids', raw);
+    window._ssidEdit=false;
+    closeSubModal();
+    updateSsidSummary();
+    await syncNativePrefs();
+    toast(raw?'SSID сохранены':'Список SSID очищен');
+    return;
+  }
   const raw=document.getElementById('sub-input').value.trim();
-  if(!raw){ toast('Введите значение'); return; }
+  if(!raw){ toast('Введите ссылку или домен'); return; }
   let url=raw;
   if(subMode==='dns'){
-    toast('Получаю конфиг через DNS…');
+    toast('Получаю через DNS…');
     const txt=await resolveDnsTxt(raw);
     if(!txt){ toast('DNS TXT не найден для '+raw); return; }
-    url=txt;
+    url=extractHttpUrl(txt)||txt;
+  } else {
+    url=extractHttpUrl(raw)||raw;
   }
-  localStorage.setItem('mise_subUrl', url);
-  localStorage.removeItem('mise_lastServers'); localStorage.removeItem('mise_preferred');
-  closeSubModal(); renderSubs(); toast('Подписка сохранена'); go('servers');
+  if(/^https?:\/\//i.test(url)){
+    commitSubUrl(url);
+    return;
+  }
+  // clipboard / pasted share links or raw YAML
+  if(looksLikeSubscriptionBody(raw)){
+    await commitSubBody(raw, 'Буфер');
+    return;
+  }
+  toast('Нужна https-ссылка или ключи (vless/ss/…)');
+}
+function looksLikeSubscriptionBody(text){
+  const t=String(text||'');
+  if(SHARE_SCHEME_RE.test(t)) return true;
+  if(/proxies\s*:/.test(t)) return true;
+  if(/^[A-Za-z0-9+/=\s]+$/.test(t.trim()) && t.trim().length>80) return true;
+  return false;
+}
+async function commitSubBody(body, preferredName){
+  body=String(body||'').trim();
+  if(!body){ toast('Пусто'); return false; }
+  const id='local_'+uid();
+  const url='local://'+id;
+  try{
+    if(Vpn && Vpn.putSubBody){
+      await Vpn.putSubBody({ id, body });
+    } else {
+      localStorage.setItem('mise_body_'+id, body);
+    }
+  }catch(e){ toast('Не удалось сохранить тело: '+e); return false; }
+  const subs=getSubs();
+  const name=preferredName||('Импорт '+(subs.length+1));
+  if(editingSubId){
+    const s=subs.find(x=>x.id===editingSubId);
+    if(s){ s.url=url; s.kind='local'; s.name=name; }
+  } else {
+    subs.push({id:uid(), name, url, kind:'local', enabled:true});
+  }
+  saveSubs(subs);
+  // include local in payload path
+  finishSubSave('Ключи сохранены · переподключите VPN');
+  return true;
+}
+function getEnabledSubsPayload(){
+  return getEnabledSubs().map((s,i)=>{
+    let label=s.name||'';
+    if(!label || /^Подписка\s*\d*$/i.test(label) || /^Sub\s*\d*$/i.test(label) || /^Импорт/i.test(label)){
+      try{ label=s.url.startsWith('local:') ? (s.name||'local') : new URL(s.url).host.replace(/^www\./,''); }
+      catch(e){ label='S'+(i+1); }
+    }
+    const o={url:s.url, label:String(label).slice(0,24), kind:s.kind||(s.url.startsWith('local:')?'local':'remote')};
+    return o;
+  });
+}
+// override earlier getEnabledSubs to allow local://
+function getEnabledSubs(){ return getSubs().filter(s=>s.enabled && s.url && (/^https?:\/\//i.test(s.url) || /^local:\/\//i.test(s.url))); }
+async function importFromClipboard(){
+  try{
+    let text='';
+    if(Vpn && Vpn.getClipboard){
+      const r=await Vpn.getClipboard();
+      text=(r&&r.text)||'';
+    } else if(navigator.clipboard && navigator.clipboard.readText){
+      text=await navigator.clipboard.readText();
+    }
+    text=(text||'').trim();
+    if(!text){ toast('Буфер пуст'); return; }
+    const url=extractHttpUrl(text);
+    if(url && /^https?:\/\//i.test(url) && text.length<500){
+      commitSubUrl(url);
+      return;
+    }
+    if(looksLikeSubscriptionBody(text)){
+      await commitSubBody(text, 'Буфер');
+      return;
+    }
+    openSubModal(text); setSubMode('clip');
+    toast('Проверьте и сохраните');
+  }catch(e){ toast('Буфер: '+(e&&e.message?e.message:e)); }
+}
+async function importFromQr(){
+  if(!Vpn || !Vpn.scanQr){ toast('Сканер недоступен · вставьте из буфера'); return; }
+  try{
+    toast('Откройте QR…');
+    const r=await Vpn.scanQr();
+    const text=(r&&r.text||'').trim();
+    if(!text){ toast('Пустой QR'); return; }
+    const url=extractHttpUrl(text);
+    if(url && /^https?:\/\//i.test(url) && !looksLikeSubscriptionBody(text.slice(0,200))){
+      commitSubUrl(url); return;
+    }
+    if(looksLikeSubscriptionBody(text) || text.length>80){
+      await commitSubBody(text, 'QR'); return;
+    }
+    if(url){ commitSubUrl(url); return; }
+    openSubModal(text); setSubMode('clip');
+  }catch(e){
+    const msg=String(e&&e.message?e.message:e);
+    if(msg.includes('cancel')||msg.includes('cancelled')) toast('Сканирование отменено');
+    else toast('QR: '+msg);
+  }
 }
 
-// ---------- трафик (реальный, из API ядра) ----------
-function fmtBytes(b){ if(b<1024) return b+' Б'; const u=['КБ','МБ','ГБ','ТБ']; let i=-1; do{ b/=1024; i++; }while(b>=1024&&i<u.length-1); return b.toFixed(b<10?1:0)+' '+u[i]; }
-let trafTimer=null, totalUp=0, totalDown=0;
+// ---------- трафик + соединения (как на ПК) ----------
+function fmtBytes(b){ b=Number(b)||0; if(b<1024) return b+' Б'; const u=['КБ','МБ','ГБ','ТБ']; let i=-1; do{ b/=1024; i++; }while(b>=1024&&i<u.length-1); return b.toFixed(b<10?1:0)+' '+u[i]; }
+function fmtRate(bps){ return fmtBytes(bps)+'/с'; }
+let trafTimer=null, totalUp=0, totalDown=0, prevUp=0, prevDown=0, prevTs=0;
 function startTraffic(){
   if(trafTimer) return;
+  prevUp=prevDown=0; prevTs=Date.now();
   trafTimer=setInterval(async()=>{
     if(!connected) return;
     const r=await core('GET','/connections');
     if(r.ok && r.data){
       totalUp=r.data.uploadTotal||0; totalDown=r.data.downloadTotal||0;
+      const now=Date.now();
+      const dt=Math.max(0.5,(now-prevTs)/1000);
+      const upR=Math.max(0,(totalUp-prevUp)/dt);
+      const dnR=Math.max(0,(totalDown-prevDown)/dt);
+      prevUp=totalUp; prevDown=totalDown; prevTs=now;
+      if(document.hidden) return; // battery: skip UI while backgrounded
       const el=document.getElementById('sess-data'); if(el) el.textContent=fmtBytes(totalUp+totalDown);
+      const ru=document.getElementById('rate-up'); if(ru) ru.textContent='↑ '+fmtRate(upR);
+      const rd=document.getElementById('rate-down'); if(rd) rd.textContent='↓ '+fmtRate(dnR);
+      recordTrafficSample(totalUp+totalDown);
+      renderHomeConns(r.data.connections||[]);
     }
   }, 2000);
 }
-function stopTraffic(){ clearInterval(trafTimer); trafTimer=null; const el=document.getElementById('sess-data'); if(el) el.textContent='0 Б'; }
+function stopTraffic(){
+  clearInterval(trafTimer); trafTimer=null;
+  try{ const st=statsStore(); st._lastSession=0; saveStatsStore(st); }catch(e){}
+  const el=document.getElementById('sess-data'); if(el) el.textContent='0 Б';
+  const ru=document.getElementById('rate-up'); if(ru) ru.textContent='↑ 0';
+  const rd=document.getElementById('rate-down'); if(rd) rd.textContent='↓ 0';
+  const hc=document.getElementById('home-conns'); if(hc) hc.innerHTML='<div class="list-note">Появятся после подключения VPN.</div>';
+}
+function renderHomeConns(list){
+  const hc=document.getElementById('home-conns'); if(!hc) return;
+  if(!list||!list.length){ hc.innerHTML='<div class="list-note">Нет активных соединений.</div>'; return; }
+  // top by traffic
+  const sorted=list.slice().sort((a,b)=>((b.upload||0)+(b.download||0))-((a.upload||0)+(a.download||0))).slice(0,12);
+  hc.innerHTML=sorted.map(c=>{
+    const meta=c.metadata||{};
+    const host=meta.host||meta.destinationIP||meta.remoteDestination||'—';
+    const chain=(c.chains&&c.chains.length)?c.chains[c.chains.length-1]:(c.ruleProxy||'');
+    const bytes=fmtBytes((c.upload||0)+(c.download||0));
+    return `<div class="row" style="cursor:default"><div class="grow"><div class="t" style="font-size:14px">${String(host).replace(/</g,'&lt;')}</div><div class="s">${String(chain).replace(/</g,'&lt;')} · ${bytes}</div></div></div>`;
+  }).join('');
+}
+async function closeAllConns(){
+  if(!connected){ toast('VPN не подключён'); return; }
+  const r=await core('DELETE','/connections');
+  toast(r.ok?'Соединения сброшены':'Не удалось сбросить');
+  if(r.ok){ const hc=document.getElementById('home-conns'); if(hc) hc.innerHTML='<div class="list-note">Соединения сброшены.</div>'; }
+}
 
-// ---------- тема (с сохранением) ----------
+// ---------- theme ----------
 function applyTheme(){ const t=localStorage.getItem('mise_theme'); document.documentElement.setAttribute('data-theme', t==='light'?'light':''); }
 function toggleTheme(){
   const cur=localStorage.getItem('mise_theme')==='light'?'':'light';
   localStorage.setItem('mise_theme', cur||'dark'); applyTheme();
 }
 
+// ---------- Android prefs (autostart / BootReceiver / split / kill) ----------
+function isAutostart(){ return localStorage.getItem('mise_autostart')==='1'; }
+function isKillSwitch(){ return localStorage.getItem('mise_kill')==='1'; }
+function isBiometric(){ return localStorage.getItem('mise_bio')==='1'; }
+function isNetAuto(){ return localStorage.getItem('mise_netauto')==='1'; }
+function isAutoServer(){ return localStorage.getItem('mise_autosrv')==='1'; }
+function getTrustedSsids(){ return localStorage.getItem('mise_ssids')||''; }
+function getSplitMode(){
+  const m=localStorage.getItem('mise_split_mode')||'all';
+  return (m==='include'||m==='exclude')?m:'all';
+}
+function getSplitApps(){
+  try{ const a=JSON.parse(localStorage.getItem('mise_split_apps')||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; }
+}
+function saveSplitApps(list){ localStorage.setItem('mise_split_apps', JSON.stringify(list||[])); }
+async function syncNativePrefs(){
+  if(!Vpn || !Vpn.setNativePrefs) return;
+  try{
+    const payload=getEnabledSubsPayload();
+    await Vpn.setNativePrefs({
+      autostart: isAutostart(),
+      killSwitch: isKillSwitch(),
+      biometricLock: isBiometric(),
+      netAuto: isNetAuto(),
+      awayConnect: true,
+      trustedSsids: getTrustedSsids(),
+      homeAction: 'disconnect',
+      subUrl: getSubUrl(),
+      subsJson: JSON.stringify(payload),
+      hwid: getHwid(),
+      mode: curMode(),
+      splitMode: getSplitMode(),
+      splitApps: JSON.stringify(getSplitApps())
+    });
+  }catch(e){ dbg('setNativePrefs: '+e); }
+}
+async function toggleAutostart(el){
+  el.classList.toggle('on');
+  const on = el.classList.contains('on');
+  localStorage.setItem('mise_autostart', on?'1':'0');
+  await syncNativePrefs();
+  toast(on ? 'Автозапуск включён' : 'Автозапуск выключен');
+}
+async function toggleKillSwitch(el){
+  el.classList.toggle('on');
+  const on = el.classList.contains('on');
+  localStorage.setItem('mise_kill', on?'1':'0');
+  await syncNativePrefs();
+  toast(on ? 'Kill Switch: автопереподключение' : 'Kill Switch выключен');
+}
+async function toggleBiometric(el){
+  el.classList.toggle('on');
+  const on = el.classList.contains('on');
+  if(on && Vpn && Vpn.biometricAvailable){
+    try{
+      const a=await Vpn.biometricAvailable();
+      if(!a || !a.available){ el.classList.remove('on'); toast('Биометрия/PIN недоступны на устройстве'); return; }
+    }catch(e){}
+  }
+  localStorage.setItem('mise_bio', on?'1':'0');
+  await syncNativePrefs();
+  toast(on ? 'Защита входа включена (после перезапуска)' : 'Защита входа выключена');
+}
+async function toggleNetAuto(el){
+  el.classList.toggle('on');
+  const on = el.classList.contains('on');
+  localStorage.setItem('mise_netauto', on?'1':'0');
+  await syncNativePrefs();
+  toast(on ? 'Авто по сети: домашний Wi‑Fi → VPN off' : 'Авто по сети выключено');
+}
+async function toggleAutoServer(el){
+  el.classList.toggle('on');
+  const on = el.classList.contains('on');
+  localStorage.setItem('mise_autosrv', on?'1':'0');
+  toast(on ? 'Автосмена при плохом пинге' : 'Автосмена выключена');
+  if(on) startAutoServerWatch(); else stopAutoServerWatch();
+}
+function editTrustedWifi(){
+  editingSubId=null;
+  setSubMode('url');
+  const inp=document.getElementById('sub-input');
+  const title=document.querySelector('.sub-modal-title');
+  const hint=document.getElementById('sub-hint');
+  if(title) title.textContent='Домашний Wi‑Fi';
+  if(hint) hint.textContent='SSID через запятую (Home, MyWiFi). Android 10+ может скрывать имя без геолокации.';
+  if(inp){ inp.value=getTrustedSsids(); inp.placeholder='HomeWiFi, Office'; }
+  document.getElementById('sub-modal').classList.remove('hidden');
+  // temporary save hook
+  window._ssidEdit=true;
+  setTimeout(()=>inp&&inp.focus(),50);
+}
+function updateSsidSummary(){
+  const el=document.getElementById('ssid-summary');
+  if(!el) return;
+  const s=getTrustedSsids().trim();
+  el.textContent = s ? s.slice(0,40) : 'НЕ ЗАДАНО';
+}
+// --- period stats (day / week) ---
+function statsStore(){
+  try{ return JSON.parse(localStorage.getItem('mise_traf_hist')||'{}')||{}; }catch(e){ return {}; }
+}
+function saveStatsStore(o){ try{ localStorage.setItem('mise_traf_hist', JSON.stringify(o)); }catch(e){} }
+function dayKey(d){ const x=d||new Date(); return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0'); }
+function recordTrafficSample(bytes){
+  const st=statsStore();
+  const k=dayKey();
+  const prev=Number(st._lastSession||0);
+  const cur=Number(bytes)||0;
+  // only add positive deltas within session
+  if(cur>=prev){
+    const delta=cur-prev;
+    st[k]=(Number(st[k])||0)+delta;
+  }
+  st._lastSession=cur;
+  saveStatsStore(st);
+  updatePeriodStatsLabel();
+}
+function periodTotals(){
+  const st=statsStore();
+  const today=dayKey();
+  let week=0;
+  for(let i=0;i<7;i++){
+    const d=new Date(); d.setDate(d.getDate()-i);
+    week+=Number(st[dayKey(d)])||0;
+  }
+  return { day: Number(st[today])||0, week };
+}
+function updatePeriodStatsLabel(){
+  const el=document.getElementById('period-stats');
+  if(!el) return;
+  const t=periodTotals();
+  el.textContent='ДЕНЬ '+fmtBytes(t.day)+' · НЕД '+fmtBytes(t.week);
+}
+function showPeriodStats(){
+  const t=periodTotals();
+  toast('Сегодня: '+fmtBytes(t.day)+' · 7 дней: '+fmtBytes(t.week));
+  updatePeriodStatsLabel();
+}
+// --- DNS presets (Phase C lite) ---
+const DNS_PRESETS=[
+  {id:'auto', l:'АВТО', nameserver:['https://1.1.1.1/dns-query','https://8.8.8.8/dns-query']},
+  {id:'secure', l:'БЕЗОПАСНЫЙ', nameserver:['https://cloudflare-dns.com/dns-query','https://dns.google/dns-query']},
+  {id:'fast', l:'БЫСТРЫЙ', nameserver:['1.1.1.1','8.8.8.8']},
+  {id:'antiblock', l:'АНТИБЛОК', nameserver:['https://dns.adguard-dns.com/dns-query','https://dns.google/dns-query','1.1.1.1']},
+];
+function getDnsPreset(){
+  const id=localStorage.getItem('mise_dns')||'auto';
+  return DNS_PRESETS.find(p=>p.id===id)||DNS_PRESETS[0];
+}
+function updateDnsSummary(){
+  const el=document.getElementById('dns-summary');
+  if(el) el.textContent=getDnsPreset().l;
+}
+async function cycleDnsPreset(){
+  const cur=getDnsPreset();
+  const i=DNS_PRESETS.findIndex(p=>p.id===cur.id);
+  const next=DNS_PRESETS[(i+1)%DNS_PRESETS.length];
+  localStorage.setItem('mise_dns', next.id);
+  updateDnsSummary();
+  if(connected){
+    try{
+      // mihomo accepts partial config patch for dns nameserver in some builds — best-effort
+      await core('PATCH','/configs',{ 'dns': { enable:true, nameserver: next.nameserver } });
+      toast('DNS: '+next.l+' (частично; полный — после reconnect)');
+    }catch(e){ toast('DNS: '+next.l+' (применится при reconnect)'); }
+  } else toast('DNS: '+next.l);
+}
+async function runDiagnostics(){
+  toast('Диагностика…');
+  const lines=[];
+  lines.push('VPN: '+(connected?'on':'off')+' · mode '+curMode());
+  // internet
+  try{
+    const t0=Date.now();
+    const r=await fetch('https://www.gstatic.com/generate_204',{method:'GET',cache:'no-store',mode:'no-cors'});
+    lines.push('Internet probe: ok ~'+(Date.now()-t0)+'ms (no-cors)');
+  }catch(e){ lines.push('Internet probe: fail '+e); }
+  // core
+  if(connected){
+    const r=await core('GET','/version');
+    if(r.ok) lines.push('Core API: ok '+JSON.stringify(r.data||{}).slice(0,80));
+    else lines.push('Core API: fail '+ (r.error||r.status));
+    const c=await core('GET','/configs');
+    if(c.ok && c.data) lines.push('Core mode: '+(c.data.mode||'?'));
+  } else lines.push('Core API: skipped (VPN off)');
+  // IP
+  try{
+    if(Vpn && Vpn.checkOutboundIp){
+      const ip=await Vpn.checkOutboundIp();
+      lines.push(ip&&ip.ok ? ('IP: '+ip.ip+(ip.viaProxy?' via proxy':'')) : ('IP: '+(ip&&ip.error||'fail')));
+    }
+  }catch(e){ lines.push('IP: err'); }
+  lines.push('Subs: '+getEnabledSubs().length+' enabled');
+  lines.push('Split: '+getSplitMode()+' · apps '+getSplitApps().length);
+  dbg(lines.join('\n'));
+  toast(lines.slice(0,3).join(' · '));
+  // show dbg
+  const el=document.getElementById('dbg'); if(el) el.classList.add('on');
+}
+// --- auto server switch on bad ping ---
+let autoSrvTimer=null;
+function startAutoServerWatch(){
+  stopAutoServerWatch();
+  if(!isAutoServer()) return;
+  autoSrvTimer=setInterval(checkAutoServer, 45000);
+}
+function stopAutoServerWatch(){ if(autoSrvTimer){ clearInterval(autoSrvTimer); autoSrvTimer=null; } }
+async function checkAutoServer(){
+  if(!connected || !isAutoServer() || document.hidden) return;
+  if(curMode()==='direct') return;
+  try{
+    const r=await core('GET','/proxies');
+    const g=r.data&&r.data.proxies&&r.data.proxies[GROUP];
+    if(!g||!g.now) return;
+    const name=g.now;
+    const url=encodeURIComponent('https://www.gstatic.com/generate_204');
+    const rr=await core('GET','/proxies/'+encodeURIComponent(name)+'/delay?timeout=4000&url='+url);
+    const d=(rr.data&&typeof rr.data.delay==='number')?rr.data.delay:-1;
+    if(d>0 && d<=500){ delays[name]=d; return; }
+    // switch to Fastest group selection or best cached
+    dbg('autosrv bad ping '+name+' d='+d);
+    let best=null, bestD=1e9;
+    for(const [n,v] of Object.entries(delays)){
+      if(v>0 && v<bestD && !isGroupName(n)){ bestD=v; best=n; }
+    }
+    if(best && best!==name){
+      await applyServerSelection(best);
+      toast('Автосмена → '+cleanName(best)+' ('+bestD+' мс)');
+      loadProxies();
+    } else {
+      // ask Fastest via PROXY if available
+      const all=(g.all||[]).filter(n=>!isGroupName(n));
+      if(all.length){
+        // trigger url-test group by selecting Fastest into Зарубежные
+        await core('PUT','/proxies/'+encodeURIComponent('Зарубежные'),{name:'Fastest'});
+        toast('Автосмена: Fastest');
+      }
+    }
+  }catch(e){ dbg('autosrv: '+e); }
+}
+async function openSystemVpnSettings(){
+  if(Vpn && Vpn.openVpnSettings){
+    try{ await Vpn.openVpnSettings(); }
+    catch(e){ toast('Откройте настройки VPN вручную'); }
+  } else toast('Настройки → Сеть → VPN → Always-on');
+}
+function updateSplitSummary(){
+  const el=document.getElementById('split-summary');
+  if(!el) return;
+  const m=getSplitMode(), n=getSplitApps().length;
+  if(m==='all') el.textContent='VPN ДЛЯ ВСЕХ';
+  else if(m==='exclude') el.textContent='КРОМЕ '+n+' ПРИЛ.';
+  else el.textContent='ТОЛЬКО '+n+' ПРИЛ.';
+}
+function renderSplitModeUi(){
+  const m=getSplitMode();
+  for(const id of ['split-all','split-exclude','split-include']){
+    const el=document.getElementById(id);
+    if(!el) continue;
+    const v=id.replace('split-','');
+    el.classList.toggle('active', (v==='all'?m==='all':m===v));
+  }
+  const hint=document.getElementById('split-hint');
+  if(hint){
+    if(m==='all') hint.textContent='VPN для всех приложений (кроме Misetanibox).';
+    else if(m==='exclude') hint.textContent='Выбранные приложения идут мимо VPN. Остальные — через VPN. Переподключите VPN.';
+    else hint.textContent='Только выбранные приложения через VPN. Остальные — напрямую. Переподключите VPN.';
+  }
+  updateSplitSummary();
+}
+async function setSplitMode(mode){
+  localStorage.setItem('mise_split_mode', mode==='include'||mode==='exclude'?mode:'all');
+  renderSplitModeUi();
+  await syncNativePrefs();
+  toast(connected ? 'Split: переподключите VPN' : 'Split сохранён');
+  loadAppList(false);
+}
+let cachedApps=null;
+function showSysApps(){ return localStorage.getItem('mise_sysapps')!=='0'; }
+function toggleSysApps(el){
+  el.classList.toggle('on');
+  localStorage.setItem('mise_sysapps', el.classList.contains('on')?'1':'0');
+  filterAppList();
+}
+async function loadAppList(force){
+  const list=document.getElementById('apps-list');
+  if(!list) return;
+  if(!isNative || !Vpn || !Vpn.listApps){
+    list.innerHTML='<div class="list-note">Список приложений доступен только в Android-сборке.</div>';
+    return;
+  }
+  if(!force && cachedApps){ filterAppList(); return; }
+  list.innerHTML='<div class="list-note">Загрузка всех приложений…</div>';
+  try{
+    const r=await Vpn.listApps({ includeSystem: true });
+    const apps=(r&&r.apps)||[];
+    cachedApps=apps;
+    const cnt=document.getElementById('apps-count');
+    if(cnt) cnt.textContent=(r.count||apps.length)+' ПРИЛОЖЕНИЙ';
+    const sub=document.getElementById('apps-sub');
+    if(sub) sub.textContent='SPLIT · '+(r.count||apps.length)+' APPS';
+    filterAppList();
+  }catch(e){
+    list.innerHTML='<div class="list-note">Ошибка: '+(e&&e.message?e.message:e)+'</div>';
+  }
+}
+function filterAppList(){
+  if(!cachedApps) return;
+  const q=(document.getElementById('apps-search')?.value||'').trim().toLowerCase();
+  const sys=showSysApps();
+  let apps=cachedApps.filter(a=>{
+    if(!sys && a.system) return false;
+    if(!q) return true;
+    const lab=String(a.label||'').toLowerCase();
+    const pkg=String(a.packageName||'').toLowerCase();
+    return lab.includes(q) || pkg.includes(q);
+  });
+  // selected first
+  const selected=new Set(getSplitApps());
+  apps=apps.slice().sort((a,b)=>{
+    const as=selected.has(a.packageName)?0:1;
+    const bs=selected.has(b.packageName)?0:1;
+    if(as!==bs) return as-bs;
+    return String(a.label||'').localeCompare(String(b.label||''),'ru');
+  });
+  renderAppList(apps);
+}
+function renderAppList(apps){
+  const list=document.getElementById('apps-list');
+  if(!list) return;
+  const selected=new Set(getSplitApps());
+  const m=getSplitMode();
+  if(m==='all'){
+    list.innerHTML='<div class="list-note">Режим «Все» — выбор приложений не нужен. Включите «Кроме» или «Только». Ниже полный список ('+apps.length+').</div>'+
+      apps.slice(0,50).map(a=>appRowHtml(a, selected)).join('')+
+      (apps.length>50?`<div class="list-note">… и ещё ${apps.length-50}. Включите режим «Кроме/Только» для выбора.</div>`:'');
+    return;
+  }
+  if(!apps.length){ list.innerHTML='<div class="list-note">Ничего не найдено. Снимите фильтр или включите «Системные».</div>'; return; }
+  list.innerHTML=`<div class="list-note">${apps.length} в списке · выбрано ${selected.size}</div>`+
+    apps.map(a=>appRowHtml(a, selected)).join('');
+}
+function appRowHtml(a, selected){
+  const pkg=a.packageName||'';
+  const on=selected.has(pkg);
+  const sys=a.system?' · SYSTEM':'';
+  return `<div class="row" onclick="toggleSplitApp('${escAttr(pkg)}')">
+    <div class="app-check ${on?'on':''}">${on?'✓':''}</div>
+    <div class="grow"><div class="t">${String(a.label||pkg).replace(/</g,'&lt;')}</div><div class="s">${String(pkg).replace(/</g,'&lt;')}${sys}</div></div>
+  </div>`;
+}
+async function toggleSplitApp(pkg){
+  if(!pkg) return;
+  let apps=getSplitApps();
+  if(apps.includes(pkg)) apps=apps.filter(p=>p!==pkg);
+  else apps.push(pkg);
+  saveSplitApps(apps);
+  await syncNativePrefs();
+  if(cachedApps) renderAppList(cachedApps);
+  updateSplitSummary();
+}
+function showAbout(){
+  const p=document.getElementById('about-panel');
+  if(p) p.classList.toggle('hidden');
+  const a=document.getElementById('about-sub');
+  if(a) a.textContent='v'+BUILD;
+}
+function initSettingsToggles(){
+  const a=document.getElementById('tog-autostart');
+  if(a) a.classList.toggle('on', isAutostart());
+  const k=document.getElementById('tog-kill');
+  if(k) k.classList.toggle('on', isKillSwitch());
+  const b=document.getElementById('tog-bio');
+  if(b) b.classList.toggle('on', isBiometric());
+  const n=document.getElementById('tog-netauto');
+  if(n) n.classList.toggle('on', isNetAuto());
+  const s=document.getElementById('tog-autosrv');
+  if(s) s.classList.toggle('on', isAutoServer());
+  const sys=document.getElementById('tog-sysapps');
+  if(sys) sys.classList.toggle('on', showSysApps());
+  updateSplitSummary();
+  updateSsidSummary();
+  updatePeriodStatsLabel();
+  updateDnsSummary();
+  if(isAutoServer()) startAutoServerWatch();
+}
+
 applyTheme();
 applyModeLabel();
-refreshSplitSub();
+purgeLocalFileSubs();
 renderSubs();
 setUiConnected(false);
-// стартовая диагностика окружения
-dbg('старт '+BUILD+' | Cap='+(!!Cap)+' platform='+platform+' native='+isNative+' plugin='+(!!Vpn)+' reg='+(!!(Cap&&Cap.registerPlugin)));
-const vs=document.getElementById('ver-sub'); if(vs) vs.textContent='MISETANIBOX · '+BUILD.toUpperCase();
+initSettingsToggles();
+dbg('старт Misetanibox v'+BUILD+' | Cap='+(!!Cap)+' native='+isNative+' plugin='+(!!Vpn));
+const vs=document.getElementById('ver-sub'); if(vs) vs.textContent='MISETANIBOX · v'+BUILD;
+const about=document.getElementById('about-sub'); if(about) about.textContent='v'+BUILD;
+
+(async function bootSubs(){
+  purgeLocalFileSubs();
+  renderSubs();
+  try{ await syncNativePrefs(); }catch(e){}
+})();
+
+// Restore tunnel UI if service already running
+(async function restoreStatus(){
+  if(!Vpn || !Vpn.status) return;
+  try{
+    const s = await Vpn.status();
+    if(s && s.running) setUiConnected(true);
+  }catch(e){}
+  if(Vpn.getDeviceInfo){
+    try{
+      const d = await Vpn.getDeviceInfo();
+      const about = document.getElementById('about-sub');
+      if(about && d) about.textContent = 'ANDROID '+d.androidRelease+' · API '+d.sdkInt+'';
+    }catch(e){}
+  }
+  if(Vpn.getNativePrefs){
+    try{
+      const p=await Vpn.getNativePrefs();
+      if(p && p.pendingOpenTab) go(p.pendingOpenTab);
+      if(p && typeof p.killSwitch==='boolean'){
+        localStorage.setItem('mise_kill', p.killSwitch?'1':'0');
+        const k=document.getElementById('tog-kill');
+        if(k) k.classList.toggle('on', p.killSwitch);
+      }
+    }catch(e){}
+  }
+})();
+
+// Poll pending tab when returning from notification "Сервер"
+document.addEventListener('visibilitychange', async ()=>{
+  if(document.hidden || !Vpn || !Vpn.getNativePrefs) return;
+  try{
+    const p=await Vpn.getNativePrefs();
+    if(p && p.pendingOpenTab) go(p.pendingOpenTab);
+  }catch(e){}
+});
 </script>
 </body>
 </html>

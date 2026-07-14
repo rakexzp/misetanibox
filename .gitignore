@@ -41,14 +41,21 @@ goclashz
 build/bin/
 
 mobile/node_modules/
-
+mobile/dist/
 mobile/core/mihomo.aar
 
 mobile/android/.gradle/
 mobile/android/build/
 mobile/android/app/build/
 mobile/android/app/libs/*.aar
+mobile/android/app/libs/*-sources.jar
 mobile/android/.idea/
 mobile/android/local.properties
 mobile/android/*.iml
 mobile/android/app/src/main/assets/public/
+mobile/android/capacitor-cordova-android-plugins/
+
+mobile/android/misetanibox-release.jks
+mobile/android/keystore.properties
+mobile/dist/
+

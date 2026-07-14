@@ -1,6 +1,20 @@
 {
-  "appId": "network.geodema.misetanibox",
+  "appId": "com.misetanibox.app",
   "appName": "Misetanibox",
   "webDir": "www",
-  "android": { "allowMixedContent": true }
+  "android": {
+    "allowMixedContent": true,
+    "backgroundColor": "#0A0A0A",
+    "webContentsDebuggingEnabled": false
+  },
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  },
+  "plugins": {
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#0A0A0A"
+    }
+  }
 }
