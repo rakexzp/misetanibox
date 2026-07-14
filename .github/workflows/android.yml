@@ -53,7 +53,13 @@ jobs:
         working-directory: mobile/core
         run: |
           go mod download
-          gomobile bind -v -target=android/arm64,android/arm -androidapi 21 -o mihomo.aar .
+          # target включает amd64 (x86_64-эмуляторы), ldflags выравнивает .so под 16 КБ
+          # страницы (Android 15 / 16 KB page size), иначе либа не грузится на новых образах.
+          gomobile bind -v \
+            -target=android/arm64,android/arm,android/amd64 \
+            -androidapi 21 \
+            -ldflags="-extldflags=-Wl,-z,max-page-size=16384" \
+            -o mihomo.aar .
           mkdir -p ../android/app/libs
           cp mihomo.aar ../android/app/libs/mihomo.aar
 
