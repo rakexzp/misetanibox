@@ -49,8 +49,8 @@ import { globalState } from '../store';
 import * as API from '../../wailsjs/go/main/App';
 
 // каомодзи-мордочка под брендом — реагирует на состояние подключения
-const HAPPY = ['\\(^o^)/', '(^q^)', 'ᕕ( ᐛ )ᕗ', '(๑˃ᴗ˂)', '(≧▽≦)', 'ヽ(o^▽^o)ノ', '(・‿・)'];
-const SLEEP = ['(-_-)zzz', '(￣ω￣)', '(._.)', '(≖_≖)'];
+const HAPPY = ['^o^', '^q^', '^_^', 'XD', '>ᴗ<', '•‿•', '\\o/', '^ᴗ^'];
+const SLEEP = ['-_-', '._.', '-.-', '=_=', 'u_u', '-_-zzz'];
 const rnd = (a: string[]) => a[Math.floor(Math.random() * a.length)];
 
 const face = ref(SLEEP[0]);
@@ -72,7 +72,7 @@ watch(() => globalState.isRunning, () => {
 });
 
 const blink = () => {
-  face.value = globalState.isRunning ? '(^_^)' : '(-‸-)';
+  face.value = globalState.isRunning ? '^_^' : 'u_u';
   setTimeout(() => { face.value = baseFace; }, 150);
 };
 
