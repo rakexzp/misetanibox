@@ -1,6 +1,7 @@
 <template>
   <aside class="sidebar">
     <div class="sidebar-brand">Misetanibox</div>
+    <div class="brand-face" :class="{ pop: facePop, online: globalState.isRunning }">{{ face }}</div>
     <nav class="nav-list">
       <TransitionGroup name="nav-slide">
         <div v-for="item in menu" :key="item.id"
@@ -43,8 +44,43 @@
 </template>
 
 <script setup lang="ts">
+import { ref, watch, onMounted, onUnmounted } from 'vue';
 import { globalState } from '../store';
 import * as API from '../../wailsjs/go/main/App';
+
+// каомодзи-мордочка под брендом — реагирует на состояние подключения
+const HAPPY = ['\\(^o^)/', '(^q^)', 'ᕕ( ᐛ )ᕗ', '(๑˃ᴗ˂)', '(≧▽≦)', 'ヽ(o^▽^o)ノ', '(・‿・)'];
+const SLEEP = ['(-_-)zzz', '(￣ω￣)', '(._.)', '(≖_≖)'];
+const rnd = (a: string[]) => a[Math.floor(Math.random() * a.length)];
+
+const face = ref(SLEEP[0]);
+const facePop = ref(false);
+let baseFace = SLEEP[0];
+let blinkTimer: ReturnType<typeof setInterval> | undefined;
+
+const setFace = () => {
+  baseFace = globalState.isRunning ? rnd(HAPPY) : rnd(SLEEP);
+  face.value = baseFace;
+};
+
+watch(() => globalState.isRunning, () => {
+  setFace();
+  if (globalState.isRunning) {
+    facePop.value = true;
+    setTimeout(() => { facePop.value = false; }, 550);
+  }
+});
+
+const blink = () => {
+  face.value = globalState.isRunning ? '(^_^)' : '(-‸-)';
+  setTimeout(() => { face.value = baseFace; }, 150);
+};
+
+onMounted(() => {
+  setFace();
+  blinkTimer = setInterval(() => { if (!document.hidden) blink(); }, 5200);
+});
+onUnmounted(() => clearInterval(blinkTimer));
 
 defineProps<{
   activeId: string;
@@ -87,7 +123,26 @@ const toggleTheme = () => {
   letter-spacing: -0.02em;
   color: var(--text-main);
   text-align: center;
-  padding: 8px 0 32px 0;
+  padding: 8px 0 4px 0;
+}
+
+.brand-face {
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  padding: 0 0 26px 0;
+  min-height: 1.2em;
+  user-select: none;
+  transition: color 0.25s ease;
+  will-change: transform;
+}
+.brand-face.online { color: var(--accent); }
+.brand-face.pop { animation: face-pop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes face-pop {
+  0% { transform: scale(0.6) translateY(4px); opacity: 0.4; }
+  50% { transform: scale(1.25) translateY(-2px); }
+  100% { transform: scale(1) translateY(0); }
 }
 
 .nav-list { flex: 1; }
