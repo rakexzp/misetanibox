@@ -55,6 +55,8 @@ wails build -platform linux/amd64 -tags webkit2_41   # Linux (нужны gtk3 + 
 
 Логотип — [@whxteangel](https://t.me/whxteangel). Ядро — [MetaCubeX/mihomo](https://github.com/MetaCubeX/mihomo) и [vernesong/mihomo](https://github.com/vernesong/mihomo) (Smart).
 
+Android-версия — вклад [@14Unight](https://github.com/14Unight): плитка в шторке, виджет, автозапуск и др.
+
 ## Лицензия
 
 MIT. Основано на [GoclashZ](https://github.com/Zzz-IT/GoclashZ) © Zzz-IT.
