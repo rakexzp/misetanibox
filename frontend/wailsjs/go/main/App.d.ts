@@ -237,3 +237,5 @@ export function WorkshopFetchImage(arg1:string):Promise<string>;
 export function SetCardBgData(arg1:string,arg2:string):Promise<string>;
 export function GetProxyChains():Promise<Array<clash.ProxyChain>>;
 export function SaveProxyChains(arg1:Array<clash.ProxyChain>):Promise<void>;
+export function GetGpuSaver():Promise<boolean>;
+export function SetGpuSaver(arg1:boolean):Promise<void>;

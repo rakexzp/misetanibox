@@ -72,6 +72,16 @@
                 <span class="slider"></span>
               </label>
             </div>
+            <div class="setting-item">
+              <div class="info">
+                <h4>Разгрузка GPU интерфейса</h4>
+                <p>Отключает GPU-композитинг вебвью (сама отрисовка идёт через CPU). Помогает, если видеокарта греется именно от интерфейса. Применяется после перезапуска.</p>
+              </div>
+              <label class="modern-switch">
+                <input type="checkbox" :checked="gpuSaver" @change="toggleGpuSaver">
+                <span class="slider"></span>
+              </label>
+            </div>
           </div>
 
           <div class="glass-card setting-group">
@@ -1340,6 +1350,17 @@ const resetColors = () => {
 // экономный режим анимаций (меньше нагрузки на GPU)
 const economy = ref(economyEnabled());
 const toggleEconomy = () => { economy.value = !economy.value; setEconomy(economy.value); };
+
+// разгрузка GPU интерфейса (отключение композитинга webview) — применяется при перезапуске
+const gpuSaver = ref(false);
+(async () => { try { gpuSaver.value = await (API.GetGpuSaver as any)(); } catch { /* ignore */ } })();
+const toggleGpuSaver = async () => {
+  gpuSaver.value = !gpuSaver.value;
+  try {
+    await (API.SetGpuSaver as any)(gpuSaver.value);
+    await showAlert('Настройка сохранена. Перезапустите приложение, чтобы она применилась.', 'Нужен перезапуск');
+  } catch (e) { await showAlert('Не удалось сохранить: ' + e, 'Ошибка'); }
+};
 
 const showResetConfirm = ref(false);
 const resetModule = ref('');

@@ -43,6 +43,11 @@ func main() {
 		}
 	}()
 
+	// разгрузка GPU: точечно отключить композитинг WebView2 (не весь GPU), если включено в настройках
+	if v, err := utils.LoadSetting("gpu_saver", false); err == nil && v != nil && *v {
+		os.Setenv("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", "--disable-gpu-compositing")
+	}
+
 	exePath, _ := os.Executable()
 	isDebugMode := false
 	if filepath.Base(exePath) == "Misetanibox-dev.exe" || len(os.Getenv("WAILS_DEV_SERVER")) > 0 {

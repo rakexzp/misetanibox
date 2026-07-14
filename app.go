@@ -878,6 +878,19 @@ func (a *App) DeleteFromGallery(galleryID string) []GalleryItem {
 
 func (a *App) deviceHwid() string { return sys.GetDeviceInfo().HWID }
 
+// GetGpuSaver — включена ли разгрузка GPU (отключение композитинга webview). Применяется при следующем запуске.
+func (a *App) GetGpuSaver() bool {
+	v, err := utils.LoadSetting("gpu_saver", false)
+	if err != nil || v == nil {
+		return false
+	}
+	return *v
+}
+
+func (a *App) SetGpuSaver(on bool) error {
+	return utils.SaveSetting("gpu_saver", &on)
+}
+
 func (a *App) WorkshopList(sort, q string, page int) (string, error) {
 	return workshop.List(a.deviceHwid(), sort, q, page)
 }

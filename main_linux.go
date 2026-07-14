@@ -61,6 +61,11 @@ func main() {
 		}
 	}()
 
+	// разгрузка GPU: отключить композитинг WebKit (не весь GPU), если включено в настройках
+	if v, err := utils.LoadSetting("gpu_saver", false); err == nil && v != nil && *v {
+		os.Setenv("WEBKIT_DISABLE_COMPOSITING_MODE", "1")
+	}
+
 	exePath, _ := os.Executable()
 	isDebugMode := false
 	if strings.Contains(filepath.Base(exePath), "-dev") || len(os.Getenv("WAILS_DEV_SERVER")) > 0 {

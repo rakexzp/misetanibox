@@ -509,3 +509,11 @@ export function GetProxyChains() {
 export function SaveProxyChains(arg1) {
   return window['go']['main']['App']['SaveProxyChains'](arg1);
 }
+
+export function GetGpuSaver() {
+  return window['go']['main']['App']['GetGpuSaver']();
+}
+
+export function SetGpuSaver(arg1) {
+  return window['go']['main']['App']['SetGpuSaver'](arg1);
+}
