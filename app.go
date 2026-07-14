@@ -1021,9 +1021,10 @@ func (a *App) SelectLocalConfig(id string) error {
 
 func (a *App) SelectLocalFile() (FileInfo, error) {
 	path, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: "Выберите локальный файл конфигурации",
+		Title: "Выберите файл подписки или конфигурации",
 		Filters: []runtime.FileFilter{
-			{DisplayName: "Файлы конфигурации Clash (*.yaml; *.yml)", Pattern: "*.yaml;*.yml"},
+			{DisplayName: "Подписка / конфиг (*.txt; *.yaml; *.yml)", Pattern: "*.txt;*.yaml;*.yml"},
+			{DisplayName: "Все файлы (*.*)", Pattern: "*.*"},
 		},
 	})
 	if err != nil || path == "" {

@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"mime"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -18,6 +20,211 @@ import (
 
 	"gopkg.in/yaml.v3"
 )
+
+// resolveSubInput accepts:
+//   - https://… subscription URLs
+//   - local paths / file:// URLs to a .txt that contains an http(s) URL
+//   - local paths to a Clash/mihomo YAML (imported as body, no network)
+//
+// Returns either remoteURL (download) or localBody (inline config). The caller's
+// original input should be stored in the index so refresh re-reads the file.
+func resolveSubInput(input string) (remoteURL string, localBody []byte, err error) {
+	input = strings.TrimSpace(input)
+	input = strings.Trim(input, `"'«»`)
+	if input == "" {
+		return "", nil, fmt.Errorf("пустая ссылка или путь")
+	}
+
+	// Direct remote URL — no file involved.
+	low := strings.ToLower(input)
+	if strings.HasPrefix(low, "http://") || strings.HasPrefix(low, "https://") {
+		return input, nil, nil
+	}
+
+	path, isLocal, pathErr := localPathFromInput(input)
+	if pathErr != nil {
+		return "", nil, pathErr
+	}
+	if !isLocal {
+		// Domain-like or opaque string — let HTTP downloader try (may fail clearly).
+		return input, nil, nil
+	}
+
+	data, readErr := os.ReadFile(path)
+	if readErr != nil {
+		return "", nil, fmt.Errorf("не удалось прочитать файл %s: %w", path, readErr)
+	}
+	// Strip UTF-8 BOM
+	data = bytesTrimBOM(data)
+	content := strings.TrimSpace(string(data))
+	if content == "" {
+		return "", nil, fmt.Errorf("файл пуст: %s", path)
+	}
+
+	// File is a pointer to a remote subscription (one or more lines).
+	if u := firstHTTPURL(content); u != "" {
+		return u, nil, nil
+	}
+
+	// base64:… or raw base64 blob of YAML
+	trimmed := strings.TrimPrefix(content, "base64:")
+	if dec, decErr := base64.StdEncoding.DecodeString(strings.TrimSpace(trimmed)); decErr == nil && len(dec) > 0 {
+		if StrictVerifyClashConfig(dec) == nil {
+			return "", dec, nil
+		}
+	}
+
+	// Inline Clash/mihomo YAML (or proxies-only body).
+	if StrictVerifyClashConfig(data) == nil {
+		return "", data, nil
+	}
+
+	return "", nil, fmt.Errorf(
+		"в файле %s нет https-ссылки и это не YAML Clash/mihomo. "+
+			"Положите в .txt одну строку с URL подписки или полный конфиг",
+		path,
+	)
+}
+
+func bytesTrimBOM(b []byte) []byte {
+	if len(b) >= 3 && b[0] == 0xEF && b[1] == 0xBB && b[2] == 0xBF {
+		return b[3:]
+	}
+	return b
+}
+
+// localPathFromInput detects Windows/Unix/file:// paths that exist on disk.
+func localPathFromInput(input string) (path string, ok bool, err error) {
+	s := strings.TrimSpace(input)
+	low := strings.ToLower(s)
+
+	if strings.HasPrefix(low, "file:") {
+		p, perr := pathFromFileURL(s)
+		if perr != nil {
+			return "", false, perr
+		}
+		if st, e := os.Stat(p); e != nil {
+			return "", false, fmt.Errorf("локальный файл не найден: %s", p)
+		} else if st.IsDir() {
+			return "", false, fmt.Errorf("нужен файл, а не папка: %s", p)
+		}
+		return p, true, nil
+	}
+
+	// Never treat real URLs as paths.
+	if strings.Contains(s, "://") {
+		return "", false, nil
+	}
+
+	candidate := s
+	// Normalize quotes / stray spaces already trimmed.
+	if looksLikeFilesystemPath(candidate) {
+		if st, e := os.Stat(candidate); e == nil {
+			if st.IsDir() {
+				return "", false, fmt.Errorf("нужен файл, а не папка: %s", candidate)
+			}
+			return candidate, true, nil
+		}
+		// Path-shaped but missing — surface a clear error instead of HTTP fail.
+		if filepath.IsAbs(candidate) || looksLikeWindowsPath(candidate) {
+			return "", false, fmt.Errorf("локальный файл не найден: %s", candidate)
+		}
+	}
+
+	// Relative path that exists (e.g. .\subs\my.txt)
+	if st, e := os.Stat(candidate); e == nil && !st.IsDir() {
+		abs, _ := filepath.Abs(candidate)
+		return abs, true, nil
+	}
+	return "", false, nil
+}
+
+func looksLikeWindowsPath(s string) bool {
+	if strings.HasPrefix(s, `\\`) {
+		return true // UNC
+	}
+	if len(s) >= 3 {
+		drive := s[0]
+		if ((drive >= 'A' && drive <= 'Z') || (drive >= 'a' && drive <= 'z')) && s[1] == ':' {
+			return s[2] == '\\' || s[2] == '/'
+		}
+	}
+	return false
+}
+
+func looksLikeFilesystemPath(s string) bool {
+	if looksLikeWindowsPath(s) {
+		return true
+	}
+	if filepath.IsAbs(s) {
+		return true
+	}
+	// Relative with separators or known config extensions.
+	if strings.ContainsAny(s, `/\`) {
+		return true
+	}
+	ext := strings.ToLower(filepath.Ext(s))
+	switch ext {
+	case ".txt", ".yaml", ".yml", ".json", ".conf", ".ini", ".list":
+		return true
+	}
+	return false
+}
+
+func pathFromFileURL(raw string) (string, error) {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return "", fmt.Errorf("некорректный file:// URL: %w", err)
+	}
+	p := u.Path
+	if u.Host != "" && u.Host != "localhost" {
+		// file://server/share → UNC on Windows
+		if runtime.GOOS == "windows" {
+			p = `\\` + u.Host + filepath.FromSlash(p)
+			return p, nil
+		}
+	}
+	if runtime.GOOS == "windows" {
+		// file:///C:/Users/... → /C:/Users/... → C:\Users\...
+		if strings.HasPrefix(p, "/") && len(p) >= 3 && p[2] == ':' {
+			p = p[1:]
+		}
+		// file:///C|/Users (legacy)
+		if len(p) >= 2 && p[1] == '|' {
+			p = string(p[0]) + ":" + p[2:]
+		}
+		p = filepath.FromSlash(p)
+	}
+	if p == "" {
+		return "", fmt.Errorf("пустой путь в file:// URL")
+	}
+	return p, nil
+}
+
+func firstHTTPURL(content string) string {
+	// Whole content is a single URL
+	one := strings.TrimSpace(content)
+	one = strings.Trim(one, `"'`)
+	low := strings.ToLower(one)
+	if (strings.HasPrefix(low, "http://") || strings.HasPrefix(low, "https://")) && !strings.Contains(one, "\n") {
+		return one
+	}
+	for _, line := range strings.Split(content, "\n") {
+		line = strings.TrimSpace(line)
+		line = strings.Trim(line, `"'`)
+		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, "//") {
+			continue
+		}
+		// Allow "url: https://..." style
+		if idx := strings.Index(strings.ToLower(line), "http://"); idx >= 0 {
+			return strings.TrimSpace(line[idx:])
+		}
+		if idx := strings.Index(strings.ToLower(line), "https://"); idx >= 0 {
+			return strings.TrimSpace(line[idx:])
+		}
+	}
+	return ""
+}
 
 func parseSubUserInfo(header string) (upload, download, total, expire int64) {
 	if header == "" {
@@ -73,6 +280,13 @@ func DownloadSub(ctx context.Context, name, url, existingId, userAgent string) (
 		id = fmt.Sprintf("%d", time.Now().UnixMilli())
 	}
 
+	// Keep the original input (may be a local path to a .txt with the real URL).
+	sourceKey := strings.TrimSpace(url)
+	remoteURL, localBody, resolveErr := resolveSubInput(sourceKey)
+	if resolveErr != nil {
+		return id, resolveErr
+	}
+
 	dir := utils.GetSubscriptionsDir()
 	os.MkdirAll(dir, 0755)
 
@@ -94,55 +308,72 @@ func DownloadSub(ctx context.Context, name, url, existingId, userAgent string) (
 		_ = utils.WriteFileAtomic(originPath+".bak", originData, 0644)
 	}
 
-	err = downloader.FetchSmallFileAtomic(ctx, downloader.Options{
-		URLs:      []string{url},
-		DestPath:  originPath,
-		UserAgent: userAgent,
-		Headers:   sys.SubscriptionHeaders(),
-		MaxBytes:  50 * 1024 * 1024,
-		Strategy: func() downloader.DownloadStrategy {
-			var pUrl string
-			if IsRunning() {
-				if netCfg, err := GetNetworkConfig(); err == nil && netCfg.MixedPort != 0 {
-					pUrl = fmt.Sprintf("http://127.0.0.1:%d", netCfg.MixedPort)
-				}
-			}
-			return downloader.DownloadStrategy{
-				ProxyURL:    pUrl,
-				PreferProxy: pUrl != "",
-			}
-		},
-		InsecureSkipVerify: true,
-		OnResponse: func(resp *http.Response) {
-
-			if info := resp.Header.Get("Subscription-Userinfo"); info != "" {
-				upload, download, total, expire = parseSubUserInfo(info)
-			}
-
-			headerName = parseSubProfileName(resp.Header)
-		},
-		Validator: func(tmpPath string) error {
-
-			data, err := os.ReadFile(tmpPath)
-			if err != nil {
-				return err
-			}
-			if err := StrictVerifyClashConfig(data); err != nil {
-				return fmt.Errorf("проверка конфигурации подписки не пройдена: %v (возможно, скачалась веб-страница, HTML или мусор)", err)
-			}
-			if err := ValidateClashReferencesBytes(data); err != nil {
-				return fmt.Errorf("проверка ссылок конфигурации подписки не пройдена: %v", err)
-			}
-			return nil
-		},
-	})
-
-	if err != nil {
-
-		if _, statErr := os.Stat(originPath + ".bak"); statErr == nil {
-			_ = os.Rename(originPath+".bak", originPath)
+	if len(localBody) > 0 {
+		// Local YAML / decoded config — no network.
+		if err := StrictVerifyClashConfig(localBody); err != nil {
+			return safeId, fmt.Errorf("проверка конфигурации не пройдена: %v", err)
 		}
-		return safeId, err
+		if err := ValidateClashReferencesBytes(localBody); err != nil {
+			return safeId, fmt.Errorf("проверка ссылок конфигурации не пройдена: %v", err)
+		}
+		if err := utils.WriteFileAtomic(originPath, localBody, 0644); err != nil {
+			return safeId, err
+		}
+	} else {
+		fetchURL := remoteURL
+		if fetchURL == "" {
+			fetchURL = sourceKey
+		}
+		err = downloader.FetchSmallFileAtomic(ctx, downloader.Options{
+			URLs:      []string{fetchURL},
+			DestPath:  originPath,
+			UserAgent: userAgent,
+			Headers:   sys.SubscriptionHeaders(),
+			MaxBytes:  50 * 1024 * 1024,
+			Strategy: func() downloader.DownloadStrategy {
+				var pUrl string
+				if IsRunning() {
+					if netCfg, err := GetNetworkConfig(); err == nil && netCfg.MixedPort != 0 {
+						pUrl = fmt.Sprintf("http://127.0.0.1:%d", netCfg.MixedPort)
+					}
+				}
+				return downloader.DownloadStrategy{
+					ProxyURL:    pUrl,
+					PreferProxy: pUrl != "",
+				}
+			},
+			InsecureSkipVerify: true,
+			OnResponse: func(resp *http.Response) {
+
+				if info := resp.Header.Get("Subscription-Userinfo"); info != "" {
+					upload, download, total, expire = parseSubUserInfo(info)
+				}
+
+				headerName = parseSubProfileName(resp.Header)
+			},
+			Validator: func(tmpPath string) error {
+
+				data, err := os.ReadFile(tmpPath)
+				if err != nil {
+					return err
+				}
+				if err := StrictVerifyClashConfig(data); err != nil {
+					return fmt.Errorf("проверка конфигурации подписки не пройдена: %v (возможно, скачалась веб-страница, HTML или мусор)", err)
+				}
+				if err := ValidateClashReferencesBytes(data); err != nil {
+					return fmt.Errorf("проверка ссылок конфигурации подписки не пройдена: %v", err)
+				}
+				return nil
+			},
+		})
+
+		if err != nil {
+
+			if _, statErr := os.Stat(originPath + ".bak"); statErr == nil {
+				_ = os.Rename(originPath+".bak", originPath)
+			}
+			return safeId, err
+		}
 	}
 
 	err = WithRuleStorageLock(func() error {
@@ -176,7 +407,14 @@ func DownloadSub(ctx context.Context, name, url, existingId, userAgent string) (
 		resolvedName = strings.TrimSpace(headerName)
 	}
 	if resolvedName == "" {
-		resolvedName = "Подписка"
+		if base := filepath.Base(sourceKey); base != "" && base != "." && looksLikeFilesystemPath(sourceKey) {
+			resolvedName = strings.TrimSuffix(base, filepath.Ext(base))
+			if resolvedName == "" {
+				resolvedName = base
+			}
+		} else {
+			resolvedName = "Подписка"
+		}
 	}
 
 	IndexLock.Lock()
@@ -188,6 +426,9 @@ func DownloadSub(ctx context.Context, name, url, existingId, userAgent string) (
 			SubIndex[i].Total = total
 			SubIndex[i].Expire = expire
 			SubIndex[i].Updated = time.Now().Unix()
+			if sourceKey != "" {
+				SubIndex[i].URL = sourceKey
+			}
 
 			if strings.TrimSpace(name) == "" && strings.TrimSpace(headerName) != "" {
 				SubIndex[i].Name = strings.TrimSpace(headerName)
@@ -200,7 +441,7 @@ func DownloadSub(ctx context.Context, name, url, existingId, userAgent string) (
 		SubIndex = append(SubIndex, SubIndexItem{
 			ID:       safeId,
 			Name:     resolvedName,
-			URL:      url,
+			URL:      sourceKey, // original input (http URL or local path to .txt)
 			Type:     "remote",
 			Upload:   upload,
 			Download: download,

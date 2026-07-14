@@ -98,14 +98,14 @@
             <h3>Импорт файла конфигурации</h3>
           </div>
           <div class="modal-body">
-            <p class="global-modal-msg">Импорт по ссылке подписки:</p>
+            <p class="global-modal-msg">Ссылка, путь к .txt (внутри URL) или YAML:</p>
             <div style="display: flex; gap: 8px;">
-              <input v-model="newSubUrl" placeholder="https://..." class="modal-input" style="flex: 1;" :disabled="isImporting" />
+              <input v-model="newSubUrl" placeholder="https://… или C:\…\sub.txt" class="modal-input" style="flex: 1;" :disabled="isImporting" />
               <button class="primary-btn mini-btn" style="height: 44px;" @click="handleDownload" :disabled="!newSubUrl.trim() || isImporting">Импорт</button>
             </div>
             <div class="divider-text">или</div>
             <button class="action-btn w-full-btn hover-accent" @click="handlePickFile" :disabled="isImporting" style="height: 44px; margin-top: 4px;">
-              <span class="btn-icon" v-html="ICONS.folder" style="margin-right: 4px;"></span> Выбрать локальный YAML-файл
+              <span class="btn-icon" v-html="ICONS.folder" style="margin-right: 4px;"></span> Выбрать локальный файл (.txt / YAML)
             </button>
           </div>
         </div>
@@ -317,7 +317,8 @@ const handlePickFile = async () => {
     if (result && result.path) {
       pendingImportPath.value = result.path;
       configNameInput.value = result.name;
-      isImportingRemote.value = false;
+      // Always resolve via UpdateSub: supports .txt with https URL and local YAML.
+      isImportingRemote.value = true;
       activeModal.value = 'import_confirm';
     }
   } catch (e) {
@@ -330,10 +331,17 @@ const confirmImport = async () => {
   isImporting.value = true;
   try {
     const finalName = configNameInput.value.trim() || (isImportingRemote.value ? "Подписка без имени" : "Файл без имени");
-    if (isImportingRemote.value) {
-      await API.UpdateSub(finalName, pendingImportPath.value);
-    } else {
-      await API.DoLocalImport(pendingImportPath.value, finalName);
+    const src = pendingImportPath.value;
+    // UpdateSub resolves: https URL, local .txt with URL inside, or local Clash YAML.
+    try {
+      await API.UpdateSub(finalName, src);
+    } catch (firstErr) {
+      // Fallback for pure local YAML import path used previously.
+      if (!isImportingRemote.value) {
+        await API.DoLocalImport(src, finalName);
+      } else {
+        throw firstErr;
+      }
     }
     await fetchConfigs();
     closeAllModals();

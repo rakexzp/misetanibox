@@ -8,7 +8,7 @@
 
 ---
 
-Форк [Zzz-IT/GoclashZ](https://github.com/Zzz-IT/GoclashZ). Нативный рендеринг Wails и системная многопоточность Go — минимальный след в памяти вместо Electron.
+Основано на Clash Meta / Mihomo. Нативный рендеринг Wails и системная многопоточность Go — минимальный след в памяти вместо Electron.
 
 ## Возможности
 
@@ -55,6 +55,20 @@ wails build -platform linux/amd64 -tags webkit2_41   # Linux (нужны gtk3 + 
 
 Логотип — [@whxteangel](https://t.me/whxteangel). Ядро — [MetaCubeX/mihomo](https://github.com/MetaCubeX/mihomo) и [vernesong/mihomo](https://github.com/vernesong/mihomo) (Smart).
 
+
+## Android (телефон)
+
+Нативное приложение под **Android 8+**, target **Android 16 (API 36)**.
+
+`powershell
+cd mobile
+npm install
+npm run build:core   # gomobile → mihomo.aar (нужны Go + NDK)
+npm run build:apk    # debug APK
+`
+
+APK: `mobile/android/app/build/outputs/apk/debug/app-debug.apk`  
+Подробнее: [mobile/README.md](mobile/README.md).
 ## Лицензия
 
-MIT. Основано на [GoclashZ](https://github.com/Zzz-IT/GoclashZ) © Zzz-IT.
+MIT.
