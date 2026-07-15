@@ -70,14 +70,22 @@ jobs:
           cp node_modules/@capacitor/core/dist/capacitor.js www/capacitor.js
           npx cap sync android
 
-      - name: Build debug APK
+      - name: Decode release keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/misetanibox-release.p12"
+
+      - name: Build release APK (signed)
         working-directory: mobile/android
+        env:
+          ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/misetanibox-release.p12
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
           chmod +x ./gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleRelease --no-daemon
 
       - name: Rename APK
-        run: cp mobile/android/app/build/outputs/apk/debug/app-debug.apk Misetanibox_android.apk
+        run: cp mobile/android/app/build/outputs/apk/release/app-release.apk Misetanibox_android.apk
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

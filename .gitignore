@@ -52,3 +52,9 @@ mobile/android/.idea/
 mobile/android/local.properties
 mobile/android/*.iml
 mobile/android/app/src/main/assets/public/
+
+# Android signing — keystore НИКОГДА не в репозиторий (только в GitHub Secrets)
+*.p12
+*.jks
+*.keystore
+keystore.properties
