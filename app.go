@@ -919,6 +919,33 @@ func (a *App) SaveProxyChains(chains []clash.ProxyChain) error {
 	return nil
 }
 
+// --- WARP-выход (Cloudflare WARP как узел цепочки) ---
+
+// GetWarpEnabled — включён ли WARP-выход.
+func (a *App) GetWarpEnabled() bool { return clash.IsWarpEnabled() }
+
+// EnableWarp — регистрирует (при первом включении) и активирует WARP-узел; затем перезапускает ядро.
+func (a *App) EnableWarp() error {
+	if err := clash.EnableWarpNode(); err != nil {
+		return err
+	}
+	if clash.IsRunning() {
+		return a.core.RestartCoreWithReason(a.ctx, "warp")
+	}
+	return nil
+}
+
+// DisableWarp — выключает WARP-узел; перезапускает ядро.
+func (a *App) DisableWarp() error {
+	if err := clash.DisableWarpNode(); err != nil {
+		return err
+	}
+	if clash.IsRunning() {
+		return a.core.RestartCoreWithReason(a.ctx, "warp")
+	}
+	return nil
+}
+
 func (a *App) RepairDataDirPermission() error {
 	if !sys.CheckAdmin() {
 		return sys.RunElevatedWithArgsWait("--repair-permissions")

@@ -5,7 +5,13 @@
         <h3 class="ch-title">Цепочки прокси</h3>
         <p class="ch-sub">Трафик идёт через несколько серверов подряд: вход → промежуточные → выход. Реализовано через relay-группы mihomo.</p>
       </div>
-      <button v-if="!editing" class="primary-btn accent-btn" @click="newChain">+ Создать цепочку</button>
+      <div class="ch-head-actions">
+        <button class="action-btn warp-btn" :class="{ on: warpEnabled }" :disabled="warpBusy" @click="toggleWarp"
+          :title="'Cloudflare WARP как узел-выход — добавь его в цепочку последним'">
+          {{ warpBusy ? 'WARP…' : (warpEnabled ? '✓ WARP-выход' : '+ WARP-выход') }}
+        </button>
+        <button v-if="!editing" class="primary-btn accent-btn" @click="newChain">+ Создать цепочку</button>
+      </div>
     </div>
 
     <!-- редактор -->
@@ -78,16 +84,25 @@ import { showAlert, showConfirm } from '../store';
 const GROUP_TYPES = new Set(['selector', 'urltest', 'url-test', 'fallback', 'loadbalance', 'load-balance',
   'relay', 'smart', 'direct', 'reject', 'reject-drop', 'rejectdrop', 'pass', 'compatible', 'dns']);
 
+const WARP_NODE = 'WARP';
+
 const chains = ref<{ name: string; nodes: string[] }[]>([]);
 const nodes = ref<string[]>([]);
 const editing = ref(false);
 const editIndex = ref(-1);
 const draft = ref<{ name: string; nodes: string[] }>({ name: '', nodes: [] });
 const search = ref('');
+const warpEnabled = ref(false);
+const warpBusy = ref(false);
 
+// WARP-узел показываем в списке выбора первым, когда включён
+const availableNodes = computed(() => {
+  const base = nodes.value.filter((n) => n !== WARP_NODE);
+  return warpEnabled.value ? [WARP_NODE, ...base] : base;
+});
 const filteredNodes = computed(() => {
   const q = search.value.trim().toLowerCase();
-  return nodes.value.filter((n) => !q || n.toLowerCase().includes(q));
+  return availableNodes.value.filter((n) => !q || n.toLowerCase().includes(q));
 });
 const canSave = computed(() => draft.value.name.trim().length > 0 && draft.value.nodes.length >= 2);
 
@@ -129,6 +144,24 @@ function move(i: number, dir: number) {
   [arr[i], arr[j]] = [arr[j], arr[i]];
 }
 
+async function toggleWarp() {
+  warpBusy.value = true;
+  try {
+    if (warpEnabled.value) {
+      await API.DisableWarp();
+      warpEnabled.value = false;
+    } else {
+      await API.EnableWarp();
+      warpEnabled.value = true;
+      await showAlert('WARP-выход включён. Добавь узел «WARP» в цепочку последним — трафик будет выходить через Cloudflare WARP.', 'Готово');
+    }
+  } catch (e) {
+    await showAlert('Не удалось переключить WARP: ' + e, 'Ошибка', true);
+  } finally {
+    warpBusy.value = false;
+  }
+}
+
 async function persist() {
   await API.SaveProxyChains(chains.value as any);
 }
@@ -148,7 +181,11 @@ async function deleteChain(i: number) {
   try { await persist(); } catch (e) { await showAlert('Ошибка: ' + e, 'Ошибка', true); }
 }
 
-onMounted(() => { loadChains(); loadNodes(); });
+async function loadWarp() {
+  try { warpEnabled.value = await API.GetWarpEnabled(); } catch { warpEnabled.value = false; }
+}
+
+onMounted(() => { loadChains(); loadNodes(); loadWarp(); });
 </script>
 
 <style scoped>
@@ -187,4 +224,9 @@ onMounted(() => { loadChains(); loadNodes(); });
 .ch-card-actions { display: flex; gap: 8px; }
 .action-btn.danger { color: #d9534f; }
 .ch-note { color: var(--text-muted); font-size: 0.78rem; margin-top: 16px; line-height: 1.6; }
+.ch-head-actions { display: flex; gap: 10px; align-items: center; flex: none; }
+.warp-btn { border: 1px solid var(--surface-hover); background: var(--surface); color: var(--text-sub); border-radius: 9px; padding: 8px 14px; cursor: pointer; font-size: 0.82rem; white-space: nowrap; }
+.warp-btn:hover:not(:disabled) { border-color: var(--accent); }
+.warp-btn.on { border-color: var(--accent); color: var(--accent); }
+.warp-btn:disabled { opacity: 0.6; cursor: default; }
 </style>
