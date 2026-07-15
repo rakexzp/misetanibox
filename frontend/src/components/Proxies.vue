@@ -242,9 +242,16 @@ const loadData = async () => {
     if (data && data.groups) {
       const processedGroups: any[] = [];
       
-      const keys = (data.groupOrder && data.groupOrder.length > 0) 
-                   ? data.groupOrder 
+      const keys = (data.groupOrder && data.groupOrder.length > 0)
+                   ? [...data.groupOrder]
                    : Object.keys(data.groups);
+
+      // GLOBAL — встроенная группа mihomo, её нет в proxy-groups конфига (и в groupOrder).
+      // В режиме global через неё идёт весь трафик — добавляем вручную, чтобы была видна.
+      if (String(globalState.mode || '').toLowerCase() === 'global'
+          && data.groups && data.groups['GLOBAL'] && !keys.includes('GLOBAL')) {
+        keys.unshift('GLOBAL');
+      }
 
       keys.forEach((name: string) => {
         const item = data.groups[name];
