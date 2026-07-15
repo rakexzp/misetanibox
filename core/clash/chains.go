@@ -1,8 +1,13 @@
 package clash
 
-import "goclashz/core/utils"
+import (
+	"strconv"
+	"strings"
 
-// ProxyChain — пользовательская цепочка прокси (relay): трафик идёт узел[0] → узел[1] → … → выход.
+	"goclashz/core/utils"
+)
+
+// ProxyChain — пользовательская цепочка прокси: трафик идёт узел[0] → узел[1] → … → выход.
 type ProxyChain struct {
 	Name  string   `json:"name"`
 	Nodes []string `json:"nodes"`
@@ -10,8 +15,11 @@ type ProxyChain struct {
 
 const proxyChainsKey = "proxy_chains"
 
-// ChainPrefix — префикс имени группы-цепочки в списке прокси.
+// ChainPrefix — префикс имени узла-выхода цепочки (виден в списке, выбирается как обычный сервер).
 const ChainPrefix = "🔗 "
+
+// ChainHopPrefix — префикс внутренних промежуточных хопов цепочки (скрыты в UI фронтом).
+const ChainHopPrefix = "⛓ "
 
 func GetChains() []ProxyChain {
 	v, err := utils.LoadSetting(proxyChainsKey, []ProxyChain{})
@@ -28,42 +36,126 @@ func SaveChains(chains []ProxyChain) error {
 	return utils.SaveSetting(proxyChainsKey, &chains)
 }
 
-// injectChains добавляет relay-группы цепочек в конфиг (как injectSmartGroup).
+// cloneProxyMap — поверхностная копия определения прокси (меняем только name/dialer-proxy сверху).
+func cloneProxyMap(src map[string]interface{}) map[string]interface{} {
+	dst := make(map[string]interface{}, len(src)+2)
+	for k, v := range src {
+		dst[k] = v
+	}
+	return dst
+}
+
+// injectChains строит цепочки через dialer-proxy (тип relay в mihomo удалён).
+// Для цепочки [n0, n1, … nk]: вход n0 — оригинальный узел, каждый следующий — копия узла
+// с полем dialer-proxy на предыдущий хоп; последний — копия-выход с именем «🔗 Name»
+// (её и выбирает юзер). Выход добавляется в пользовательские select-группы, чтобы быть выбираемым.
 func injectChains(root map[string]interface{}) {
 	chains := GetChains()
 	if len(chains) == 0 {
 		return
 	}
-	_, hasProxies := root["proxies"].([]interface{})
-	_, hasProviders := root["proxy-providers"].(map[string]interface{})
-	if !hasProxies && !hasProviders {
+	proxies, ok := root["proxies"].([]interface{})
+	if !ok || len(proxies) == 0 {
 		return
 	}
-	groups, _ := root["proxy-groups"].([]interface{})
 
-	var relays []interface{}
-	for _, ch := range chains {
-		if ch.Name == "" || len(ch.Nodes) < 2 {
-			continue // цепочка из <2 узлов бессмысленна
-		}
-		proxies := make([]interface{}, 0, len(ch.Nodes))
-		for _, n := range ch.Nodes {
-			if n != "" {
-				proxies = append(proxies, n)
+	// индекс определений узлов по имени
+	byName := make(map[string]map[string]interface{}, len(proxies))
+	for _, p := range proxies {
+		if pm, ok := p.(map[string]interface{}); ok {
+			if n, _ := pm["name"].(string); n != "" {
+				byName[n] = pm
 			}
 		}
-		if len(proxies) < 2 {
+	}
+
+	var added []interface{}
+	var exits []string
+	for _, ch := range chains {
+		name := strings.TrimSpace(ch.Name)
+		if name == "" {
 			continue
 		}
-		relays = append(relays, map[string]interface{}{
-			"name":    ChainPrefix + ch.Name,
-			"type":    "relay",
-			"proxies": proxies,
-		})
+		nodes := make([]string, 0, len(ch.Nodes))
+		for _, n := range ch.Nodes {
+			if n != "" {
+				nodes = append(nodes, n)
+			}
+		}
+		if len(nodes) < 2 {
+			continue
+		}
+		// все узлы должны быть определены в proxies (dialer-proxy требует реальный узел);
+		// провайдерные/отсутствующие цепочки пропускаем, чтобы не уронить ядро
+		valid := true
+		for _, n := range nodes {
+			if _, f := byName[n]; !f {
+				valid = false
+				break
+			}
+		}
+		if !valid {
+			continue
+		}
+
+		prev := nodes[0] // вход — оригинальный узел (как dialer-proxy)
+		for i := 1; i < len(nodes); i++ {
+			def := cloneProxyMap(byName[nodes[i]])
+			var cname string
+			if i == len(nodes)-1 {
+				cname = ChainPrefix + name // выход — видимый, выбираемый
+			} else {
+				cname = ChainHopPrefix + name + " " + strconv.Itoa(i) // промежуточный — скрыт
+			}
+			def["name"] = cname
+			def["dialer-proxy"] = prev
+			added = append(added, def)
+			prev = cname
+		}
+		exits = append(exits, ChainPrefix+name)
 	}
-	if len(relays) == 0 {
+	if len(added) == 0 {
 		return
 	}
-	// цепочки — вперёд, чтобы были заметны в списке
-	root["proxy-groups"] = append(relays, groups...)
+	root["proxies"] = append(proxies, added...)
+
+	// добавить выходы цепочек в пользовательские select-группы выбора сервера,
+	// чтобы они были выбираемы как обычные узлы (include-all-группы подхватят сами)
+	if groups, ok := root["proxy-groups"].([]interface{}); ok {
+		for _, g := range groups {
+			gm, ok := g.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			if t, _ := gm["type"].(string); t != "select" {
+				continue
+			}
+			if ia, _ := gm["include-all"].(bool); ia {
+				continue
+			}
+			if ia, _ := gm["include-all-proxies"].(bool); ia {
+				continue
+			}
+			gname, _ := gm["name"].(string)
+			if strings.HasPrefix(gname, ChainPrefix) || strings.HasPrefix(gname, ChainHopPrefix) {
+				continue
+			}
+			gp, _ := gm["proxies"].([]interface{})
+			// только группы, где уже есть хотя бы один реальный узел (группы выбора сервера)
+			hasRealNode := false
+			for _, m := range gp {
+				if mn, _ := m.(string); byName[mn] != nil {
+					hasRealNode = true
+					break
+				}
+			}
+			if !hasRealNode {
+				continue
+			}
+			for _, e := range exits {
+				gp = append(gp, e)
+			}
+			gm["proxies"] = gp
+		}
+	}
 }

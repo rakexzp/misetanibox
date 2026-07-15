@@ -124,8 +124,8 @@ async function loadNodes() {
         else if (!ci) set.add(child);
       }
     }
-    // убрать имена самих цепочек
-    nodes.value = [...set].filter((n) => !n.startsWith('🔗')).sort();
+    // убрать имена самих цепочек-выходов (🔗) и внутренних хопов (⛓)
+    nodes.value = [...set].filter((n) => !n.startsWith('🔗') && !n.startsWith('⛓')).sort();
   } catch { nodes.value = []; }
 }
 async function loadChains() {

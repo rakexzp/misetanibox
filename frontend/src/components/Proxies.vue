@@ -255,7 +255,7 @@ const loadData = async () => {
         const isHidden = item.hidden === true;
 
         if (isGroupType && !isSystemReserved && !isHidden) {
-          const proxies = (item.all || []).map((memberName: string) => {
+          const proxies = (item.all || []).filter((memberName: string) => !memberName.startsWith('⛓')).map((memberName: string) => {
             const detail = (data.proxies && data.proxies[memberName]) || (data.groups && data.groups[memberName]);
             
             return {
