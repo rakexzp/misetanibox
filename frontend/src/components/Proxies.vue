@@ -251,7 +251,10 @@ const loadData = async () => {
         if (!item) return;
 
         const isGroupType = ['Selector', 'URLTest', 'Fallback', 'LoadBalance', 'Smart'].includes(item.type);
-        const isSystemReserved = ['GLOBAL', 'DIRECT', 'REJECT'].includes(name);
+        // GLOBAL прячем в обычных режимах, но в режиме global через него идёт весь трафик —
+        // показываем, чтобы юзер видел и мог выбрать активный сервер.
+        const inGlobalMode = String(globalState.mode || '').toLowerCase() === 'global';
+        const isSystemReserved = ['DIRECT', 'REJECT'].includes(name) || (name === 'GLOBAL' && !inGlobalMode);
         const isHidden = item.hidden === true;
 
         if (isGroupType && !isSystemReserved && !isHidden) {
@@ -279,7 +282,10 @@ const loadData = async () => {
 
       const isCurrentValid = processedGroups.some(g => g.name === currentGroup.value);
       if (!isCurrentValid && processedGroups.length > 0) {
-        currentGroup.value = processedGroups[0].name;
+        // в global-режиме по умолчанию открываем GLOBAL (через него идёт весь трафик)
+        const inGlobalMode = String(globalState.mode || '').toLowerCase() === 'global';
+        const globalTab = inGlobalMode ? processedGroups.find(g => g.name === 'GLOBAL') : null;
+        currentGroup.value = globalTab ? globalTab.name : processedGroups[0].name;
       }
     }
   } catch (e) {
@@ -323,6 +329,14 @@ const stopRunningWatch = watch(
 
 const stopActiveConfigWatch = watch(
   () => globalState.activeConfigId,
+  async () => {
+    await loadData();
+  }
+);
+
+// смена режима (rule/global/direct) меняет видимость GLOBAL — перечитываем список
+const stopModeWatch = watch(
+  () => globalState.mode,
   async () => {
     await loadData();
   }
