@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"mime"
 	"net/http"
+	neturl "net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -128,17 +129,45 @@ type SubFetchOptions struct {
 	Headers map[string]string
 }
 
+// resolveFallbackURL достраивает запасной адрес.
+//
+// Заголовок с запасными адресами панель отдаёт ОДИН на всех пользователей, поэтому
+// персональный токен в него положить нельзя. Договорённость: если в запасном адресе
+// указан только хост (без пути) — берём путь и параметры из основной ссылки юзера.
+// Тогда одна строка «https://зеркало» обслуживает всю базу.
+// Если путь указан явно — используем адрес как есть.
+func resolveFallbackURL(primary, fallback string) string {
+	fb, err := neturl.Parse(fallback)
+	if err != nil || fb.Host == "" {
+		return ""
+	}
+	if strings.Trim(fb.Path, "/") != "" || fb.RawQuery != "" {
+		return fallback
+	}
+	pr, err := neturl.Parse(primary)
+	if err != nil || pr.Path == "" {
+		return fallback
+	}
+	fb.Path = pr.Path
+	fb.RawQuery = pr.RawQuery
+	return fb.String()
+}
+
 // subFetchURLs — основная ссылка + запасные, без пустых и дублей.
 func subFetchURLs(url string, fallbacks []string) []string {
 	out := make([]string, 0, len(fallbacks)+1)
 	seen := map[string]bool{}
-	for _, u := range append([]string{url}, fallbacks...) {
+	add := func(u string) {
 		u = strings.TrimSpace(u)
 		if u == "" || seen[u] {
-			continue
+			return
 		}
 		seen[u] = true
 		out = append(out, u)
+	}
+	add(url)
+	for _, f := range fallbacks {
+		add(resolveFallbackURL(url, strings.TrimSpace(f)))
 	}
 	return out
 }
