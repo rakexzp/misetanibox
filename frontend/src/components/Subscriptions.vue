@@ -66,9 +66,21 @@
             <span>Использовано {{ formatBytes(config.upload + config.download) }}</span>
             <span>Всего {{ formatBytes(config.total) }}</span>
           </div>
-          <div v-if="config.expire > 0" class="expire-text">
-            Истекает: {{ formatDate(config.expire) }}
-          </div>
+        </div>
+
+        <!-- Срок и продление: показываем и без счётчика трафика (безлимит по трафику, но со сроком),
+             и когда панель прислала ссылку продления без даты -->
+        <div v-if="!isSortingMode && (config.expire > 0 || (config as any).webPageUrl)" class="expire-row">
+          <span v-if="config.expire > 0" class="expire-text" :class="{ 'expire-soon': isExpiringSoon(config) }">
+            {{ isExpired(config) ? 'Истекла: ' : 'Истекает: ' }}{{ formatDate(config.expire) }}
+          </span>
+          <span v-else class="expire-text">Подписка активна</span>
+          <button
+            v-if="(config as any).webPageUrl"
+            class="renew-btn"
+            :class="{ 'renew-accent': isExpiringSoon(config) }"
+            @click.stop="openRenew(config)"
+          >Продлить</button>
         </div>
 
         <div class="sub-footer" v-show="!isSortingMode">
@@ -81,7 +93,7 @@
                 <button v-if="config.type === 'remote'" class="menu-item" @click.stop="handleUpdateSingle(config)">Обновить подписку</button>
                 <button class="menu-item" @click.stop="openRenameModal(config)">Переименовать</button>
                 <button class="menu-item" @click.stop="handleEditFile(config)">Редактировать</button>
-                <button v-if="config.type === 'remote'" class="menu-item" @click.stop="openFetchModal(config)">Запасные ссылки и заголовки</button>
+                <button v-if="config.type === 'remote'" class="menu-item" @click.stop="openFetchModal(config)">Заголовки запроса</button>
                 <button v-if="config.type === 'remote' && config.url" class="menu-item" @click.stop="handleShareLink(config)">Поделиться ссылкой</button>
                 <button class="menu-item" @click.stop="handleExport(config)">Экспорт файла</button>
                 <button class="menu-item danger" @click.stop="openDeleteModal(config)">Удалить навсегда</button>
@@ -129,13 +141,9 @@
             />
             <template v-if="isImportingRemote">
               <button class="extra-toggle" @click="showFetchExtra = !showFetchExtra">
-                {{ showFetchExtra ? '− ' : '+ ' }}Запасные ссылки и заголовки
+                {{ showFetchExtra ? '− ' : '+ ' }}Свои заголовки запроса
               </button>
               <div v-if="showFetchExtra" class="extra-block">
-                <p class="global-modal-msg">Запасные ссылки (по одной в строке)</p>
-                <textarea v-model="fallbackText" class="modal-input extra-area" rows="3"
-                  placeholder="https://зеркало-1/sub&#10;https://зеркало-2/sub" :disabled="isImporting"></textarea>
-                <p class="extra-hint">Грузятся вместе с основной — берётся первая ответившая.</p>
                 <p class="global-modal-msg">Свои заголовки (Имя: значение, по одному в строке)</p>
                 <textarea v-model="headersText" class="modal-input extra-area" rows="3"
                   placeholder="User-Agent: clash-meta&#10;X-Token: abc" :disabled="isImporting"></textarea>
@@ -153,13 +161,10 @@
         </div>
 
                 <div v-if="activeModal === 'fetch'" class="custom-modal-card" @click.stop>
-          <div class="modal-header"><h3>Запасные ссылки и заголовки</h3></div>
+          <div class="modal-header"><h3>Заголовки запроса подписки</h3></div>
           <div class="modal-body">
-            <p class="global-modal-msg">Запасные ссылки (по одной в строке)</p>
-            <textarea v-model="fallbackText" class="modal-input extra-area" rows="4"
-              placeholder="https://зеркало-1/sub&#10;https://зеркало-2/sub" :disabled="isSavingFetch"></textarea>
-            <p class="extra-hint">Грузятся вместе с основной — берётся первая ответившая. Помогает, когда основной адрес заблокирован.</p>
-            <p class="global-modal-msg">Свои заголовки (Имя: значение, по одному в строке)</p>
+            <p class="extra-hint">Отправляются при загрузке подписки. Перекрывают стандартные (x-hwid и т.п.).</p>
+            <p class="global-modal-msg">Имя: значение — по одному в строке</p>
             <textarea v-model="headersText" class="modal-input extra-area" rows="4"
               placeholder="User-Agent: clash-meta&#10;X-Token: abc" :disabled="isSavingFetch"></textarea>
             <div class="modal-footer">
@@ -233,12 +238,8 @@ const activeMenu = ref<string | null>(null);
 const newSubUrl = ref('');
 // запасные ссылки + свои заголовки для загрузки подписки
 const showFetchExtra = ref(false);
-const fallbackText = ref('');
 const headersText = ref('');
 const isSavingFetch = ref(false);
-
-const parseFallbacks = (text: string): string[] =>
-  text.split('\n').map((l) => l.trim()).filter((l) => !!l);
 
 const parseHeaders = (text: string): Record<string, string> => {
   const out: Record<string, string> = {};
@@ -252,6 +253,16 @@ const parseHeaders = (text: string): Record<string, string> => {
     if (k) out[k] = v;
   }
   return out;
+};
+
+const isExpired = (c: any) => c.expire > 0 && c.expire * 1000 <= Date.now();
+// «скоро» = осталось меньше 3 суток (или уже истекла) — тогда кнопка с акцентом
+const isExpiringSoon = (c: any) =>
+  c.expire > 0 && c.expire * 1000 - Date.now() < 3 * 24 * 60 * 60 * 1000;
+
+const openRenew = (c: any) => {
+  const url = c?.webPageUrl;
+  if (url) BrowserOpenURL(url);
 };
 
 const stringifyHeaders = (h: Record<string, string>): string =>
@@ -392,7 +403,6 @@ const confirmImport = async () => {
       await (API as any).UpdateSubEx(
         finalName,
         pendingImportPath.value,
-        parseFallbacks(fallbackText.value),
         parseHeaders(headersText.value),
       );
     } else {
@@ -401,7 +411,6 @@ const confirmImport = async () => {
     await fetchConfigs();
     closeAllModals();
     newSubUrl.value = '';
-    fallbackText.value = '';
     headersText.value = '';
     showFetchExtra.value = false;
   } catch (e) {
@@ -415,12 +424,10 @@ const confirmImport = async () => {
 const openFetchModal = async (config: clash.SubIndexItem) => {
   activeMenu.value = null;
   targetId.value = config.id;
-  fallbackText.value = '';
   headersText.value = '';
   try {
-    const st: any = await (API as any).GetSubFetchSettings(config.id);
-    fallbackText.value = (st?.fallbackUrls || []).join('\n');
-    headersText.value = stringifyHeaders(st?.headers || {});
+    const st: any = await (API as any).GetSubHeaders(config.id);
+    headersText.value = stringifyHeaders(st || {});
   } catch (e) { /* пустые поля — не критично */ }
   activeModal.value = 'fetch';
 };
@@ -428,11 +435,7 @@ const openFetchModal = async (config: clash.SubIndexItem) => {
 const confirmFetchSettings = async () => {
   isSavingFetch.value = true;
   try {
-    await (API as any).SaveSubFetchSettings(
-      targetId.value,
-      parseFallbacks(fallbackText.value),
-      parseHeaders(headersText.value),
-    );
+    await (API as any).SaveSubHeaders(targetId.value, parseHeaders(headersText.value));
     await fetchConfigs();
     closeAllModals();
   } catch (e) {
@@ -842,4 +845,9 @@ onUnmounted(() => {
 .extra-block { display: flex; flex-direction: column; gap: 4px; }
 .extra-area { resize: vertical; font-family: inherit; line-height: 1.5; }
 .extra-hint { color: var(--text-muted); font-size: 0.72rem; line-height: 1.5; margin: 2px 0 6px; }
+.expire-row { padding: 0 4px 2px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.expire-soon { color: #d9534f; font-weight: 600; }
+.renew-btn { flex: none; padding: 4px 12px; border-radius: 7px; border: 1px solid var(--surface-hover); background: var(--surface); color: var(--text-sub); font-size: 0.75rem; font-weight: 600; cursor: pointer; }
+.renew-btn:hover { border-color: var(--accent); color: var(--accent); }
+.renew-btn.renew-accent { background: var(--accent); border-color: var(--accent); color: #fff; }
 </style>

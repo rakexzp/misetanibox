@@ -47,6 +47,57 @@ func parseSubUserInfo(header string) (upload, download, total, expire int64) {
 	return
 }
 
+// Заголовки, которыми панель может отдать запасные адреса подписки.
+// Значение — список ссылок через запятую/точку с запятой/перевод строки.
+var subFallbackHeaders = []string{
+	"x-sub-fallback",
+	"x-fallback-url",
+	"profile-fallback-url",
+}
+
+// parseSubFallbacks достаёт запасные ссылки из заголовков ответа подписки.
+// Так фолбек настраивается на стороне панели и не требует ничего от пользователя.
+func parseSubFallbacks(h http.Header) []string {
+	out := make([]string, 0, 4)
+	seen := map[string]bool{}
+	for _, name := range subFallbackHeaders {
+		for _, raw := range h.Values(name) {
+			for _, part := range strings.FieldsFunc(raw, func(r rune) bool {
+				return r == ',' || r == ';' || r == '\n' || r == '\r' || r == ' ' || r == '\t'
+			}) {
+				u := strings.TrimSpace(part)
+				if u == "" || seen[u] {
+					continue
+				}
+				if !strings.HasPrefix(u, "http://") && !strings.HasPrefix(u, "https://") {
+					continue // мусор/относительные пути игнорируем
+				}
+				seen[u] = true
+				out = append(out, u)
+			}
+		}
+	}
+	return out
+}
+
+// Заголовки со ссылкой на личный кабинет / продление подписки.
+var subWebPageHeaders = []string{
+	"profile-web-page-url", // де-факто стандарт у панелей
+	"x-renew-url",
+	"x-subscription-web-page",
+}
+
+// parseSubWebPage достаёт ссылку на страницу продления из заголовков ответа.
+func parseSubWebPage(h http.Header) string {
+	for _, name := range subWebPageHeaders {
+		u := strings.TrimSpace(h.Get(name))
+		if strings.HasPrefix(u, "http://") || strings.HasPrefix(u, "https://") {
+			return u
+		}
+	}
+	return ""
+}
+
 func parseSubProfileName(h http.Header) string {
 	if pt := strings.TrimSpace(h.Get("profile-title")); pt != "" {
 		if strings.HasPrefix(strings.ToLower(pt), "base64:") {
@@ -130,6 +181,8 @@ func DownloadSub(ctx context.Context, name, url, existingId, userAgent string, o
 
 	var upload, download, total, expire int64
 	var headerName string
+	var headerFallbacks []string
+	var headerWebPage string
 
 	if _, statErr := os.Stat(originPath); statErr == nil {
 		originData, _ := os.ReadFile(originPath)
@@ -162,6 +215,12 @@ func DownloadSub(ctx context.Context, name, url, existingId, userAgent string, o
 			}
 
 			headerName = parseSubProfileName(resp.Header)
+			if fb := parseSubFallbacks(resp.Header); len(fb) > 0 {
+				headerFallbacks = fb
+			}
+			if wp := parseSubWebPage(resp.Header); wp != "" {
+				headerWebPage = wp
+			}
 		},
 		Validator: func(tmpPath string) error {
 
@@ -234,7 +293,13 @@ func DownloadSub(ctx context.Context, name, url, existingId, userAgent string, o
 			if strings.TrimSpace(name) == "" && strings.TrimSpace(headerName) != "" {
 				SubIndex[i].Name = strings.TrimSpace(headerName)
 			}
-			SubIndex[i].FallbackURLs = opts.FallbackURLs
+			// фолбеки приходят из заголовка панели; если панель их не прислала — оставляем прежние
+			if len(headerFallbacks) > 0 {
+				SubIndex[i].FallbackURLs = headerFallbacks
+			}
+			if headerWebPage != "" {
+				SubIndex[i].WebPageURL = headerWebPage
+			}
 			SubIndex[i].Headers = opts.Headers
 			found = true
 			break
@@ -252,7 +317,8 @@ func DownloadSub(ctx context.Context, name, url, existingId, userAgent string, o
 			Expire:   expire,
 			Updated:  time.Now().Unix(),
 
-			FallbackURLs: opts.FallbackURLs,
+			FallbackURLs: headerFallbacks,
+			WebPageURL:   headerWebPage,
 			Headers:      opts.Headers,
 		})
 	}
@@ -261,14 +327,13 @@ func DownloadSub(ctx context.Context, name, url, existingId, userAgent string, o
 	return safeId, SaveIndex()
 }
 
-// SaveSubFetchSettings сохраняет запасные ссылки и свои заголовки подписки,
-// не перезакачивая её (нужно для редактирования настроек из интерфейса).
-func SaveSubFetchSettings(id string, fallbackURLs []string, headers map[string]string) error {
+// SaveSubHeaders сохраняет свои заголовки запроса подписки, не перезакачивая её.
+// Запасные ссылки здесь намеренно не трогаются — их присылает панель заголовком ответа.
+func SaveSubHeaders(id string, headers map[string]string) error {
 	IndexLock.Lock()
 	found := false
 	for i, item := range SubIndex {
 		if item.ID == id {
-			SubIndex[i].FallbackURLs = fallbackURLs
 			SubIndex[i].Headers = headers
 			found = true
 			break

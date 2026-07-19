@@ -22,6 +22,8 @@ type SubIndexItem struct {
 	FallbackURLs []string `json:"fallbackUrls,omitempty"`
 	// Свои HTTP-заголовки для запроса подписки (перекрывают стандартные).
 	Headers map[string]string `json:"headers,omitempty"`
+	// Личный кабинет / страница продления — приходит заголовком от панели.
+	WebPageURL string `json:"webPageUrl,omitempty"`
 }
 
 var (

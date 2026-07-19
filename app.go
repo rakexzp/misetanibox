@@ -354,32 +354,24 @@ func (a *App) UpdateSub(name, url string) error {
 	return a.core.UpdateSub(a.ctx, name, url, nil)
 }
 
-// UpdateSubEx — добавить/обновить подписку с запасными ссылками и своими заголовками.
-// Запасные ссылки грузятся вместе с основной, берётся первая ответившая.
-func (a *App) UpdateSubEx(name, url string, fallbackUrls []string, headers map[string]string) error {
-	return a.core.UpdateSub(a.ctx, name, url, &clash.SubFetchOptions{
-		FallbackURLs: fallbackUrls,
-		Headers:      headers,
-	})
+// UpdateSubEx — добавить/обновить подписку со своими заголовками запроса.
+// Запасные ссылки задаёт панель заголовком ответа, из интерфейса не выставляются.
+func (a *App) UpdateSubEx(name, url string, headers map[string]string) error {
+	return a.core.UpdateSub(a.ctx, name, url, &clash.SubFetchOptions{Headers: headers})
 }
 
-// GetSubFetchSettings — текущие запасные ссылки и заголовки подписки (для UI).
-func (a *App) GetSubFetchSettings(id string) map[string]interface{} {
-	out := map[string]interface{}{"fallbackUrls": []string{}, "headers": map[string]string{}}
-	if item, ok := clash.FindSubIndexByID(id); ok {
-		if item.FallbackURLs != nil {
-			out["fallbackUrls"] = item.FallbackURLs
-		}
-		if item.Headers != nil {
-			out["headers"] = item.Headers
-		}
+// GetSubHeaders — свои заголовки запроса подписки (для UI).
+func (a *App) GetSubHeaders(id string) map[string]string {
+	if item, ok := clash.FindSubIndexByID(id); ok && item.Headers != nil {
+		return item.Headers
 	}
-	return out
+	return map[string]string{}
 }
 
-// SaveSubFetchSettings — сохранить запасные ссылки и заголовки без перезакачки подписки.
-func (a *App) SaveSubFetchSettings(id string, fallbackUrls []string, headers map[string]string) error {
-	return clash.SaveSubFetchSettings(id, fallbackUrls, headers)
+// SaveSubHeaders — сохранить свои заголовки запроса без перезакачки подписки.
+// Запасные ссылки не трогаем: их ведёт панель через заголовок ответа.
+func (a *App) SaveSubHeaders(id string, headers map[string]string) error {
+	return clash.SaveSubHeaders(id, headers)
 }
 
 func (a *App) AddSubViaDNS(domain, name string) (string, error) {
