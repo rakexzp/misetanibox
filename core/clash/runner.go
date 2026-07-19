@@ -37,6 +37,8 @@ var (
 	processExitCh     chan struct{}
 	onExitCallback    OnExitFunc
 	startedViaHelper  atomic.Bool
+	// поколение запуска через Helper — чтобы наблюдатель от прошлого запуска не срабатывал
+	helperCoreGen atomic.Uint64
 )
 
 func SetOnExitCallback(fn OnExitFunc) {
@@ -124,7 +126,57 @@ func startCoreViaHelper(_ context.Context, exePath, binDir, runtimeConfig, _ str
 	isRunning.Store(true)
 	isIntentionalStop.Store(false)
 	logger.Infof("ядро запущено через службу Helper (TUN)")
+
+	// При запуске через Helper процесс ядра нам не принадлежит, поэтому cmd.Wait() недоступен.
+	// Без наблюдателя падение ядра оставалось незамеченным: isRunning навсегда true и
+	// интерфейс показывал «подключено» при мёртвом туннеле. Опрашиваем статус у службы.
+	watchHelperCore(helperCoreGen.Add(1))
 	return nil
+}
+
+func watchHelperCore(gen uint64) {
+	go func() {
+		client := sys.NewHelperClient()
+		const interval = 3 * time.Second
+		// даём ядру время на инициализацию TUN-адаптера
+		time.Sleep(interval)
+
+		misses := 0
+		for {
+			if helperCoreGen.Load() != gen || !isRunning.Load() || isIntentionalStop.Load() {
+				return
+			}
+			if st, err := client.CoreStatus(); err != nil || !st.Running {
+				misses++
+			} else {
+				misses = 0
+			}
+			// два промаха подряд, чтобы не среагировать на разовый сбой опроса
+			if misses >= 2 {
+				break
+			}
+			time.Sleep(interval)
+		}
+
+		if helperCoreGen.Load() != gen || isIntentionalStop.Load() {
+			return
+		}
+
+		mu.Lock()
+		if helperCoreGen.Load() != gen {
+			mu.Unlock()
+			return
+		}
+		isRunning.Store(false)
+		startedViaHelper.Store(false)
+		cb := onExitCallback
+		mu.Unlock()
+
+		logger.Warnf("ядро, запущенное через службу Helper, больше не работает")
+		if cb != nil {
+			cb(ExitEvent{Intentional: false, Message: "ядро аварийно завершилось (режим TUN)"})
+		}
+	}()
 }
 
 func startCoreDirect(ctx context.Context, exePath, binDir, runtimeConfig, pidFile string) error {

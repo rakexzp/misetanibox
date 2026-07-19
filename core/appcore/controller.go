@@ -368,19 +368,50 @@ func (c *Controller) runStartupRestoreJob(ctx context.Context) {
 		switch {
 		case errors.Is(err, ErrNoActiveConfig):
 			c.events.Emit("notify-error", "Восстановление запуска не удалось: конфигурация ещё не добавлена")
+			c.abortStartupRestore("нет активной конфигурации")
 			return
 		case errors.Is(err, ErrHelperInstallRequired):
 			c.events.Emit("notify-error", "Для восстановления запуска TUN требуется инициализация фоновой службы")
+			c.abortStartupRestore("служба helper не установлена")
+			return
+		case errors.Is(err, ErrHelperRepairRequired):
+			c.events.Emit("notify-error", "Не удалось запустить фоновую службу для TUN — включите VPN вручную (потребуются права администратора)")
+			c.abortStartupRestore("служба helper недоступна")
 			return
 		case errors.Is(err, ErrWintunMissing):
 			c.events.Emit("notify-error", "Восстановление запуска TUN не удалось: отсутствует драйвер Wintun")
+			c.abortStartupRestore("нет драйвера Wintun")
 			return
 		default:
 			c.logWarn("Восстановление запуска не удалось attempt=%d: %v", i+1, err)
 		}
 	}
 
-	c.logWarn("Восстановление запуска не удалось после 5 попыток")
+	c.events.Emit("notify-error", "Не удалось восстановить VPN после запуска системы — включите вручную")
+	c.abortStartupRestore("исчерпаны попытки")
+}
+
+// abortStartupRestore сбрасывает «желаемое» состояние после неудачного восстановления.
+// Без этого desired.Tun/CoreRunning оставались true, и интерфейс показывал «VPN включён»,
+// хотя туннель не поднят — пользователь думал, что защищён.
+func (c *Controller) abortStartupRestore(reason string) {
+	c.StopCoreService()
+
+	desired := c.Desired.Get()
+	desired.CoreRunning = false
+	desired.SystemProxy = false
+	desired.Tun = false
+	c.Desired.SetAndSave(desired)
+
+	c.runtimeState.Clear()
+	c.mu.Lock()
+	c.tunActive = false
+	c.sysProxyActive = false
+	c.userCoreRunning = false
+	c.mu.Unlock()
+
+	c.SyncState()
+	c.logWarn("Восстановление запуска прервано (%s) — состояние сброшено, интерфейс покажет «выключено»", reason)
 }
 
 func (c *Controller) syncStartupTaskStateSafe() {
@@ -1107,8 +1138,28 @@ func (c *Controller) ensureHelperReadySlow(reason string) error {
 
 	if !sys.CheckAdmin() {
 		helperStatus := sys.CheckHelperService()
+		// Если проверить состояние службы не удалось — НЕ выдаём это за «служба не установлена»,
+		// иначе пользователю на пустом месте предлагается переустановка (и так каждый запуск).
+		if helperStatus.Error != "" && !helperStatus.Installed {
+			c.logWarn("Не удалось достоверно проверить службу helper: %s", helperStatus.Error)
+			return ErrHelperRepairRequired
+		}
 		if !helperStatus.Installed {
 			return ErrHelperInstallRequired
+		}
+		// Служба ставится с типом запуска «вручную», поэтому после перезагрузки ПК она
+		// установлена, но остановлена. DACL службы даёт обычному пользователю право
+		// SERVICE_START — пробуем поднять её без UAC (раньше сразу требовали админа,
+		// из-за чего TUN не поднимался при автозапуске).
+		if !helperStatus.Running {
+			if err := sys.StartHelperService(); err != nil {
+				c.logWarn("Не удалось запустить службу helper без прав администратора: %v", err)
+			} else if err := sys.WaitForHelperReady(10, 300*time.Millisecond); err != nil {
+				c.logWarn("Служба helper запущена, но не отвечает: %v", err)
+			} else {
+				c.logInfo("Служба helper запущена без прав администратора (reason: %s)", reason)
+				return nil
+			}
 		}
 		return ErrHelperRepairRequired
 	}

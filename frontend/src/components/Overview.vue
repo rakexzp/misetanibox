@@ -1,6 +1,6 @@
 <template>
   <div class="overview-layout">
-    <section class="hero-panel card-panel" :class="{ 'card-has-bg': hasBg('hero') }" :style="cardStyle('hero')">
+    <section class="hero-panel card-panel" :class="{ 'card-has-bg': hasBg('hero', consoleServiceOn) }" :style="cardStyle('hero', consoleServiceOn)">
       <span class="card-edit" @click.stop>
         <button class="card-edit-btn" @click.stop="openCardEditor('hero')" title="Настроить картинку">✎</button>
       </span>
@@ -30,7 +30,7 @@
     </section>
 
     <section class="switch-row">
-      <div class="action-card" :class="{ 'on': sysProxyCardOn, 'card-has-bg': hasBg('sysproxy') }" :style="cardStyle('sysproxy')" @click="toggleSysProxy">
+      <div class="action-card" :class="{ 'on': sysProxyCardOn, 'card-has-bg': hasBg('sysproxy', sysProxyCardOn) }" :style="cardStyle('sysproxy', sysProxyCardOn)" @click="toggleSysProxy">
         <span class="card-edit" @click.stop>
           <button class="card-edit-btn" @click.stop="openCardEditor('sysproxy')" title="Настроить картинку">✎</button>
         </span>
@@ -44,7 +44,7 @@
         <div class="status-node"></div>
       </div>
 
-      <div class="action-card" :class="{ 'on': tunCardOn, 'card-has-bg': hasBg('tun') }" :style="cardStyle('tun')" @click="toggleTun">
+      <div class="action-card" :class="{ 'on': tunCardOn, 'card-has-bg': hasBg('tun', tunCardOn) }" :style="cardStyle('tun', tunCardOn)" @click="toggleTun">
         <span class="card-edit" @click.stop>
           <button class="card-edit-btn" @click.stop="openCardEditor('tun')" title="Настроить картинку">✎</button>
         </span>
@@ -81,11 +81,19 @@
         <div class="bg-editor" @click.stop :style="{ transform: `translate(${editorPos.x}px, ${editorPos.y}px)` }">
           <h3 class="bg-editor-drag" @mousedown="startEditorDrag">Картинка карточки <span class="drag-hint">⠿</span></h3>
 
+          <div v-if="editHasStates" class="bg-state-switch">
+            <button class="bg-state-btn" :class="{ active: !editOnState }" @click="editOnState = false">Выключено</button>
+            <button class="bg-state-btn" :class="{ active: editOnState }" @click="editOnState = true">Включено</button>
+          </div>
+          <div v-if="editHasStates" class="bg-state-hint">
+            {{ editOnState ? 'Картинка, когда переключатель включён. Если не задана — берётся картинка «Выключено».' : 'Базовая картинка карточки.' }}
+          </div>
+
           <div class="bg-editor-actions">
-            <button class="action-btn accent-btn" @click="pickCardImage(editingCard)">
-              {{ globalState.cardBgs[editingCard] ? 'Сменить картинку' : 'Своя картинка' }}
+            <button class="action-btn accent-btn" @click="pickCardImage(editKey)">
+              {{ globalState.cardBgs[editKey] ? 'Сменить картинку' : 'Своя картинка' }}
             </button>
-            <button v-if="hasBg(editingCard)" class="action-btn" @click="clearCard(editingCard)">Убрать</button>
+            <button v-if="hasBg(editKey)" class="action-btn" @click="clearCard(editKey)">Убрать</button>
           </div>
 
           <div class="bg-presets-label">Пресеты</div>
@@ -94,39 +102,39 @@
               v-for="p in BG_PRESETS"
               :key="p.id"
               class="bg-preset"
-              :class="{ active: cardPresets[editingCard] === p.css }"
+              :class="{ active: cardPresets[editKey] === p.css }"
               :style="{ background: p.css }"
-              @click="applyPreset(editingCard, p.css)"
+              @click="applyPreset(editKey, p.css)"
               :title="p.id"
             ></button>
           </div>
 
           <div class="bg-presets-label">
             Мои фоны
-            <button v-if="globalState.cardBgs[editingCard]" class="bg-save-link" @click="saveCardToGallery(editingCard)">＋ сохранить текущий</button>
+            <button v-if="globalState.cardBgs[editKey]" class="bg-save-link" @click="saveCardToGallery(editKey)">＋ сохранить текущий</button>
           </div>
           <div class="bg-gallery">
             <button class="bg-gallery-add" @click="addToGallery" title="Добавить картинку в галерею">＋</button>
-            <div v-for="g in gallery" :key="g.id" class="bg-gallery-item" @click="applyGallery(editingCard, g.id)">
+            <div v-for="g in gallery" :key="g.id" class="bg-gallery-item" @click="applyGallery(editKey, g.id)">
               <img :src="g.dataUrl" alt="" />
               <button class="bg-gallery-del" @click.stop="deleteGallery(g.id)" title="Удалить из галереи">✕</button>
             </div>
             <div v-if="!gallery.length" class="bg-gallery-empty">Пусто — добавь свои картинки через ＋</div>
           </div>
 
-          <template v-if="globalState.cardBgs[editingCard]">
+          <template v-if="globalState.cardBgs[editKey]">
             <label class="bg-row"><span>По горизонтали</span>
-              <input type="range" min="0" max="100" v-model.number="optsFor(editingCard).x" @input="saveCardBgOpts" />
+              <input type="range" min="0" max="100" v-model.number="optsFor(editKey).x" @input="saveCardBgOpts" />
             </label>
             <label class="bg-row"><span>По вертикали</span>
-              <input type="range" min="0" max="100" v-model.number="optsFor(editingCard).y" @input="saveCardBgOpts" />
+              <input type="range" min="0" max="100" v-model.number="optsFor(editKey).y" @input="saveCardBgOpts" />
             </label>
             <label class="bg-row"><span>Масштаб</span>
-              <input type="range" min="100" max="300" v-model.number="optsFor(editingCard).zoom" @input="saveCardBgOpts" />
+              <input type="range" min="100" max="300" v-model.number="optsFor(editKey).zoom" @input="saveCardBgOpts" />
             </label>
           </template>
-          <label v-if="hasBg(editingCard)" class="bg-row"><span>Затемнение</span>
-            <input type="range" min="0" max="90" v-model.number="optsFor(editingCard).scrim" @input="saveCardBgOpts" />
+          <label v-if="hasBg(editKey)" class="bg-row"><span>Затемнение</span>
+            <input type="range" min="0" max="90" v-model.number="optsFor(editKey).scrim" @input="saveCardBgOpts" />
           </label>
 
           <div class="bg-editor-footer">
@@ -194,8 +202,24 @@ const deleteGallery = async (id: string) => {
 };
 
 const editingCard = ref<string | null>(null);
+
+// Две картинки на карточку: базовая (выключено) и отдельная для состояния «включено».
+// Ключ состояния «вкл» = <ключ>+'on' — только буквы, т.к. бэкенд санитайзит ключ до букв/цифр
+// (он идёт в имя файла cardbg_<key>.<ext>), поэтому подчёркивания использовать нельзя.
+const ON_SUFFIX = 'on';
+const STATEFUL_CARDS = new Set(['hero', 'sysproxy', 'tun']);
+const editOnState = ref(false); // какое состояние редактируем: false = выкл, true = вкл
+const editKey = computed(() => (editingCard.value ? (editOnState.value ? editingCard.value + ON_SUFFIX : editingCard.value) : ''));
+const editHasStates = computed(() => STATEFUL_CARDS.has(editingCard.value || ''));
+
+// какой ключ показывать: для включённой карточки берём картинку «вкл», если она задана
+const stateKey = (key: string, isOn?: boolean) => {
+  if (!isOn) return key;
+  const k = key + ON_SUFFIX;
+  return (globalState.cardBgs[k] || cardPresets[k]) ? k : key;
+};
 const editorPos = ref({ x: 0, y: 0 });
-const openCardEditor = (key: string) => { optsFor(key); editorPos.value = { x: 0, y: 0 }; loadGallery(); editingCard.value = key; };
+const openCardEditor = (key: string) => { optsFor(key); editorPos.value = { x: 0, y: 0 }; loadGallery(); editOnState.value = false; editingCard.value = key; };
 
 const startEditorDrag = (e: MouseEvent) => {
   const start = { mx: e.clientX, my: e.clientY, x: editorPos.value.x, y: editorPos.value.y };
@@ -210,13 +234,17 @@ const startEditorDrag = (e: MouseEvent) => {
   window.addEventListener('mouseup', up);
 };
 
-const hasBg = (key: string) => !!(globalState.cardBgs[key] || cardPresets[key]);
+const hasBg = (key: string, isOn?: boolean) => {
+  const k = stateKey(key, isOn);
+  return !!(globalState.cardBgs[k] || cardPresets[k]);
+};
 
-const cardStyle = (key: string) => {
-  const upload = globalState.cardBgs[key];
-  const preset = cardPresets[key];
+const cardStyle = (key: string, isOn?: boolean) => {
+  const k = stateKey(key, isOn);
+  const upload = globalState.cardBgs[k];
+  const preset = cardPresets[k];
   if (!upload && !preset) return {};
-  const o = optsFor(key);
+  const o = optsFor(k);
   return {
     backgroundImage: upload ? `url(${upload})` : preset,
     backgroundPosition: `${o.x}% ${o.y}%`,
@@ -306,14 +334,20 @@ const handleRestartCore = async () => {
 const sysProxyCardOn = computed(() => globalState.systemProxy);
 const tunCardOn = computed(() => globalState.tun);
 
+// Подписи опираются на ФАКТИЧЕСКОЕ состояние: раньше они шли от «желаемого»,
+// из-за чего при неподнявшемся туннеле карточка писала «адаптер подключён».
 const sysProxyLabel = computed(() => {
-  return sysProxyCardOn.value
+  if (globalState.systemProxyPending) return 'Применяется…';
+  if (globalState.systemProxy && !globalState.actualSystemProxy) return 'Не удалось применить — попробуйте включить заново';
+  return globalState.actualSystemProxy
     ? 'Системные настройки сети изменены'
     : 'HTTP-трафик не перехватывается';
 });
 
 const tunLabel = computed(() => {
-  return tunCardOn.value
+  if (globalState.tunPending) return 'Применяется…';
+  if (globalState.tun && !globalState.actualTun) return 'Адаптер не поднялся — включите заново';
+  return globalState.actualTun
     ? 'Виртуальный адаптер подключён'
     : 'Драйвер прозрачного прокси не загружен';
 });
@@ -569,4 +603,8 @@ const runModeWorker = async (targetMode: string) => {
 .seg-item { flex: 1; text-align: center; padding: 14px 0; font-size: 0.9rem; font-weight: 600; color: var(--text-main); cursor: pointer; z-index: 1; transition: 0.3s; }
 .seg-item.active { color: var(--accent-fg); }
 .seg-slider { position: absolute; top: 10px; bottom: 10px; width: calc(33.33% - 20px); margin-left: 10px; background: var(--text-main); border-radius: 8px; z-index: 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); transition: left 0.3s cubic-bezier(0.4,0,0.2,1); }
+.bg-state-switch { display: flex; gap: 6px; margin-bottom: 8px; }
+.bg-state-btn { flex: 1; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--surface-hover); background: var(--surface); color: var(--text-sub); font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+.bg-state-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.bg-state-hint { color: var(--text-muted); font-size: 0.72rem; line-height: 1.5; margin-bottom: 10px; }
 </style>

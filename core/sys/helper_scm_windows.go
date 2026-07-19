@@ -13,6 +13,21 @@ import (
 	"golang.org/x/sys/windows/svc/mgr"
 )
 
+// connectSCMLimited подключается к диспетчеру служб с минимальными правами.
+//
+// ВАЖНО: mgr.Connect() из x/sys открывает SCM с SC_MANAGER_ALL_ACCESS, что требует прав
+// администратора. Приложение из автозапуска работает БЕЗ элевации, поэтому такой вызов падал
+// с ACCESS_DENIED, проверка «установлена ли служба» возвращала ошибку, а вызывающий код считал
+// это за «служба не установлена» — и после каждой перезагрузки просил установить её заново.
+// Для проверки состояния и запуска/остановки достаточно SC_MANAGER_CONNECT, доступного всем.
+func connectSCMLimited() (*mgr.Mgr, error) {
+	handle, err := windows.OpenSCManager(nil, nil, windows.SC_MANAGER_CONNECT)
+	if err != nil {
+		return nil, fmt.Errorf("SCM connect failed: %w", err)
+	}
+	return &mgr.Mgr{Handle: handle}, nil
+}
+
 func openServiceWithAccess(m *mgr.Mgr, name string, access uint32) (*mgr.Service, error) {
 	namePtr, err := windows.UTF16PtrFromString(name)
 	if err != nil {
@@ -31,7 +46,7 @@ func openServiceWithAccess(m *mgr.Mgr, name string, access uint32) (*mgr.Service
 }
 
 func isServiceInstalledSCM(name string) (bool, error) {
-	m, err := mgr.Connect()
+	m, err := connectSCMLimited()
 	if err != nil {
 		return false, fmt.Errorf("SCM connect failed: %w", err)
 	}
@@ -49,7 +64,7 @@ func isServiceInstalledSCM(name string) (bool, error) {
 }
 
 func isServiceRunningSCM(name string) (bool, error) {
-	m, err := mgr.Connect()
+	m, err := connectSCMLimited()
 	if err != nil {
 		return false, fmt.Errorf("SCM connect failed: %w", err)
 	}
@@ -157,7 +172,7 @@ func uninstallServiceSCM(name string) error {
 }
 
 func startServiceSCM(name string) error {
-	m, err := mgr.Connect()
+	m, err := connectSCMLimited()
 	if err != nil {
 		return fmt.Errorf("SCM connect failed: %w", err)
 	}
@@ -200,7 +215,7 @@ func startServiceSCM(name string) error {
 }
 
 func stopServiceSCM(name string) error {
-	m, err := mgr.Connect()
+	m, err := connectSCMLimited()
 	if err != nil {
 		return fmt.Errorf("SCM connect failed: %w", err)
 	}
