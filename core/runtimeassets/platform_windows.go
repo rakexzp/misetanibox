@@ -11,3 +11,6 @@ const wintunNeeded = true
 func validateCoreBinary(path string) error {
 	return utils.ValidateWindowsPE(path, 5*1024*1024, 300*1024*1024)
 }
+
+// findSystemCore — на Windows системного ядра из пакетного менеджера не бывает.
+func findSystemCore() string { return "" }

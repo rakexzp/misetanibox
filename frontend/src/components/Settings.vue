@@ -72,10 +72,10 @@
                 <span class="slider"></span>
               </label>
             </div>
-            <div class="setting-item">
+            <div class="setting-item" v-if="isWindows">
               <div class="info">
                 <h4>Разгрузка GPU интерфейса</h4>
-                <p>Отключает GPU-ускорение вебвью — интерфейс рисуется через CPU. Помогает, если видеокарта греется именно от приложения. Применяется после перезапуска. Актуально для Windows (на Linux вебвью и так без GPU-ускорения).</p>
+                <p>Отключает GPU-ускорение вебвью — интерфейс рисуется через CPU. Помогает, если видеокарта греется именно от приложения. Применяется после перезапуска.</p>
               </div>
               <label class="modern-switch">
                 <input type="checkbox" :checked="gpuSaver" @change="toggleGpuSaver">
@@ -155,9 +155,9 @@
               </button>
             </div>
 
-            <div class="divider"></div>
+            <div class="divider" v-if="isWindows"></div>
 
-            <div class="setting-item">
+            <div class="setting-item" v-if="isWindows">
               <div class="info">
                 <h4>Драйвер Wintun (DLL)</h4>
                 <p>Текущая версия: {{ wintunVersion || 'Получение…' }}</p>
@@ -171,7 +171,7 @@
             
             <div class="divider"></div>
 
-            <div class="setting-item">
+            <div class="setting-item" v-if="isWindows">
               <div class="info">
                 <h4>Фоновая служба (GoclashZHelper)</h4>
                 <p>
@@ -843,9 +843,9 @@
               </label>
             </div>
 
-            <div class="divider"></div>
+            <div class="divider" v-if="isWindows"></div>
 
-            <div class="setting-item">
+            <div class="setting-item" v-if="isWindows">
               <div class="info">
                 <h4>Умное ядро (Smart) <span v-if="smartCoreOn" style="color: var(--green-text); font-size: 0.8rem; margin-left: 6px;">установлено</span></h4>
                 <p>Заменяет ядро на сборку с ML-выбором лучшего сервера по истории задержек и нагрузке. Скачивается отдельно (~20 МБ). Ядро неподписанное — при первом запуске Windows Defender может его заблокировать; тогда разрешите файл в «Журнале защиты» или добавьте исключение.</p>
@@ -860,7 +860,7 @@
               </button>
             </div>
 
-            <template v-if="smartCoreOn">
+            <template v-if="isWindows && smartCoreOn">
               <div class="divider"></div>
               <div class="setting-item">
                 <div class="info">
@@ -1309,7 +1309,13 @@
 import { ref, reactive, onMounted, onUnmounted, computed, watch } from 'vue';
 import * as API from '../../wailsjs/go/main/App';
 import { BrowserOpenURL, EventsOn } from '../../wailsjs/runtime/runtime';
+
 import { showAlert, showConfirm, globalState, setUiMode } from '../store';
+
+// Разделы, применимые только к Windows (wintun, фоновая служба, Smart-ядро, GPU-тумблер),
+// на Linux прячем — там они либо не нужны, либо собираются только под Windows.
+const isWindows = computed(() => globalState.platform !== 'linux');
+
 import { getSavedColors, saveColors, type CustomColors } from '../utils/colors';
 import { economyEnabled, setEconomy } from '../utils/perf';
 import { formatBytes, formatSpeed, formatEtaTime, formatRelativeTime } from '../utils/format';

@@ -10,6 +10,7 @@ import (
 	"goclashz/core/utils"
 	"os"
 	"path/filepath"
+	goruntime "runtime"
 	"strings"
 	"time"
 )
@@ -221,6 +222,19 @@ func (c *Controller) CheckAppUpdateAsync(ctx context.Context, currentVersion str
 				c.events.Emit("app-update-none", map[string]string{
 					"message": "Установлена последняя версия.",
 				})
+			}
+			return nil
+		}
+
+		// На Linux программа ставится пакетом (deb/AUR) или AppImage, а в обновлениях
+		// лежит установщик под Windows — качать и запускать его тут нельзя.
+		// Сообщаем о версии и отправляем на страницу загрузки.
+		if goruntime.GOOS != "windows" {
+			if manual {
+				c.events.Emit("app-update-error", fmt.Sprintf(
+					"Доступна версия %s. На Linux обновите пакет через менеджер пакетов или скачайте сборку: %s",
+					info.Version, info.ReleaseURL,
+				))
 			}
 			return nil
 		}

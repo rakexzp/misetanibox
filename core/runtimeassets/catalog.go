@@ -173,7 +173,17 @@ func checkRuntimeAsset(ctx context.Context, key AssetKey, label, name string) As
 }
 
 func seedPathForCanonicalName(name string) string {
-	return filepath.Join(utils.GetSeedCoreBinDir(), name)
+	seed := filepath.Join(utils.GetSeedCoreBinDir(), name)
+	// Дистрибутивные сборки (AUR) не кладут своё ядро — оно ставится зависимостью (mihomo).
+	// Если seed-ядра нет, берём системное: дальше оно копируется в рабочий каталог как обычно.
+	if name == coreBinName {
+		if _, err := os.Stat(seed); err != nil {
+			if sys := findSystemCore(); sys != "" {
+				return sys
+			}
+		}
+	}
+	return seed
 }
 
 func runtimePathForCanonicalName(name string) string {

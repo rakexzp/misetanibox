@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	goruntime "runtime"
 	"strings"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -433,8 +434,10 @@ func (c *Controller) GetEvents() EventSink {
 }
 
 type AppState struct {
-	IsRunning   bool   `json:"isRunning"`
-	IsAdmin     bool   `json:"isAdmin"`
+	IsRunning bool `json:"isRunning"`
+	IsAdmin   bool `json:"isAdmin"`
+	// Platform — ОС ("windows"/"linux"): интерфейс прячет неприменимые разделы
+	Platform    string `json:"platform"`
 	Mode        string `json:"mode"`
 	Theme       string `json:"theme"`
 	HideLogs    bool   `json:"hideLogs"`
@@ -480,6 +483,7 @@ func (c *Controller) GetAppState() AppState {
 	state := AppState{
 		IsRunning:          logicalIsRunning,
 		IsAdmin:            sys.CheckAdmin(),
+		Platform:           goruntime.GOOS,
 		Mode:               behavior.ActiveMode,
 		DesiredSystemProxy: desired.SystemProxy,
 		DesiredTun:         desired.Tun,
