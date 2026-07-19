@@ -81,10 +81,12 @@ func parseSubFallbacks(h http.Header) []string {
 }
 
 // Заголовки со ссылкой на личный кабинет / продление подписки.
+// Порядок важен: явно заданная ссылка продления побеждает автоматическую
+// profile-web-page-url, которую панель отдаёт сама (она ведёт на страницу подписки).
 var subWebPageHeaders = []string{
-	"profile-web-page-url", // де-факто стандарт у панелей
 	"x-renew-url",
 	"x-subscription-web-page",
+	"profile-web-page-url",
 }
 
 // parseSubWebPage достаёт ссылку на страницу продления из заголовков ответа.
