@@ -18,6 +18,10 @@ type SubIndexItem struct {
 	Total    int64  `json:"total"`
 	Expire   int64  `json:"expire"`
 	Updated  int64  `json:"updated"`
+	// Запасные ссылки на ту же подписку: пробуются вместе с основной, берётся первая ответившая.
+	FallbackURLs []string `json:"fallbackUrls,omitempty"`
+	// Свои HTTP-заголовки для запроса подписки (перекрывают стандартные).
+	Headers map[string]string `json:"headers,omitempty"`
 }
 
 var (

@@ -81,6 +81,7 @@
                 <button v-if="config.type === 'remote'" class="menu-item" @click.stop="handleUpdateSingle(config)">Обновить подписку</button>
                 <button class="menu-item" @click.stop="openRenameModal(config)">Переименовать</button>
                 <button class="menu-item" @click.stop="handleEditFile(config)">Редактировать</button>
+                <button v-if="config.type === 'remote'" class="menu-item" @click.stop="openFetchModal(config)">Запасные ссылки и заголовки</button>
                 <button v-if="config.type === 'remote' && config.url" class="menu-item" @click.stop="handleShareLink(config)">Поделиться ссылкой</button>
                 <button class="menu-item" @click.stop="handleExport(config)">Экспорт файла</button>
                 <button class="menu-item danger" @click.stop="openDeleteModal(config)">Удалить навсегда</button>
@@ -126,12 +127,44 @@
               @keyup.enter="confirmImport"
               :disabled="isImporting"
             />
+            <template v-if="isImportingRemote">
+              <button class="extra-toggle" @click="showFetchExtra = !showFetchExtra">
+                {{ showFetchExtra ? '− ' : '+ ' }}Запасные ссылки и заголовки
+              </button>
+              <div v-if="showFetchExtra" class="extra-block">
+                <p class="global-modal-msg">Запасные ссылки (по одной в строке)</p>
+                <textarea v-model="fallbackText" class="modal-input extra-area" rows="3"
+                  placeholder="https://зеркало-1/sub&#10;https://зеркало-2/sub" :disabled="isImporting"></textarea>
+                <p class="extra-hint">Грузятся вместе с основной — берётся первая ответившая.</p>
+                <p class="global-modal-msg">Свои заголовки (Имя: значение, по одному в строке)</p>
+                <textarea v-model="headersText" class="modal-input extra-area" rows="3"
+                  placeholder="User-Agent: clash-meta&#10;X-Token: abc" :disabled="isImporting"></textarea>
+              </div>
+            </template>
+
             <div class="modal-footer">
               <button class="action-btn flex-1" @click="activeModal = 'import'" :disabled="isImporting">Назад</button>
               <button class="primary-btn accent-btn flex-1" @click="confirmImport" :disabled="!configNameInput || isImporting">
                 <span v-if="isImporting" class="btn-icon spin" v-html="ICONS.refresh"></span>
                 {{ isImporting ? (isImportingRemote ? 'Загрузка...' : 'Импорт...') : 'ОК' }}
               </button>
+            </div>
+          </div>
+        </div>
+
+                <div v-if="activeModal === 'fetch'" class="custom-modal-card" @click.stop>
+          <div class="modal-header"><h3>Запасные ссылки и заголовки</h3></div>
+          <div class="modal-body">
+            <p class="global-modal-msg">Запасные ссылки (по одной в строке)</p>
+            <textarea v-model="fallbackText" class="modal-input extra-area" rows="4"
+              placeholder="https://зеркало-1/sub&#10;https://зеркало-2/sub" :disabled="isSavingFetch"></textarea>
+            <p class="extra-hint">Грузятся вместе с основной — берётся первая ответившая. Помогает, когда основной адрес заблокирован.</p>
+            <p class="global-modal-msg">Свои заголовки (Имя: значение, по одному в строке)</p>
+            <textarea v-model="headersText" class="modal-input extra-area" rows="4"
+              placeholder="User-Agent: clash-meta&#10;X-Token: abc" :disabled="isSavingFetch"></textarea>
+            <div class="modal-footer">
+              <button class="action-btn flex-1" @click="closeAllModals" :disabled="isSavingFetch">Отмена</button>
+              <button class="primary-btn accent-btn flex-1" @click="confirmFetchSettings" :disabled="isSavingFetch">Сохранить</button>
             </div>
           </div>
         </div>
@@ -185,7 +218,7 @@ const emit = defineEmits<{
   'edit-config': [id: string, name: string, type: 'local' | 'remote'];
 }>();
 
-const activeModal = ref<'import' | 'import_confirm' | 'rename' | 'delete' | null>(null);
+const activeModal = ref<'import' | 'import_confirm' | 'rename' | 'delete' | 'fetch' | null>(null);
 const targetId = ref('');
 const targetName = ref('');
 const renameValue = ref('');
@@ -198,6 +231,31 @@ const localConfigs = ref<clash.SubIndexItem[]>([]);
 const activeMenu = ref<string | null>(null);
 
 const newSubUrl = ref('');
+// запасные ссылки + свои заголовки для загрузки подписки
+const showFetchExtra = ref(false);
+const fallbackText = ref('');
+const headersText = ref('');
+const isSavingFetch = ref(false);
+
+const parseFallbacks = (text: string): string[] =>
+  text.split('\n').map((l) => l.trim()).filter((l) => !!l);
+
+const parseHeaders = (text: string): Record<string, string> => {
+  const out: Record<string, string> = {};
+  for (const line of text.split('\n')) {
+    const t = line.trim();
+    if (!t) continue;
+    const i = t.indexOf(':');
+    if (i <= 0) continue;
+    const k = t.slice(0, i).trim();
+    const v = t.slice(i + 1).trim();
+    if (k) out[k] = v;
+  }
+  return out;
+};
+
+const stringifyHeaders = (h: Record<string, string>): string =>
+  Object.entries(h || {}).map(([k, v]) => `${k}: ${v}`).join('\n');
 const pendingImportPath = ref('');
 const configNameInput = ref('');
 const isImportingRemote = ref(false);
@@ -331,18 +389,56 @@ const confirmImport = async () => {
   try {
     const finalName = configNameInput.value.trim() || (isImportingRemote.value ? "Подписка без имени" : "Файл без имени");
     if (isImportingRemote.value) {
-      await API.UpdateSub(finalName, pendingImportPath.value);
+      await (API as any).UpdateSubEx(
+        finalName,
+        pendingImportPath.value,
+        parseFallbacks(fallbackText.value),
+        parseHeaders(headersText.value),
+      );
     } else {
       await API.DoLocalImport(pendingImportPath.value, finalName);
     }
     await fetchConfigs();
     closeAllModals();
     newSubUrl.value = '';
+    fallbackText.value = '';
+    headersText.value = '';
+    showFetchExtra.value = false;
   } catch (e) {
     console.error("导入失败:", e);
     await showAlert("Не удалось импортировать: " + e, "Ошибка");
   } finally {
     isImporting.value = false;
+  }
+};
+
+const openFetchModal = async (config: clash.SubIndexItem) => {
+  activeMenu.value = null;
+  targetId.value = config.id;
+  fallbackText.value = '';
+  headersText.value = '';
+  try {
+    const st: any = await (API as any).GetSubFetchSettings(config.id);
+    fallbackText.value = (st?.fallbackUrls || []).join('\n');
+    headersText.value = stringifyHeaders(st?.headers || {});
+  } catch (e) { /* пустые поля — не критично */ }
+  activeModal.value = 'fetch';
+};
+
+const confirmFetchSettings = async () => {
+  isSavingFetch.value = true;
+  try {
+    await (API as any).SaveSubFetchSettings(
+      targetId.value,
+      parseFallbacks(fallbackText.value),
+      parseHeaders(headersText.value),
+    );
+    await fetchConfigs();
+    closeAllModals();
+  } catch (e) {
+    await showAlert('Не удалось сохранить: ' + e, 'Ошибка');
+  } finally {
+    isSavingFetch.value = false;
   }
 };
 
@@ -742,4 +838,8 @@ onUnmounted(() => {
   color: var(--accent-fg);
   opacity: 0.7;
 }
+.extra-toggle { background: none; border: none; color: var(--accent); font-size: 0.8rem; cursor: pointer; padding: 8px 0 4px; text-align: left; }
+.extra-block { display: flex; flex-direction: column; gap: 4px; }
+.extra-area { resize: vertical; font-family: inherit; line-height: 1.5; }
+.extra-hint { color: var(--text-muted); font-size: 0.72rem; line-height: 1.5; margin: 2px 0 6px; }
 </style>

@@ -6,9 +6,9 @@ import (
 	"goclashz/core/clash"
 )
 
-func (c *Controller) UpdateSub(ctx context.Context, name, url string) error {
+func (c *Controller) UpdateSub(ctx context.Context, name, url string, opts *clash.SubFetchOptions) error {
 	ua := c.Behavior.Get().SubUA
-	id, err := clash.DownloadSub(ctx, name, url, "", ua)
+	id, err := clash.DownloadSub(ctx, name, url, "", ua, opts)
 	if err != nil {
 		return err
 	}
@@ -30,7 +30,10 @@ func (c *Controller) UpdateSingleSub(ctx context.Context, id string) error {
 	}
 
 	ua := c.Behavior.Get().SubUA
-	_, err := clash.DownloadSub(ctx, item.Name, item.URL, id, ua)
+	_, err := clash.DownloadSub(ctx, item.Name, item.URL, id, ua, &clash.SubFetchOptions{
+		FallbackURLs: item.FallbackURLs,
+		Headers:      item.Headers,
+	})
 	if err == nil {
 		state := c.GetAppState()
 		if state.ActiveConfig == id && state.IsRunning {
@@ -50,7 +53,10 @@ func (c *Controller) UpdateAllSubsAsync(ctx context.Context) {
 
 		for _, item := range items {
 			if item.URL != "" && item.Type == "remote" {
-				id, err := clash.DownloadSub(ctx, item.Name, item.URL, item.ID, ua)
+				id, err := clash.DownloadSub(ctx, item.Name, item.URL, item.ID, ua, &clash.SubFetchOptions{
+					FallbackURLs: item.FallbackURLs,
+					Headers:      item.Headers,
+				})
 				if err == nil && id == state.ActiveConfig {
 					needsRestart = true
 				}

@@ -67,7 +67,49 @@ func parseSubProfileName(h http.Header) string {
 	return ""
 }
 
-func DownloadSub(ctx context.Context, name, url, existingId, userAgent string) (string, error) {
+// SubFetchOptions — дополнительные параметры загрузки подписки.
+type SubFetchOptions struct {
+	// Запасные ссылки: идут в загрузку вместе с основной, побеждает первая ответившая.
+	FallbackURLs []string
+	// Свои заголовки: перекрывают стандартные (x-hwid и т.п.).
+	Headers map[string]string
+}
+
+// subFetchURLs — основная ссылка + запасные, без пустых и дублей.
+func subFetchURLs(url string, fallbacks []string) []string {
+	out := make([]string, 0, len(fallbacks)+1)
+	seen := map[string]bool{}
+	for _, u := range append([]string{url}, fallbacks...) {
+		u = strings.TrimSpace(u)
+		if u == "" || seen[u] {
+			continue
+		}
+		seen[u] = true
+		out = append(out, u)
+	}
+	return out
+}
+
+// subFetchHeaders — стандартные заголовки устройства + пользовательские (последние в приоритете).
+func subFetchHeaders(custom map[string]string) map[string]string {
+	h := sys.SubscriptionHeaders()
+	if h == nil {
+		h = map[string]string{}
+	}
+	for k, v := range custom {
+		k = strings.TrimSpace(k)
+		if k == "" {
+			continue
+		}
+		h[k] = v
+	}
+	return h
+}
+
+func DownloadSub(ctx context.Context, name, url, existingId, userAgent string, opts *SubFetchOptions) (string, error) {
+	if opts == nil {
+		opts = &SubFetchOptions{}
+	}
 	id := existingId
 	if id == "" {
 		id = fmt.Sprintf("%d", time.Now().UnixMilli())
@@ -95,10 +137,10 @@ func DownloadSub(ctx context.Context, name, url, existingId, userAgent string) (
 	}
 
 	err = downloader.FetchSmallFileAtomic(ctx, downloader.Options{
-		URLs:      []string{url},
+		URLs:      subFetchURLs(url, opts.FallbackURLs),
 		DestPath:  originPath,
 		UserAgent: userAgent,
-		Headers:   sys.SubscriptionHeaders(),
+		Headers:   subFetchHeaders(opts.Headers),
 		MaxBytes:  50 * 1024 * 1024,
 		Strategy: func() downloader.DownloadStrategy {
 			var pUrl string
@@ -192,6 +234,8 @@ func DownloadSub(ctx context.Context, name, url, existingId, userAgent string) (
 			if strings.TrimSpace(name) == "" && strings.TrimSpace(headerName) != "" {
 				SubIndex[i].Name = strings.TrimSpace(headerName)
 			}
+			SubIndex[i].FallbackURLs = opts.FallbackURLs
+			SubIndex[i].Headers = opts.Headers
 			found = true
 			break
 		}
@@ -207,11 +251,34 @@ func DownloadSub(ctx context.Context, name, url, existingId, userAgent string) (
 			Total:    total,
 			Expire:   expire,
 			Updated:  time.Now().Unix(),
+
+			FallbackURLs: opts.FallbackURLs,
+			Headers:      opts.Headers,
 		})
 	}
 	IndexLock.Unlock()
 
 	return safeId, SaveIndex()
+}
+
+// SaveSubFetchSettings сохраняет запасные ссылки и свои заголовки подписки,
+// не перезакачивая её (нужно для редактирования настроек из интерфейса).
+func SaveSubFetchSettings(id string, fallbackURLs []string, headers map[string]string) error {
+	IndexLock.Lock()
+	found := false
+	for i, item := range SubIndex {
+		if item.ID == id {
+			SubIndex[i].FallbackURLs = fallbackURLs
+			SubIndex[i].Headers = headers
+			found = true
+			break
+		}
+	}
+	IndexLock.Unlock()
+	if !found {
+		return fmt.Errorf("подписка не найдена")
+	}
+	return SaveIndex()
 }
 
 func RenameConfig(id, newName string) error {
