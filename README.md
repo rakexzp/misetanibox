@@ -60,3 +60,7 @@ Android-версия — вклад [@14Unight](https://github.com/14Unight): п
 ## Лицензия
 
 MIT. Основано на [GoclashZ](https://github.com/Zzz-IT/GoclashZ) © Zzz-IT.
+
+## Мобильная версия
+
+Android-клиент переехал в отдельный репозиторий: [misetanibox-mobile](https://github.com/rakexzp/misetanibox-mobile).
