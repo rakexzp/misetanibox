@@ -51,10 +51,6 @@ wails build -platform linux/amd64 -tags webkit2_41   # Linux (нужны gtk3 + 
 
 Релизы собираются автоматически: тег `vX.Y.Z` → Windows (`.github/workflows/release.yml`), тег `linux-v*` → Linux (`.github/workflows/linux.yml`).
 
-## Мобильная версия
-
-Android-клиент живёт в отдельном репозитории: [misetanibox-mobile](https://github.com/rakexzp/misetanibox-mobile).
-
 ## Благодарности
 
 Логотип — [@whxteangel](https://t.me/whxteangel). Ядро — [MetaCubeX/mihomo](https://github.com/MetaCubeX/mihomo) и [vernesong/mihomo](https://github.com/vernesong/mihomo) (Smart).
