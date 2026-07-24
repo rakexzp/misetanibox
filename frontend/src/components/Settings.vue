@@ -1312,9 +1312,9 @@ import { BrowserOpenURL, EventsOn } from '../../wailsjs/runtime/runtime';
 
 import { showAlert, showConfirm, globalState, setUiMode } from '../store';
 
-// Разделы, применимые только к Windows (wintun, фоновая служба, Smart-ядро, GPU-тумблер),
-// на Linux прячем — там они либо не нужны, либо собираются только под Windows.
-const isWindows = computed(() => globalState.platform !== 'linux');
+// Разделы, применимые только к Windows (wintun, фоновая служба, Smart-ядро, GPU-тумблер).
+// На Linux/macOS прячем: они либо не нужны, либо собираются только под Windows.
+const isWindows = computed(() => globalState.platform === 'windows' || globalState.platform === '');
 
 import { getSavedColors, saveColors, type CustomColors } from '../utils/colors';
 import { economyEnabled, setEconomy } from '../utils/perf';

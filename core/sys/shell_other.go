@@ -2,8 +2,17 @@
 
 package sys
 
-import "os/exec"
+import (
+	"os/exec"
+	"runtime"
+)
 
+// ShellOpen открывает файл/ссылку системным обработчиком.
+// В macOS это `open`, в Linux — `xdg-open`.
 func ShellOpen(path string) error {
-	return exec.Command("xdg-open", path).Start()
+	opener := "xdg-open"
+	if runtime.GOOS == "darwin" {
+		opener = "open"
+	}
+	return exec.Command(opener, path).Start()
 }
