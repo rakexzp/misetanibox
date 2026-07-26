@@ -33,7 +33,6 @@
       </div>
 
       <AppRoutingPanel v-if="effectiveTab === 'apps'" :config-id="globalState.activeConfigId" />
-      <RouteConfigurator ref="routeCfg" />
 
       <div v-else class="rules-grid">
         <div v-for="rule in paginatedRules" :key="rule.originalIndex" class="rule-card">
@@ -115,6 +114,8 @@
         </div>
       </div>
     </Transition>
+
+    <RouteConfigurator ref="routeCfg" />
   </div>
 </template>
 
