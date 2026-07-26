@@ -23,6 +23,9 @@
             <input v-model="searchQuery" placeholder="Поиск правил..." />
           </div>
 
+          <button class="action-btn header-action-btn" @click="routeCfg?.show()" title="Быстро разложить популярные сервисы по маршрутам">
+            ⚙ Быстрая настройка
+          </button>
           <button class="primary-btn header-action-btn" @click="openAddModal" :disabled="loading">
             <span class="btn-icon" v-html="ICONS.plus"></span> Добавить правило
           </button>
@@ -30,6 +33,7 @@
       </div>
 
       <AppRoutingPanel v-if="effectiveTab === 'apps'" :config-id="globalState.activeConfigId" />
+      <RouteConfigurator ref="routeCfg" />
 
       <div v-else class="rules-grid">
         <div v-for="rule in paginatedRules" :key="rule.originalIndex" class="rule-card">
@@ -121,6 +125,7 @@ import { showAlert, showConfirm, globalState } from '../store';
 import { ICONS } from '../utils/icons';
 import ModernSelect from './ModernSelect.vue';
 import AppRoutingPanel from './AppRoutingPanel.vue';
+import RouteConfigurator from './RouteConfigurator.vue';
 
 type RuleTab = 'subscription' | 'add' | 'delete' | 'apps';
 const rulePageData = shallowRef<any>(null);
@@ -158,6 +163,7 @@ const resetRuleSlider = () => {
 };
 
 const searchQuery = ref('');
+const routeCfg = ref<any>(null);
 const debouncedQuery = ref('');
 let searchTimer: ReturnType<typeof setTimeout>;
 

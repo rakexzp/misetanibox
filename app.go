@@ -360,6 +360,25 @@ func (a *App) UpdateSubEx(name, url string, headers map[string]string) error {
 	return a.core.UpdateSub(a.ctx, name, url, &clash.SubFetchOptions{Headers: headers})
 }
 
+// --- Конфигуратор маршрутов по сервисам ---
+
+// GetServiceCatalog — список сервисов для плашек конфигуратора.
+func (a *App) GetServiceCatalog() []clash.ServiceDef { return clash.ServiceCatalog }
+
+// GetRouteConfig — текущая раскладка сервисов.
+func (a *App) GetRouteConfig() clash.RouteConfig { return clash.GetRouteConfig() }
+
+// SaveRouteConfig — сохранить раскладку и перезапустить ядро, если оно работает.
+func (a *App) SaveRouteConfig(cfg clash.RouteConfig) error {
+	if err := clash.SaveRouteConfig(cfg); err != nil {
+		return err
+	}
+	if clash.IsRunning() {
+		return a.core.RestartCoreWithReason(a.ctx, "route-services")
+	}
+	return nil
+}
+
 // ProbeSubURL — разведать формат подписки (clash/xray/unknown) до добавления.
 func (a *App) ProbeSubURL(url string, headers map[string]string) clash.SubProbe {
 	ctx, cancel := context.WithTimeout(a.ctx, 30*time.Second)

@@ -507,6 +507,8 @@ func BuildRuntimeConfig(id string, mode string, logLevel string, tunEnabled bool
 
 	UpdateAPIBaseURL(controller)
 
+	// Маршруты конфигуратора сервисов — в начало, приоритетнее общих правил.
+	runtimeRules = injectServiceRoutes(runtimeRules)
 	root["rules"] = runtimeRules
 
 	if logLevel != "" {
