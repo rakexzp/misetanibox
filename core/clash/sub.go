@@ -16,6 +16,7 @@ import (
 	"goclashz/core/downloader"
 	"goclashz/core/sys"
 	"goclashz/core/utils"
+	"goclashz/core/xrayconv"
 
 	"gopkg.in/yaml.v3"
 )
@@ -127,6 +128,8 @@ type SubFetchOptions struct {
 	FallbackURLs []string
 	// Свои заголовки: перекрывают стандартные (x-hwid и т.п.).
 	Headers map[string]string
+	// Convert: если подписка отдаёт Xray-JSON вместо clash-YAML — сконвертировать.
+	Convert bool
 }
 
 // resolveFallbackURL достраивает запасной адрес.
@@ -239,6 +242,27 @@ func DownloadSub(ctx context.Context, name, url, existingId, userAgent string, o
 			}
 		},
 		InsecureSkipVerify: true,
+		Transform: func(tmpPath string) error {
+			if !opts.Convert {
+				return nil
+			}
+			raw, err := os.ReadFile(tmpPath)
+			if err != nil {
+				return err
+			}
+			// уже валидный clash — не трогаем
+			if StrictVerifyClashConfig(raw) == nil {
+				return nil
+			}
+			if !xrayconv.LooksLikeXray(raw) {
+				return nil // не xray — пусть Validator ругнётся как обычно
+			}
+			yaml, cerr := xrayconv.ToMihomoYAML(raw)
+			if cerr != nil {
+				return fmt.Errorf("конвертация Xray→mihomo не удалась: %w", cerr)
+			}
+			return utils.WriteFileAtomic(tmpPath, []byte(yaml), 0644)
+		},
 		OnResponse: func(resp *http.Response) {
 
 			if info := resp.Header.Get("Subscription-Userinfo"); info != "" {
@@ -331,6 +355,7 @@ func DownloadSub(ctx context.Context, name, url, existingId, userAgent string, o
 			if headerWebPage != "" {
 				SubIndex[i].WebPageURL = headerWebPage
 			}
+			SubIndex[i].Convert = opts.Convert
 			SubIndex[i].Headers = opts.Headers
 			found = true
 			break
@@ -351,6 +376,7 @@ func DownloadSub(ctx context.Context, name, url, existingId, userAgent string, o
 			FallbackURLs: headerFallbacks,
 			WebPageURL:   headerWebPage,
 			Headers:      opts.Headers,
+			Convert:      opts.Convert,
 		})
 	}
 	IndexLock.Unlock()
@@ -440,6 +466,61 @@ func ReloadConfig() error {
 		http.StatusOK,
 		http.StatusNoContent,
 	)
+}
+
+// SubProbe — результат разведки ссылки подписки.
+type SubProbe struct {
+	Kind      string `json:"kind"`      // "clash" | "xray" | "unknown"
+	NodeCount int    `json:"nodeCount"` // сколько узлов удастся получить
+	Error     string `json:"error,omitempty"`
+}
+
+// ProbeSubURL скачивает подписку один раз и определяет её формат — чтобы предложить
+// конвертацию, когда панель отдаёт Xray-JSON вместо clash-YAML.
+func ProbeSubURL(ctx context.Context, url, userAgent string, headers map[string]string) SubProbe {
+	tmp, err := os.CreateTemp("", "mise-probe-*")
+	if err != nil {
+		return SubProbe{Kind: "unknown", Error: err.Error()}
+	}
+	tmpPath := tmp.Name()
+	tmp.Close()
+	defer os.Remove(tmpPath)
+
+	ferr := downloader.FetchSmallFileAtomic(ctx, downloader.Options{
+		URLs:               []string{url},
+		DestPath:           tmpPath,
+		UserAgent:          userAgent,
+		Headers:            subFetchHeaders(headers),
+		MaxBytes:           50 * 1024 * 1024,
+		InsecureSkipVerify: true,
+	})
+	if ferr != nil {
+		return SubProbe{Kind: "unknown", Error: ferr.Error()}
+	}
+	raw, err := os.ReadFile(tmpPath)
+	if err != nil {
+		return SubProbe{Kind: "unknown", Error: err.Error()}
+	}
+
+	if StrictVerifyClashConfig(raw) == nil {
+		return SubProbe{Kind: "clash", NodeCount: countClashProxies(raw)}
+	}
+	if xrayconv.LooksLikeXray(raw) {
+		n := 0
+		if y, cerr := xrayconv.ToMihomoYAML(raw); cerr == nil {
+			n = strings.Count(y, "\n  - name:") + strings.Count(y, "\n  - {name:")
+		}
+		return SubProbe{Kind: "xray", NodeCount: n}
+	}
+	return SubProbe{Kind: "unknown"}
+}
+
+func countClashProxies(data []byte) int {
+	var doc struct {
+		Proxies []interface{} `yaml:"proxies"`
+	}
+	_ = yaml.Unmarshal(data, &doc)
+	return len(doc.Proxies)
 }
 
 func StrictVerifyClashConfig(data []byte) error {

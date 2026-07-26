@@ -360,6 +360,19 @@ func (a *App) UpdateSubEx(name, url string, headers map[string]string) error {
 	return a.core.UpdateSub(a.ctx, name, url, &clash.SubFetchOptions{Headers: headers})
 }
 
+// ProbeSubURL — разведать формат подписки (clash/xray/unknown) до добавления.
+func (a *App) ProbeSubURL(url string, headers map[string]string) clash.SubProbe {
+	ctx, cancel := context.WithTimeout(a.ctx, 30*time.Second)
+	defer cancel()
+	return clash.ProbeSubURL(ctx, url, a.core.Behavior.Get().SubUA, headers)
+}
+
+// AddSubConverted — добавить подписку с конвертацией Xray→mihomo.
+// Флаг конвертации сохраняется: последующие автообновления тоже конвертируют.
+func (a *App) AddSubConverted(name, url string, headers map[string]string) error {
+	return a.core.UpdateSub(a.ctx, name, url, &clash.SubFetchOptions{Headers: headers, Convert: true})
+}
+
 // GetSubHeaders — свои заголовки запроса подписки (для UI).
 func (a *App) GetSubHeaders(id string) map[string]string {
 	if item, ok := clash.FindSubIndexByID(id); ok && item.Headers != nil {

@@ -400,11 +400,28 @@ const confirmImport = async () => {
   try {
     const finalName = configNameInput.value.trim() || (isImportingRemote.value ? "Подписка без имени" : "Файл без имени");
     if (isImportingRemote.value) {
-      await (API as any).UpdateSubEx(
-        finalName,
-        pendingImportPath.value,
-        parseHeaders(headersText.value),
-      );
+      const headers = parseHeaders(headersText.value);
+      // Разведываем формат: панель может отдавать Xray-JSON вместо clash-YAML.
+      let kind = 'clash';
+      try {
+        const probe: any = await (API as any).ProbeSubURL(pendingImportPath.value, headers);
+        kind = probe?.kind || 'clash';
+        if (kind === 'xray') {
+          const ok = await showConfirm(
+            `Ссылка отдаёт конфигурацию Xray (узлов: ${probe.nodeCount || '?'}), а не формат Misetanibox. Сконвертировать её автоматически? Конвертация будет повторяться при каждом обновлении подписки.`,
+            'Конвертировать Xray?'
+          );
+          if (ok) {
+            await (API as any).AddSubConverted(finalName, pendingImportPath.value, headers);
+          } else {
+            // юзер отказался — пробуем как есть (скорее всего не примется)
+            await (API as any).UpdateSubEx(finalName, pendingImportPath.value, headers);
+          }
+        }
+      } catch (e) { kind = 'clash'; }
+      if (kind !== 'xray') {
+        await (API as any).UpdateSubEx(finalName, pendingImportPath.value, headers);
+      }
     } else {
       await API.DoLocalImport(pendingImportPath.value, finalName);
     }

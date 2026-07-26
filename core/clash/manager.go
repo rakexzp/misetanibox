@@ -24,6 +24,8 @@ type SubIndexItem struct {
 	Headers map[string]string `json:"headers,omitempty"`
 	// Личный кабинет / страница продления — приходит заголовком от панели.
 	WebPageURL string `json:"webPageUrl,omitempty"`
+	// Конвертировать Xray-JSON в mihomo-YAML при загрузке (панель отдаёт xray-формат).
+	Convert bool `json:"convert,omitempty"`
 }
 
 var (

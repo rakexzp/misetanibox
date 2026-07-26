@@ -76,6 +76,13 @@ func FetchSmallFileAtomic(ctx context.Context, opt Options) error {
 		if res.err == nil && len(res.body) > 0 {
 			tmpPath := opt.DestPath + ".tmp"
 			_ = os.WriteFile(tmpPath, res.body, 0644)
+			if opt.Transform != nil {
+				if err := opt.Transform(tmpPath); err != nil {
+					_ = os.Remove(tmpPath)
+					lastErr = err
+					continue
+				}
+			}
 			if opt.Validator != nil {
 				if err := opt.Validator(tmpPath); err != nil {
 					_ = os.Remove(tmpPath)

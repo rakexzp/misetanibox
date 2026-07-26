@@ -21,7 +21,10 @@ type Options struct {
 
 	AttemptsPerEndpoint int
 	OnResponse          func(resp *http.Response)
-	Validator           func(tmpPath string) error
+	// Transform (если задан) вызывается ДО Validator и может переписать файл
+	// (напр. сконвертировать Xray-JSON в mihomo-YAML на месте).
+	Transform func(tmpPath string) error
+	Validator func(tmpPath string) error
 
 	OnProgress func(bytesDone, totalBytes, speedBps int64, etaSec int64)
 }
