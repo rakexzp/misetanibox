@@ -1168,7 +1168,7 @@ func (c *Controller) ensureHelperReadySlow(reason string) error {
 		return ErrHelperRepairRequired
 	}
 
-	helperExe := filepath.Join(utils.GetAppDir(), "GoclashZHelper.exe")
+	helperExe := filepath.Join(utils.GetAppDir(), "MisetaniboxHelper.exe")
 	sid, err := sys.CurrentUserSID()
 	if err != nil {
 		return fmt.Errorf("Не удалось получить SID текущего пользователя: %w", err)

@@ -23,9 +23,9 @@ import (
 )
 
 const (
-	serviceName  = "GoclashZHelper"
-	pipeName     = `\\.\pipe\GoclashZ.Helper`
-	registryPath = `SYSTEM\CurrentControlSet\Services\GoclashZHelper`
+	serviceName  = "MisetaniboxHelper"
+	pipeName     = `\\.\pipe\Misetanibox.Helper`
+	registryPath = `SYSTEM\CurrentControlSet\Services\MisetaniboxHelper`
 )
 
 type helperService struct {
@@ -516,8 +516,8 @@ func (s *helperService) writeResponse(conn net.Conn, ok bool, data json.RawMessa
 }
 
 func runDebug() {
-	pipeName := `\\.\pipe\GoclashZ.Helper.debug`
-	fmt.Printf("GoclashZHelper starting in debug mode on pipe: %s\n", pipeName)
+	pipeName := `\\.\pipe\Misetanibox.Helper.debug`
+	fmt.Printf("MisetaniboxHelper starting in debug mode on pipe: %s\n", pipeName)
 
 	cfg := &winio.PipeConfig{
 		InputBufferSize:  4096,
@@ -558,9 +558,9 @@ func installService(allowedSid string) {
 	defer m.Disconnect()
 
 	s, err := m.CreateService(serviceName, exePath, mgr.Config{
-		DisplayName:  "GoclashZ Helper Service",
+		DisplayName:  "Misetanibox Helper Service",
 		Description:  "Предоставляет GoclashZ привилегированные операции: запуск TUN, установка Wintun, замена файлов ядра, восстановление прав доступа",
-		StartType:    mgr.StartManual,
+		StartType:    mgr.StartAutomatic,
 		ErrorControl: mgr.ErrorNormal,
 	})
 	if err != nil {
@@ -573,7 +573,7 @@ func installService(allowedSid string) {
 		writeAllowedSid(allowedSid)
 	}
 
-	fmt.Println("GoclashZHelper service installed successfully")
+	fmt.Println("MisetaniboxHelper service installed successfully")
 }
 
 func writeAllowedSid(sid string) {
@@ -642,5 +642,5 @@ func uninstallService() {
 		os.Exit(1)
 	}
 
-	fmt.Println("GoclashZHelper service uninstalled successfully")
+	fmt.Println("MisetaniboxHelper service uninstalled successfully")
 }

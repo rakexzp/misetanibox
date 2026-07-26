@@ -120,7 +120,7 @@ func main() {
 			}
 		}
 
-		helperPath := filepath.Join(filepath.Dir(exePath), "GoclashZHelper.exe")
+		helperPath := filepath.Join(filepath.Dir(exePath), "MisetaniboxHelper.exe")
 		if err := sys.RecoverHelperServiceForUser(helperPath, allowedSid); err != nil {
 			logger.Errorf("не удалось исправить службу Helper: %v", err)
 			sys.WriteAdminTaskResult("install-helper", err)

@@ -595,9 +595,9 @@ func (a *App) GetHelperServiceStatus() sys.HelperStatusData {
 }
 
 func (a *App) InstallHelperService() error {
-	exePath := filepath.Join(utils.GetAppDir(), "GoclashZHelper.exe")
+	exePath := filepath.Join(utils.GetAppDir(), "MisetaniboxHelper.exe")
 	if _, err := os.Stat(exePath); err != nil {
-		return fmt.Errorf("GoclashZHelper.exe не найден в %s, сначала разверните программу helper", exePath)
+		return fmt.Errorf("MisetaniboxHelper.exe не найден в %s, сначала разверните программу helper", exePath)
 	}
 
 	sid, err := sys.CurrentUserSID()

@@ -7,11 +7,13 @@ import (
 )
 
 const (
-	HelperServiceName = "GoclashZHelper"
-	HelperDisplayName = "Misetanibox Helper Service"
-	HelperDescription = "Привилегированные операции для Misetanibox: запуск TUN, установка Wintun, замена файлов ядра, исправление прав"
+	HelperServiceName = "MisetaniboxHelper"
+	// LegacyHelperServiceName — старое имя службы для миграции (снести при установке новой).
+	LegacyHelperServiceName = "GoclashZHelper"
+	HelperDisplayName       = "Misetanibox Helper Service"
+	HelperDescription       = "Привилегированные операции для Misetanibox: запуск TUN, установка Wintun, замена файлов ядра, исправление прав"
 
-	HelperPipeName = `\\.\pipe\GoclashZ.Helper`
+	HelperPipeName = `\\.\pipe\Misetanibox.Helper`
 )
 
 func GetHelperPipeName() string {

@@ -94,7 +94,7 @@ func installOrUpdateServiceSCM(name, exePath, description string) error {
 	s, err := m.CreateService(name, exePath, mgr.Config{
 		DisplayName:  HelperDisplayName,
 		Description:  description,
-		StartType:    mgr.StartManual,
+		StartType:    mgr.StartAutomatic,
 		ErrorControl: mgr.ErrorNormal,
 	})
 
@@ -133,8 +133,8 @@ func installOrUpdateServiceSCM(name, exePath, description string) error {
 		cfg.Description = description
 		changed = true
 	}
-	if cfg.StartType != mgr.StartManual {
-		cfg.StartType = mgr.StartManual
+	if cfg.StartType != mgr.StartAutomatic {
+		cfg.StartType = mgr.StartAutomatic
 		changed = true
 	}
 	if cfg.ErrorControl != mgr.ErrorNormal {

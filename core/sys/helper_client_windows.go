@@ -252,6 +252,13 @@ func RecoverHelperServiceForUser(exePath string, userSID string) error {
 		return fmt.Errorf("для исправления службы Helper требуются права администратора")
 	}
 
+	// Миграция: снести старую службу GoclashZHelper (переименовали в MisetaniboxHelper).
+	// Она слушала другой пайп и могла мешать; ставим начисто под новым именем.
+	if inst, _ := isServiceInstalled(LegacyHelperServiceName); inst {
+		_ = stopServiceSCM(LegacyHelperServiceName)
+		_ = uninstallServiceSCM(LegacyHelperServiceName)
+	}
+
 	if _, err := os.Stat(exePath); err != nil {
 		return fmt.Errorf("программа helper не найдена: %s: %w", exePath, err)
 	}
@@ -293,9 +300,9 @@ func RecoverHelperServiceForUser(exePath string, userSID string) error {
 }
 
 func writeAllowedSidToRegistry(sid string) error {
-	key, err := registry.OpenKey(registry.LOCAL_MACHINE, `SYSTEM\CurrentControlSet\Services\GoclashZHelper`, registry.SET_VALUE)
+	key, err := registry.OpenKey(registry.LOCAL_MACHINE, `SYSTEM\CurrentControlSet\Services\MisetaniboxHelper`, registry.SET_VALUE)
 	if err != nil {
-		key, _, err = registry.CreateKey(registry.LOCAL_MACHINE, `SYSTEM\CurrentControlSet\Services\GoclashZHelper`, registry.SET_VALUE)
+		key, _, err = registry.CreateKey(registry.LOCAL_MACHINE, `SYSTEM\CurrentControlSet\Services\MisetaniboxHelper`, registry.SET_VALUE)
 		if err != nil {
 			return fmt.Errorf("не удалось открыть/создать раздел реестра: %w", err)
 		}

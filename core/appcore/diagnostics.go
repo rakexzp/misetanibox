@@ -66,7 +66,7 @@ func GetDiagnosticInfo() DiagnosticInfo {
 		info.HelperServiceStatus = "Not installed"
 	}
 
-	info.HelperBinaryPath = filepath.Join(info.AppDir, "GoclashZHelper.exe")
+	info.HelperBinaryPath = filepath.Join(info.AppDir, "MisetaniboxHelper.exe")
 
 	info.Assets.ClashExe = fileExists(filepath.Join(info.RuntimeCoreBinDir, "clash.exe"))
 	info.Assets.WintunDll = fileExists(filepath.Join(info.RuntimeCoreBinDir, "wintun.dll"))

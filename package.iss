@@ -31,7 +31,7 @@ DisableDirPage=no
 
 ; --- 核心修改 2：降级权限要求 ---
 ; 软件安装和日常运行不需要管理员权限。
-; TUN 模式通过 GoclashZHelper 后台服务提供高权限能力，无需 UI 提权。
+; TUN 模式通过 MisetaniboxHelper 后台服务提供高权限能力，无需 UI 提权。
 PrivilegesRequired=lowest
 
 ; 输出设置
@@ -52,7 +52,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Source: ".\build\bin\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 
 ; 2. 打包 Helper 服务程序 (用于 TUN、内核更新等高权限操作)
-Source: ".\build\bin\GoclashZHelper.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: ".\build\bin\MisetaniboxHelper.exe"; DestDir: "{app}"; Flags: ignoreversion
 
 ; CI 拉取的最新资产只作为 seed
 Source: ".\build\runtime-assets\core\bin\*"; DestDir: "{app}\seed\core\bin"; Flags: ignoreversion recursesubdirs createallsubdirs

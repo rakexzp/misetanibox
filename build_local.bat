@@ -10,8 +10,8 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 
-echo [2/2] Building GoclashZHelper.exe...
-go build -ldflags "-s -w" -o build\bin\GoclashZHelper.exe .\cmd\goclashz-helper\
+echo [2/2] Building MisetaniboxHelper.exe...
+go build -ldflags "-s -w" -o build\bin\MisetaniboxHelper.exe .\cmd\goclashz-helper\
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Helper build failed
     exit /b 1

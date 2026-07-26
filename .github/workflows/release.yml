@@ -78,7 +78,7 @@ jobs:
       - name: Build Helper service
         shell: pwsh
         run: |
-          go build -ldflags "-s -w" -o build/bin/GoclashZHelper.exe ./cmd/goclashz-helper/
+          go build -ldflags "-s -w" -o build/bin/MisetaniboxHelper.exe ./cmd/goclashz-helper/
 
       - name: Validate core files
         shell: pwsh
@@ -98,7 +98,7 @@ jobs:
           New-Item -ItemType File -Force "$root/.portable" | Out-Null
 
           Copy-Item "build/bin/Misetanibox.exe" "$root/Misetanibox.exe" -Force
-          Copy-Item "build/bin/GoclashZHelper.exe" "$root/GoclashZHelper.exe" -Force
+          Copy-Item "build/bin/MisetaniboxHelper.exe" "$root/MisetaniboxHelper.exe" -Force
           Copy-Item "build/runtime-assets/core/bin/*" "$root/seed/core/bin" -Recurse -Force
           if (Test-Path "build/runtime-assets/core/asset-manifest.json") {
             Copy-Item "build/runtime-assets/core/asset-manifest.json" "$root/seed/core/asset-manifest.json" -Force
