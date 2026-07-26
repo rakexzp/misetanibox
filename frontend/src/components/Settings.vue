@@ -933,7 +933,8 @@
                 <img :src="appLogo" style="width: 52px; height: 52px; border-radius: 12px;" />
                 <div>
                   <h4 style="margin: 0; font-weight: 800; font-size: 1.6rem; letter-spacing: -0.01em;">Misetanibox</h4>
-                  <a href="javascript:void(0)" @click="openLink('https://t.me/whxteangel')" style="font-size: 0.75rem; color: var(--text-muted);">Логотип: @whxteangel</a>
+                  <a href="javascript:void(0)" @click="openLink('https://t.me/whxteangel')" style="font-size: 0.75rem; color: var(--text-muted); display: block;">Логотип: @whxteangel</a>
+                  <a href="javascript:void(0)" @click="openLink('https://github.com/Gleb-pro-admin')" style="font-size: 0.75rem; color: var(--text-muted); display: block;">Конвертер Xray→mihomo: @Gleb-pro-admin</a>
                 </div>
               </div>
 

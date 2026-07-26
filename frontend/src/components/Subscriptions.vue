@@ -408,7 +408,7 @@ const confirmImport = async () => {
         kind = probe?.kind || 'clash';
         if (kind === 'xray') {
           const ok = await showConfirm(
-            `Ссылка отдаёт конфигурацию Xray (узлов: ${probe.nodeCount || '?'}), а не формат Misetanibox. Сконвертировать её автоматически? Конвертация будет повторяться при каждом обновлении подписки.`,
+            `Ссылка отдаёт конфигурацию Xray (узлов: ${probe.nodeCount || '?'}), а не формат Misetanibox. Сконвертировать её автоматически? Конвертация будет повторяться при каждом обновлении подписки.\n\nКонвертер — @Gleb-pro-admin (XrayMi).`,
             'Конвертировать Xray?'
           );
           if (ok) {

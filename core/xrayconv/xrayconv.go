@@ -1,8 +1,9 @@
 // Package xrayconv конвертирует Xray-JSON-конфигурации в mihomo (Clash Meta) YAML.
 //
-// Основано на XrayMi (github.com/Gleb-pro-admin/XrayMi), внутренние пакаджи вендорены
-// сюда: Go не разрешает импортировать чужой internal/. Обёртка повторяет конвейер
-// оригинального CLI: ParseConfigs → Convert → Build → Render.
+// Конвертер — авторства Глеба Гребенщикова (github.com/Gleb-pro-admin), проект XrayMi.
+// Использован с разрешения автора. Внутренние пакаджи вендорены сюда, т.к. Go не
+// разрешает импортировать чужой internal/. Обёртка повторяет конвейер оригинального
+// CLI: ParseConfigs → Convert → Build → Render.
 package xrayconv
 
 import (

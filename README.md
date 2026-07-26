@@ -55,6 +55,8 @@ wails build -platform linux/amd64 -tags webkit2_41   # Linux (нужны gtk3 + 
 
 Логотип — [@whxteangel](https://t.me/whxteangel). Ядро — [MetaCubeX/mihomo](https://github.com/MetaCubeX/mihomo) и [vernesong/mihomo](https://github.com/vernesong/mihomo) (Smart).
 
+Конвертер конфигураций Xray → mihomo — [@Gleb-pro-admin](https://github.com/Gleb-pro-admin) (проект XrayMi), использован с разрешения автора.
+
 ## Лицензия
 
 MIT. Основано на [GoclashZ](https://github.com/Zzz-IT/GoclashZ) © Zzz-IT.
