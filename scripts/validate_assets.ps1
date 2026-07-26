@@ -59,8 +59,8 @@ if (Assert-FileExists ".\build\bin\Misetanibox.exe" "主程序") {
 }
 
 # Helper
-if (Assert-FileExists ".\build\bin\GoclashZHelper.exe" "Helper 服务") {
-    Assert-MZHeader ".\build\bin\GoclashZHelper.exe" "Helper 服务" | Out-Null
+if (Assert-FileExists ".\build\bin\MisetaniboxHelper.exe" "Helper 服务") {
+    Assert-MZHeader ".\build\bin\MisetaniboxHelper.exe" "Helper 服务" | Out-Null
 }
 
 # === 2. Mihomo 内核校验 ===
