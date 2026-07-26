@@ -207,6 +207,8 @@
         </div>
       </div>
     </Transition>
+
+    <RouteConfigurator ref="routeCfg" />
   </div>
 </template>
 
@@ -216,6 +218,7 @@ import * as API from '../../wailsjs/go/main/App';
 import { clash } from '../../wailsjs/go/models';
 import { EventsOn, BrowserOpenURL } from '../../wailsjs/runtime/runtime';
 import { showAlert, showConfirm, globalState } from '../store';
+import RouteConfigurator from './RouteConfigurator.vue';
 import { formatBytes } from '../utils/format';
 import { ICONS } from '../utils/icons';
 
@@ -236,6 +239,7 @@ const localConfigs = ref<clash.SubIndexItem[]>([]);
 const activeMenu = ref<string | null>(null);
 
 const newSubUrl = ref('');
+const routeCfg = ref<any>(null);
 // запасные ссылки + свои заголовки для загрузки подписки
 const showFetchExtra = ref(false);
 const headersText = ref('');
@@ -406,10 +410,10 @@ const confirmImport = async () => {
       try {
         const probe: any = await (API as any).ProbeSubURL(pendingImportPath.value, headers);
         kind = probe?.kind || 'clash';
-        if (kind === 'xray') {
+        if (kind === 'convert') {
           const ok = await showConfirm(
-            `Ссылка отдаёт конфигурацию Xray (узлов: ${probe.nodeCount || '?'}), а не формат Misetanibox. Сконвертировать её автоматически? Конвертация будет повторяться при каждом обновлении подписки.\n\nКонвертер — @Gleb-pro-admin (XrayMi).`,
-            'Конвертировать Xray?'
+            `Ссылка отдаёт конфигурацию не в формате Misetanibox (узлов: ${probe.nodeCount || '?'}). Сконвертировать её автоматически? Конвертация будет повторяться при каждом обновлении подписки.\n\nКонвертер — @Gleb-pro-admin (XrayMi).`,
+            'Сконвертировать подписку?'
           );
           if (ok) {
             await (API as any).AddSubConverted(finalName, pendingImportPath.value, headers);
@@ -419,7 +423,7 @@ const confirmImport = async () => {
           }
         }
       } catch (e) { kind = 'clash'; }
-      if (kind !== 'xray') {
+      if (kind !== 'convert') {
         await (API as any).UpdateSubEx(finalName, pendingImportPath.value, headers);
       }
     } else {
@@ -430,6 +434,8 @@ const confirmImport = async () => {
     newSubUrl.value = '';
     headersText.value = '';
     showFetchExtra.value = false;
+    // после добавления подписки предлагаем составить конфигурацию (селекторы по сервисам)
+    routeCfg.value?.showAfterSub(() => fetchConfigs());
   } catch (e) {
     console.error("导入失败:", e);
     await showAlert("Не удалось импортировать: " + e, "Ошибка");

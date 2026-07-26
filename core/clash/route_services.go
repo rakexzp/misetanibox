@@ -6,29 +6,31 @@ import (
 	"goclashz/core/utils"
 )
 
-// Конфигуратор маршрутов по сервисам: дружелюбная надстройка над правилами.
-// Юзер в UI раскидывает популярные сервисы (YouTube, TikTok, …) по трём целям,
-// а здесь это превращается в GEOSITE-правила и инжектится в начало списка правил.
+// Конфигуратор селекторов по сервисам. Юзер выбирает популярные сервисы плашками, и
+// для каждого создаётся СВОЯ группа-селектор (type: select, include-all) — в «Прокси-узлах»
+// появляется отдельная вкладка сервиса, где можно выбрать сервер именно под него.
+// Плюс два спец-режима на плашке: «напрямую» и «блок».
 
 const routeConfigKey = "route_services"
 
-// Цели маршрута сервиса.
+// Режимы плашки.
 const (
-	RouteProxy  = "proxy"  // через VPN (группа PROXY)
-	RouteDirect = "direct" // напрямую, мимо VPN
-	RouteReject = "reject" // заблокировать
+	RouteSelector = "selector" // своя группа-селектор (выбор сервера под сервис)
+	RouteDirect   = "direct"   // напрямую, мимо VPN
+	RouteReject   = "reject"   // заблокировать
+	RouteProxy    = "proxy"    // через основной селектор (дефолт, не сохраняется)
 )
 
 // ServiceDef — один сервис в каталоге конфигуратора.
 type ServiceDef struct {
-	Key      string `json:"key"`      // стабильный ключ
-	Label    string `json:"label"`    // подпись в UI
-	Icon     string `json:"icon"`     // эмодзи для плашки
-	Geosite  string `json:"geosite"`  // категория geosite ядра
-	Category string `json:"category"` // группа в UI: popular | media | social | ru | block
+	Key      string `json:"key"`
+	Label    string `json:"label"`
+	Icon     string `json:"icon"`
+	Geosite  string `json:"geosite"`
+	Category string `json:"category"`
 }
 
-// ServiceCatalog — все geosite-категории проверены на реальном mihomo.
+// ServiceCatalog — geosite-категории проверены на реальном mihomo.
 var ServiceCatalog = []ServiceDef{
 	{"youtube", "YouTube", "▶️", "youtube", "media"},
 	{"instagram", "Instagram", "📸", "instagram", "social"},
@@ -47,29 +49,32 @@ var ServiceCatalog = []ServiceDef{
 	{"porn", "Взрослый контент", "🔞", "category-porn", "block"},
 }
 
-func geositeForKey(key string) string {
+func serviceByKey(key string) (ServiceDef, bool) {
 	for _, s := range ServiceCatalog {
 		if s.Key == key {
-			return s.Geosite
+			return s, true
 		}
 	}
-	return ""
+	return ServiceDef{}, false
 }
 
-// RouteConfig — сохранённая раскладка сервисов по целям.
+// serviceGroupName — имя группы-селектора сервиса (видно в «Прокси-узлах»).
+func serviceGroupName(s ServiceDef) string {
+	return s.Icon + " " + s.Label
+}
+
+// RouteConfig — сохранённая раскладка.
 type RouteConfig struct {
-	Enabled  bool              `json:"enabled"`  // применять ли конфигуратор
-	Services map[string]string `json:"services"` // ключ сервиса → цель (proxy/direct/reject)
+	Enabled  bool              `json:"enabled"`
+	Services map[string]string `json:"services"` // ключ сервиса → selector/direct/reject
 }
 
-// DefaultRouteConfig — ответ «Нет» в мастере: глобально + РФ напрямую + реклама в блок.
+// DefaultRouteConfig — ответ «Нет» в мастере: глобально + РФ напрямую + реклама в блок,
+// без отдельных селекторов.
 func DefaultRouteConfig() RouteConfig {
 	return RouteConfig{
-		Enabled: true,
-		Services: map[string]string{
-			"ru":  RouteDirect,
-			"ads": RouteReject,
-		},
+		Enabled:  true,
+		Services: map[string]string{"ru": RouteDirect, "ads": RouteReject},
 	}
 }
 
@@ -88,56 +93,94 @@ func SaveRouteConfig(cfg RouteConfig) error {
 	return utils.SaveSetting(routeConfigKey, &cfg)
 }
 
-// targetToPolicy переводит цель в имя политики mihomo.
-func targetToPolicy(target string) string {
-	switch target {
-	case RouteDirect:
-		return "DIRECT"
-	case RouteReject:
-		return "REJECT"
-	default:
-		return "PROXY"
+// injectServiceGroups добавляет группы-селекторы для сервисов с режимом «selector».
+// Вызывается рядом с injectChains — до валидатора, чтобы правила могли на них ссылаться.
+func injectServiceGroups(root map[string]interface{}) {
+	cfg := GetRouteConfig()
+	if !cfg.Enabled {
+		return
+	}
+	groups, _ := root["proxy-groups"].([]interface{})
+	existing := map[string]bool{}
+	for _, g := range groups {
+		if gm, ok := g.(map[string]interface{}); ok {
+			if n, _ := gm["name"].(string); n != "" {
+				existing[n] = true
+			}
+		}
+	}
+	var added []interface{}
+	for _, s := range ServiceCatalog {
+		if cfg.Services[s.Key] != RouteSelector {
+			continue
+		}
+		name := serviceGroupName(s)
+		if existing[name] {
+			continue
+		}
+		added = append(added, map[string]interface{}{
+			"name":        name,
+			"type":        "select",
+			"include-all": true,
+		})
+	}
+	if len(added) > 0 {
+		// селекторы сервисов — после основных групп
+		root["proxy-groups"] = append(groups, added...)
 	}
 }
 
-// buildServiceRoutes формирует GEOSITE-правила из раскладки.
-// Порядок: сначала блокировки, затем прямые, затем через VPN — но т.к. категории
-// не пересекаются доменами, порядок между ними некритичен; важно, что весь блок
-// идёт ПЕРЕД пользовательскими правилами и MATCH.
+// buildServiceRoutes — правила: сервис → своя группа / DIRECT / REJECT.
 func buildServiceRoutes(cfg RouteConfig) []string {
 	if !cfg.Enabled || len(cfg.Services) == 0 {
 		return nil
 	}
-	order := []string{RouteReject, RouteDirect, RouteProxy}
 	var rules []string
+	// сначала блок/напрямую, потом селекторы — но категории не пересекаются, порядок некритичен
+	order := []string{RouteReject, RouteDirect, RouteSelector}
 	for _, want := range order {
 		for _, s := range ServiceCatalog {
-			target, ok := cfg.Services[s.Key]
-			if !ok || target != want {
+			if cfg.Services[s.Key] != want || s.Geosite == "" {
 				continue
 			}
-			geo := s.Geosite
-			if geo == "" {
-				continue
+			var policy string
+			switch want {
+			case RouteReject:
+				policy = "REJECT"
+			case RouteDirect:
+				policy = "DIRECT"
+			default:
+				policy = serviceGroupName(s)
 			}
-			rules = append(rules, "GEOSITE,"+geo+","+targetToPolicy(target))
+			rules = append(rules, "GEOSITE,"+s.Geosite+","+policy)
 		}
 	}
-	// РФ по IP тоже направляем как сайты РФ (если РФ выбран напрямую/через прокси)
+	// РФ по IP — тем же маршрутом, что и сайты РФ
 	if t, ok := cfg.Services["ru"]; ok {
-		rules = append(rules, "GEOIP,RU,"+targetToPolicy(t)+",no-resolve")
+		var policy string
+		switch t {
+		case RouteReject:
+			policy = "REJECT"
+		case RouteDirect:
+			policy = "DIRECT"
+		case RouteSelector:
+			if s, ok := serviceByKey("ru"); ok {
+				policy = serviceGroupName(s)
+			}
+		}
+		if policy != "" {
+			rules = append(rules, "GEOIP,RU,"+policy+",no-resolve")
+		}
 	}
 	return rules
 }
 
-// injectServiceRoutes добавляет правила конфигуратора В НАЧАЛО списка правил,
-// чтобы они имели приоритет над остальными (но после явных пользовательских, см. вызов).
+// injectServiceRoutes добавляет правила конфигуратора в начало списка правил.
 func injectServiceRoutes(rules []string) []string {
 	routes := buildServiceRoutes(GetRouteConfig())
 	if len(routes) == 0 {
 		return rules
 	}
-	// не дублируем, если те же правила уже есть
 	existing := map[string]bool{}
 	for _, r := range rules {
 		existing[strings.TrimSpace(r)] = true

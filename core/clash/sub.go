@@ -254,10 +254,10 @@ func DownloadSub(ctx context.Context, name, url, existingId, userAgent string, o
 			if StrictVerifyClashConfig(raw) == nil {
 				return nil
 			}
-			if !xrayconv.LooksLikeXray(raw) {
-				return nil // не xray — пусть Validator ругнётся как обычно
+			if !xrayconv.LooksConvertible(raw) {
+				return nil // не конвертируемо — пусть Validator ругнётся как обычно
 			}
-			yaml, cerr := xrayconv.ToMihomoYAML(raw)
+			yaml, cerr := xrayconv.ConvertAny(raw)
 			if cerr != nil {
 				return fmt.Errorf("конвертация Xray→mihomo не удалась: %w", cerr)
 			}
@@ -505,12 +505,12 @@ func ProbeSubURL(ctx context.Context, url, userAgent string, headers map[string]
 	if StrictVerifyClashConfig(raw) == nil {
 		return SubProbe{Kind: "clash", NodeCount: countClashProxies(raw)}
 	}
-	if xrayconv.LooksLikeXray(raw) {
+	if xrayconv.LooksConvertible(raw) {
 		n := 0
-		if y, cerr := xrayconv.ToMihomoYAML(raw); cerr == nil {
-			n = strings.Count(y, "\n  - name:") + strings.Count(y, "\n  - {name:")
+		if y, cerr := xrayconv.ConvertAny(raw); cerr == nil {
+			n = countClashProxies([]byte(y))
 		}
-		return SubProbe{Kind: "xray", NodeCount: n}
+		return SubProbe{Kind: "convert", NodeCount: n}
 	}
 	return SubProbe{Kind: "unknown"}
 }

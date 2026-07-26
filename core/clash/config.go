@@ -477,6 +477,7 @@ func BuildRuntimeConfig(id string, mode string, logLevel string, tunEnabled bool
 
 	injectSmartGroup(root)
 	injectWarp(root)
+	injectServiceGroups(root)
 	injectChains(root)
 
 	if IsSmartCoreActive() && IsSmartRouteActive() {

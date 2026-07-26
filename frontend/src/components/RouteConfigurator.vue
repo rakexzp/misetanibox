@@ -5,7 +5,7 @@
         <!-- ШАГ 0: вопрос -->
         <template v-if="step === 'ask'">
           <h3 class="rc-title">Составить свою конфигурацию маршрутов?</h3>
-          <p class="rc-sub">Можно разложить популярные сервисы по маршрутам — что через VPN, что напрямую, что заблокировать. Или оставить всё как есть по умолчанию.</p>
+          <p class="rc-sub">Для выбранных сервисов создаётся своя вкладка выбора сервера (например, YouTube через Германию, а всё остальное — через основной). Можно также пустить сервис напрямую или заблокировать.</p>
           <div class="rc-ask-actions">
             <button class="rc-big primary" @click="startCustom">
               <span class="rc-big-t">Да, выбрать по сервисам</span>
@@ -24,7 +24,7 @@
             <button class="rc-back" @click="step = 'ask'">‹</button>
             <h3 class="rc-title" style="margin:0">Маршруты по сервисам</h3>
           </div>
-          <p class="rc-sub">Нажимай на плашку, чтобы сменить маршрут. Что не выбрано — идёт через VPN.</p>
+          <p class="rc-sub">Нажимай на плашку, чтобы сменить режим. «Свой выбор» — у сервиса появится своя вкладка в «Прокси-узлах».</p>
 
           <div v-for="grp in grouped" :key="grp.cat" class="rc-group">
             <div class="rc-group-title">{{ grp.title }}</div>
@@ -44,7 +44,8 @@
           </div>
 
           <div class="rc-legend">
-            <span><b class="d-proxy">через VPN</b></span>
+            <span><b class="d-proxy">общий</b></span>
+            <span><b class="d-selector">свой выбор</b></span>
             <span><b class="d-direct">напрямую</b></span>
             <span><b class="d-reject">блок</b></span>
           </div>
@@ -87,14 +88,14 @@ const grouped = computed(() => {
     .filter((g) => g.items.length);
 });
 
-const TARGETS = ['proxy', 'direct', 'reject'];
+const TARGETS = ['proxy', 'selector', 'direct', 'reject'];
 function cycle(key: string) {
   const cur = sel.value[key] || 'proxy';
   const next = TARGETS[(TARGETS.indexOf(cur) + 1) % TARGETS.length];
   sel.value = { ...sel.value, [key]: next };
 }
 function targetLabel(t?: string) {
-  return t === 'direct' ? 'напрямую' : t === 'reject' ? 'блок' : 'через VPN';
+  return t === 'selector' ? 'свой выбор' : t === 'direct' ? 'напрямую' : t === 'reject' ? 'блок' : 'общий';
 }
 
 async function show() {
@@ -106,11 +107,11 @@ async function show() {
   } catch (e) { catalog.value = []; sel.value = {}; }
   open.value = true;
 }
-function close() { open.value = false; }
+function close() { open.value = false; if (onDone.value) { const cb = onDone.value; onDone.value = null; cb(); } }
 
 async function startCustom() {
   // при первом заходе подставим разумный дефолт
-  if (!Object.keys(sel.value).length) sel.value = { ru: 'direct', ads: 'reject' };
+  if (!Object.keys(sel.value).length) sel.value = { youtube: 'selector', ru: 'direct', ads: 'reject' };
   step.value = 'custom';
 }
 
@@ -137,7 +138,9 @@ async function applyCustom() {
   finally { saving.value = false; }
 }
 
-defineExpose({ show });
+const onDone = ref<null | (() => void)>(null);
+async function showAfterSub(cb?: () => void) { onDone.value = cb || null; await show(); }
+defineExpose({ show, showAfterSub });
 </script>
 
 <style scoped>
@@ -160,10 +163,11 @@ defineExpose({ show });
 .rc-ico { font-size: 1.1rem; flex: none; }
 .rc-name { flex: 1; min-width: 0; font-size: 0.85rem; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rc-target { font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; flex: none; }
-.rc-tile.t-proxy { border-left: 3px solid var(--accent); } .rc-tile.t-proxy .rc-target { color: var(--accent); }
+.rc-tile.t-proxy { border-left: 3px solid var(--surface-hover); } .rc-tile.t-proxy .rc-target { color: var(--text-muted); }
+.rc-tile.t-selector { border-left: 3px solid var(--accent); } .rc-tile.t-selector .rc-target { color: var(--accent); }
 .rc-tile.t-direct { border-left: 3px solid #4a90d9; } .rc-tile.t-direct .rc-target { color: #4a90d9; }
 .rc-tile.t-reject { border-left: 3px solid #d9534f; } .rc-tile.t-reject .rc-target { color: #d9534f; }
 .rc-legend { display: flex; gap: 16px; margin: 4px 0 14px; font-size: 0.75rem; }
-.d-proxy { color: var(--accent); } .d-direct { color: #4a90d9; } .d-reject { color: #d9534f; }
+.d-proxy { color: var(--text-muted); } .d-selector { color: var(--accent); } .d-direct { color: #4a90d9; } .d-reject { color: #d9534f; }
 .rc-actions { display: flex; justify-content: flex-end; gap: 10px; }
 </style>
