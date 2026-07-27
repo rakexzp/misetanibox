@@ -21,19 +21,6 @@ func LooksLikeXray(raw []byte) bool {
 	return err == nil && len(configs) > 0
 }
 
-// LooksConvertible — можно ли сконвертировать: список URI-ссылок или Xray-JSON.
-func LooksConvertible(raw []byte) bool {
-	return LooksLikeURIList(raw) || LooksLikeXray(raw)
-}
-
-// ConvertAny конвертирует поддерживаемый формат (URI-список или Xray-JSON) в mihomo-YAML.
-func ConvertAny(raw []byte) (string, error) {
-	if LooksLikeURIList(raw) {
-		return URIListToMihomoYAML(raw)
-	}
-	return ToMihomoYAML(raw)
-}
-
 // ToMihomoYAML конвертирует Xray-JSON в mihomo-YAML.
 func ToMihomoYAML(raw []byte) (string, error) {
 	configs, err := xray.ParseConfigs(raw)
