@@ -52,17 +52,39 @@ func postForm(hwid, path string, form url.Values) (string, error) {
 }
 
 // List — лента тем. sort: popular|new. Возвращает сырой JSON.
-func List(hwid, sort, q string, page int) (string, error) {
-	return get(hwid, fmt.Sprintf("/themes?sort=%s&page=%d&q=%s",
-		url.QueryEscape(sort), page, url.QueryEscape(q)))
+func List(hwid, sort, q, tag string, mine bool, page int) (string, error) {
+	m := "0"
+	if mine {
+		m = "1"
+	}
+	return get(hwid, fmt.Sprintf("/themes?sort=%s&page=%d&q=%s&tag=%s&mine=%s",
+		url.QueryEscape(sort), page, url.QueryEscape(q), url.QueryEscape(tag), m))
 }
 
-func Get(hwid string, id int) (string, error)      { return get(hwid, fmt.Sprintf("/themes/%d", id)) }
-func Download(hwid string, id int) (string, error) { return get(hwid, fmt.Sprintf("/themes/%d/download", id)) }
-func Like(hwid string, id int) (string, error)     { return postForm(hwid, fmt.Sprintf("/themes/%d/like", id), nil) }
+func Get(hwid string, id int) (string, error) { return get(hwid, fmt.Sprintf("/themes/%d", id)) }
+func Download(hwid string, id int) (string, error) {
+	return get(hwid, fmt.Sprintf("/themes/%d/download", id))
+}
+func Like(hwid string, id int) (string, error) {
+	return postForm(hwid, fmt.Sprintf("/themes/%d/like", id), nil)
+}
 
 func Report(hwid string, id int, reason string) (string, error) {
 	return postForm(hwid, fmt.Sprintf("/themes/%d/report", id), url.Values{"reason": {reason}})
+}
+
+// Delete удаляет СВОЮ тему (сервер проверяет владельца по x-hwid).
+func Delete(hwid string, id int) (string, error) {
+	req, err := http.NewRequest(http.MethodDelete, BaseURL+fmt.Sprintf("/themes/%d", id), nil)
+	if err != nil {
+		return "", err
+	}
+	return do(req, hwid)
+}
+
+// Edit правит имя/теги СВОЕЙ темы (сервер проверяет владельца по x-hwid).
+func Edit(hwid string, id int, name, tags string) (string, error) {
+	return postForm(hwid, fmt.Sprintf("/themes/%d/edit", id), url.Values{"name": {name}, "tags": {tags}})
 }
 
 // decodeDataURI разбирает "data:image/png;base64,...." → байты + расширение.

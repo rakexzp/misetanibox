@@ -2,11 +2,16 @@
   <div class="workshop">
     <div class="ws-toolbar">
       <div class="ws-tabs">
-        <button :class="{ active: sort === 'popular' }" @click="setSort('popular')">Популярные</button>
-        <button :class="{ active: sort === 'new' }" @click="setSort('new')">Новые</button>
+        <button :class="{ active: sort === 'popular' && !mineOnly }" @click="mineOnly = false; setSort('popular')">Популярные</button>
+        <button :class="{ active: sort === 'new' && !mineOnly }" @click="mineOnly = false; setSort('new')">Новые</button>
+        <button :class="{ active: mineOnly }" @click="toggleMine">Мои</button>
       </div>
       <input v-model="query" class="ws-search" placeholder="Поиск темы или автора…" @keyup.enter="reload" />
       <button class="ws-publish" @click="openPublish">Опубликовать</button>
+    </div>
+
+    <div class="ws-tagbar">
+      <button v-for="tg in ALL_TAGS" :key="tg" class="ws-chip" :class="{ active: activeTag === tg }" @click="pickTag(tg)">{{ tg }}</button>
     </div>
 
     <div v-if="loading" class="ws-note">Загрузка каталога…</div>
@@ -24,12 +29,21 @@
             <span>↓ {{ t.downloads }}</span>
             <span>♥ {{ t.likes }}</span>
           </div>
+          <div v-if="t.tags && t.tags.length" class="ws-card-tags">
+            <span v-for="tg in t.tags" :key="tg" class="ws-tag">{{ tg }}</span>
+          </div>
           <div class="ws-card-actions">
             <button class="ws-btn primary" @click="install(t)" :disabled="busyId === t.id">
               {{ busyId === t.id ? '…' : 'Установить' }}
             </button>
-            <button class="ws-icon-btn" title="Нравится" @click="like(t)">♥</button>
-            <button class="ws-icon-btn" title="Пожаловаться" @click="report(t)">⚑</button>
+            <template v-if="t.mine">
+              <button class="ws-icon-btn" title="Изменить название и теги" @click="openEdit(t)">✎</button>
+              <button class="ws-icon-btn" title="Удалить свою тему" @click="delTheme(t)">🗑</button>
+            </template>
+            <template v-else>
+              <button class="ws-icon-btn" title="Нравится" @click="like(t)">♥</button>
+              <button class="ws-icon-btn" title="Пожаловаться" @click="report(t)">⚑</button>
+            </template>
           </div>
         </div>
       </div>
@@ -42,18 +56,25 @@
     <Transition name="ws-pop">
       <div v-if="showPublish" class="ws-modal-overlay" @click.self="showPublish = false">
         <div class="ws-modal">
-          <h3>Опубликовать тему</h3>
-          <p class="ws-modal-hint">Заворачиваем твоё текущее оформление — цвета, фоны карточек и их положение.</p>
+          <h3>{{ editId ? 'Изменить тему' : 'Опубликовать тему' }}</h3>
+          <p class="ws-modal-hint" v-if="editId">Меняем название и теги. Оформление (цвета/фоны) у опубликованной темы остаётся прежним.</p>
+          <p class="ws-modal-hint" v-else>Заворачиваем твоё текущее оформление — цвета, фоны карточек и их положение.</p>
           <label class="ws-field">Название
             <input v-model="pubName" maxlength="48" placeholder="Reaper Dark" />
           </label>
-          <label class="ws-field">Автор (ник)
+          <label class="ws-field" v-if="!editId">Автор (ник)
             <input v-model="pubAuthor" maxlength="48" placeholder="whxteangel" />
           </label>
+          <div class="ws-field">Теги <span class="ws-field-hint">до 5</span>
+            <div class="ws-tagpick">
+              <button v-for="tg in ALL_TAGS" :key="tg" type="button"
+                class="ws-chip" :class="{ active: pubTags.includes(tg) }" @click="togglePubTag(tg)">{{ tg }}</button>
+            </div>
+          </div>
           <div class="ws-modal-actions">
-            <button class="ws-btn" @click="showPublish = false" :disabled="publishing">Отмена</button>
+            <button class="ws-btn" @click="showPublish = false; editId = null" :disabled="publishing">Отмена</button>
             <button class="ws-btn primary" @click="doPublish" :disabled="publishing || !pubName.trim()">
-              {{ publishing ? 'Публикация…' : 'Опубликовать' }}
+              {{ publishing ? (editId ? 'Сохранение…' : 'Публикация…') : (editId ? 'Сохранить' : 'Опубликовать') }}
             </button>
           </div>
         </div>
@@ -70,10 +91,16 @@ import { getSavedColors, saveColors, type CustomColors } from '../utils/colors';
 
 const CARD_KEYS = ['hero', 'sysproxy', 'tun', 'mode'];
 
+// список тегов = whitelist бэкенда (app.py TAG_WHITELIST) — держать в синхроне
+const ALL_TAGS = ['тёмная', 'светлая', 'минимализм', 'аниме', 'природа', 'абстракция',
+  'игры', 'неон', 'градиент', 'город', 'космос', 'киберпанк', 'арт', 'авто'];
+
 const items = ref<any[]>([]);
 const loading = ref(false);
 const sort = ref<'popular' | 'new'>('popular');
 const query = ref('');
+const activeTag = ref('');
+const mineOnly = ref(false);
 const page = ref(0);
 const busyId = ref<number | null>(null);
 
@@ -81,6 +108,8 @@ const showPublish = ref(false);
 const publishing = ref(false);
 const pubName = ref('');
 const pubAuthor = ref(localStorage.getItem('mise_authorName') || '');
+const pubTags = ref<string[]>([]);
+const editId = ref<number | null>(null); // если не null — модалка в режиме правки своей темы
 
 function parse(s: string) { try { return JSON.parse(s); } catch { return null; } }
 function lsObj(k: string) { return parse(localStorage.getItem(k) || '{}') || {}; }
@@ -92,17 +121,41 @@ const previewStyle = (t: any) => t.preview
 async function reload() {
   loading.value = true; page.value = 0;
   try {
-    const res = parse(await API.WorkshopList(sort.value, query.value.trim(), 0));
+    const res = parse(await API.WorkshopList(sort.value, query.value.trim(), activeTag.value, mineOnly.value, 0));
     items.value = res?.items || [];
   } catch (e) { await showAlert('Не удалось загрузить каталог: ' + e, 'Ошибка', true); }
   loading.value = false;
 }
 async function loadMore() {
   page.value++;
-  const res = parse(await API.WorkshopList(sort.value, query.value.trim(), page.value));
+  const res = parse(await API.WorkshopList(sort.value, query.value.trim(), activeTag.value, mineOnly.value, page.value));
   if (res?.items?.length) items.value.push(...res.items);
 }
 function setSort(s: 'popular' | 'new') { sort.value = s; reload(); }
+function pickTag(tag: string) { activeTag.value = activeTag.value === tag ? '' : tag; reload(); }
+function toggleMine() { mineOnly.value = !mineOnly.value; reload(); }
+
+// удалить свою тему
+async function delTheme(t: any) {
+  if (!(await showConfirm('Удалить свою тему «' + t.name + '»? Это действие необратимо.', 'Удаление'))) return;
+  try {
+    await API.WorkshopDelete(t.id);
+    items.value = items.value.filter((x) => x.id !== t.id);
+    await showAlert('Тема удалена.', 'Готово');
+  } catch (e) { await showAlert('Не удалось удалить: ' + e, 'Ошибка', true); }
+}
+// открыть модалку в режиме правки своей темы (имя + теги)
+function openEdit(t: any) {
+  editId.value = t.id;
+  pubName.value = t.name;
+  pubTags.value = Array.isArray(t.tags) ? [...t.tags] : [];
+  showPublish.value = true;
+}
+function togglePubTag(tag: string) {
+  const i = pubTags.value.indexOf(tag);
+  if (i >= 0) pubTags.value.splice(i, 1);
+  else if (pubTags.value.length < 5) pubTags.value.push(tag);
+}
 
 async function like(t: any) {
   try { const r = parse(await API.WorkshopLike(t.id)); if (r) t.likes = r.likes; } catch { /* ignore */ }
@@ -161,6 +214,8 @@ async function applyTheme(m: any) {
 }
 
 function openPublish() {
+  editId.value = null;
+  pubTags.value = [];
   pubAuthor.value = localStorage.getItem('mise_authorName') || pubAuthor.value;
   showPublish.value = true;
 }
@@ -168,6 +223,15 @@ function openPublish() {
 async function doPublish() {
   publishing.value = true;
   try {
+    // режим правки своей темы — меняем только имя и теги
+    if (editId.value != null) {
+      await API.WorkshopEdit(editId.value, pubName.value.trim(), pubTags.value.join(','));
+      showPublish.value = false; editId.value = null;
+      await showAlert('Тема обновлена.', 'Готово');
+      reload();
+      publishing.value = false;
+      return;
+    }
     const colors = getSavedColors();
     const bgs = await API.GetCardBgs();       // { key: dataURI }
     const opts = lsObj('mise_cardBgOpts');
@@ -187,6 +251,7 @@ async function doPublish() {
       name: pubName.value.trim(),
       author: pubAuthor.value.trim() || 'аноним',
       theme: globalState.theme,
+      tags: pubTags.value,
       cards,
     };
     if (colors) manifest.colors = colors;
@@ -261,6 +326,20 @@ onMounted(reload);
   background: var(--surface); color: var(--text-main); font-size: 0.9rem;
 }
 .ws-field input:focus { outline: none; border-color: var(--accent); }
+.ws-field-hint { color: var(--text-sub); font-weight: 400; font-size: 0.72rem; }
+.ws-tagbar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; flex: none; }
+.ws-tagpick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.ws-chip {
+  padding: 5px 12px; border-radius: 999px; border: 1px solid var(--surface-hover);
+  background: var(--surface); color: var(--text-sub); font-size: 0.76rem; font-weight: 600;
+  cursor: pointer; white-space: nowrap;
+}
+.ws-chip.active { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.ws-card-tags { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 2px; }
+.ws-tag {
+  font-size: 0.66rem; padding: 2px 7px; border-radius: 999px;
+  background: var(--surface-hover); color: var(--text-sub); font-weight: 600;
+}
 .ws-modal-actions { display: flex; gap: 10px; margin-top: 6px; }
 .ws-pop-enter-active, .ws-pop-leave-active { transition: opacity 0.18s; }
 .ws-pop-enter-from, .ws-pop-leave-to { opacity: 0; }

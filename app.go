@@ -502,6 +502,10 @@ func (a *App) SetSmartRoute(active bool) error {
 	return nil
 }
 
+// Рвать активные соединения при смене сервера (чтобы новый сервер применялся сразу).
+func (a *App) GetCloseConnOnSwitch() bool         { return clash.CloseConnOnSwitchEnabled() }
+func (a *App) SetCloseConnOnSwitch(on bool) error { return clash.SetCloseConnOnSwitch(on) }
+
 func (a *App) UpdateSingleSub(id string) error {
 	return a.core.UpdateSingleSub(a.ctx, id)
 }
@@ -943,8 +947,12 @@ func (a *App) SetGpuSaver(on bool) error {
 	return utils.SaveSetting("gpu_saver", &on)
 }
 
-func (a *App) WorkshopList(sort, q string, page int) (string, error) {
-	return workshop.List(a.deviceHwid(), sort, q, page)
+func (a *App) WorkshopList(sort, q, tag string, mine bool, page int) (string, error) {
+	return workshop.List(a.deviceHwid(), sort, q, tag, mine, page)
+}
+func (a *App) WorkshopDelete(id int) (string, error) { return workshop.Delete(a.deviceHwid(), id) }
+func (a *App) WorkshopEdit(id int, name, tags string) (string, error) {
+	return workshop.Edit(a.deviceHwid(), id, name, tags)
 }
 func (a *App) WorkshopGet(id int) (string, error)      { return workshop.Get(a.deviceHwid(), id) }
 func (a *App) WorkshopDownload(id int) (string, error) { return workshop.Download(a.deviceHwid(), id) }

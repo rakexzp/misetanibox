@@ -1617,6 +1617,12 @@ func (c *Controller) SelectProxyWithModeSync(
 		c.Offline.Mark(profileID, groupName, proxyName)
 	}
 
+	// Рвём старые соединения, чтобы новый сервер применился сразу, без рестарта туннеля
+	// (mihomo переключает узел только для новых коннектов). Дефолт вкл, тумблер в настройках.
+	if clash.CloseConnOnSwitchEnabled() {
+		_ = clash.CloseAllConnections()
+	}
+
 	c.SyncProxyStateOnce()
 	return nil
 }

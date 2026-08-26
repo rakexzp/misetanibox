@@ -849,6 +849,7 @@
               <div class="info">
                 <h4>Умное ядро (Smart) <span v-if="smartCoreOn" style="color: var(--green-text); font-size: 0.8rem; margin-left: 6px;">установлено</span></h4>
                 <p>Заменяет ядро на сборку с ML-выбором лучшего сервера по истории задержек и нагрузке. Скачивается отдельно (~20 МБ). Ядро неподписанное — при первом запуске Windows Defender может его заблокировать; тогда разрешите файл в «Журнале защиты» или добавьте исключение.</p>
+                <p style="color: var(--mid-text, #d9a441); font-weight: 600;">⚠ Внимание: Smart-ядро может ломать dialer-proxy (мост/цепочки) вашего провайдера — «умный выбор» уводит трафик мимо мостовых групп, а сборка ядра может не применять префиксы провайдера. Если пользуетесь мостом через промежуточный узел — держите Smart выключенным.</p>
               </div>
               <button
                 class="action-btn"
@@ -873,6 +874,19 @@
                 </label>
               </div>
             </template>
+
+            <div class="divider"></div>
+
+            <div class="setting-item">
+              <div class="info">
+                <h4>Рвать соединения при смене сервера</h4>
+                <p>Новый сервер применяется сразу: старые сессии закрываются, чтобы трафик пошёл через выбранный узел без перезапуска туннеля. Выключите, если не хотите обрывать активные загрузки при переключении.</p>
+              </div>
+              <label class="modern-switch">
+                <input type="checkbox" :checked="closeConnOnSwitch" @change="onToggleCloseConn">
+                <span class="slider"></span>
+              </label>
+            </div>
 
             <div class="divider"></div>
 
@@ -1957,9 +1971,18 @@ const smartCoreOn = ref(false);
 const smartCoreBusy = ref(false);
 const smartRouteOn = ref(false);
 
+const closeConnOnSwitch = ref(true);
+
 const refreshSmartCore = async () => {
   try { smartCoreOn.value = await (API as any).IsSmartCore(); } catch { smartCoreOn.value = false; }
   try { smartRouteOn.value = await (API as any).GetSmartRoute(); } catch { smartRouteOn.value = false; }
+  try { closeConnOnSwitch.value = await (API as any).GetCloseConnOnSwitch(); } catch { closeConnOnSwitch.value = true; }
+};
+
+const onToggleCloseConn = async (e: Event) => {
+  const on = (e.target as HTMLInputElement).checked;
+  try { await (API as any).SetCloseConnOnSwitch(on); closeConnOnSwitch.value = on; }
+  catch (err) { await showAlert('Не удалось переключить: ' + err, 'Ошибка', true); }
 };
 
 const onToggleSmartRoute = async (e: Event) => {
