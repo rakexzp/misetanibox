@@ -6,6 +6,23 @@ import (
 	"goclashz/core/clash"
 )
 
+// reloadActiveConfigLive пересобирает runtime-конфиг активного профиля и перечитывает его
+// в работающем ядре БЕЗ полного рестарта (PUT /configs?force=true) — обновление подписки
+// с включённым VPN больше не рвёт туннель. При любой ошибке — безопасный откат на рестарт.
+func (c *Controller) reloadActiveConfigLive(ctx context.Context) error {
+	desired := c.Desired.Get()
+	behavior := c.Behavior.Get()
+	if err := clash.BuildRuntimeConfig(desired.ActiveConfig, desired.Mode, behavior.LogLevel, desired.Tun); err != nil {
+		return c.RestartCoreWithReason(ctx, "subscription-update")
+	}
+	if err := clash.ReloadConfig(); err != nil {
+		return c.RestartCoreWithReason(ctx, "subscription-update")
+	}
+	c.SyncProxyStateOnce()
+	c.SyncState()
+	return nil
+}
+
 func (c *Controller) UpdateSub(ctx context.Context, name, url string, opts *clash.SubFetchOptions) error {
 	ua := c.Behavior.Get().SubUA
 	id, err := clash.DownloadSub(ctx, name, url, "", ua, opts)
@@ -15,7 +32,7 @@ func (c *Controller) UpdateSub(ctx context.Context, name, url string, opts *clas
 
 	state := c.GetAppState()
 	if state.ActiveConfig == id && state.IsRunning {
-		return c.RestartCoreWithReason(ctx, "subscription-update")
+		return c.reloadActiveConfigLive(ctx)
 	}
 	return nil
 }
@@ -37,7 +54,7 @@ func (c *Controller) UpdateSingleSub(ctx context.Context, id string) error {
 	if err == nil {
 		state := c.GetAppState()
 		if state.ActiveConfig == id && state.IsRunning {
-			return c.RestartCoreWithReason(ctx, "subscription-update")
+			return c.reloadActiveConfigLive(ctx)
 		}
 	}
 	return err
@@ -64,7 +81,7 @@ func (c *Controller) UpdateAllSubsAsync(ctx context.Context) {
 		}
 
 		if needsRestart && state.IsRunning {
-			return c.RestartCoreWithReason(ctx, "subscription-update")
+			return c.reloadActiveConfigLive(ctx)
 		}
 		return nil
 	})
