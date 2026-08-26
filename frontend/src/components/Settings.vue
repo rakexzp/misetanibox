@@ -267,13 +267,26 @@
             <div class="divider"></div>
 
             <div class="setting-item">
-              <div class="info"><h4>Стек (Stack)</h4></div>
-              <ModernSelect 
-                v-model="tunConfig.stack" 
-                :options="stackOptions" 
-                @change="saveTun" 
-                :disabled="!tunStatus.hasWintun" 
+              <div class="info">
+                <h4>Стек (Stack)</h4>
+                <p>{{ stackHint }}</p>
+              </div>
+              <ModernSelect
+                v-model="tunConfig.stack"
+                :options="stackOptions"
+                @change="saveTun"
+                :disabled="!tunStatus.hasWintun"
               />
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="setting-item">
+              <div class="info">
+                <h4>Ускорение (GSO)</h4>
+                <p>Поднимает скорость на Linux (сегментация пакетов на стороне ядра). На Windows не влияет — там ни к чему. Применяется при переподключении.</p>
+              </div>
+              <label class="modern-switch"><input type="checkbox" v-model="tunConfig.gso" @change="saveTun" :disabled="!tunStatus.hasWintun"><span class="slider"></span></label>
             </div>
 
             <div class="divider"></div>
@@ -1464,12 +1477,18 @@ const dbList = [
 ];
 const dbTitles: Record<string, string> = { geoip: 'GeoIP', geosite: 'GeoSite', mmdb: 'MMDB', asn: 'ASN' };
 
+// LWIP убран: ядро (metacubex mihomo) его больше не поддерживает — выбор ломал TUN.
 const stackOptions = [
   { label: 'gVisor', value: 'gvisor' },
   { label: 'Mixed', value: 'mixed' },
   { label: 'System', value: 'system' },
-  { label: 'LWIP', value: 'lwip' }
 ];
+const STACK_HINTS: Record<string, string> = {
+  gvisor: 'Полностью в userspace. Самый совместимый и стабильный, но медленнее. Выбирай при странных обрывах.',
+  mixed: 'TCP через ядро (быстро), UDP через gVisor (надёжно). Золотая середина — рекомендуется для скорости.',
+  system: 'Всё через сетевой стек ОС. Максимум скорости и меньше нагрузка на CPU, но совместимость ниже (проверь игры/звонки).',
+};
+const stackHint = computed(() => STACK_HINTS[tunConfig.value?.stack] || STACK_HINTS.gvisor);
 
 const enhancedModeOptions = [
   { label: 'Fake-IP', value: 'fake-ip' },
@@ -1670,7 +1689,7 @@ const tunStatus = ref<Record<string, any>>({ hasWintun: false, isAdmin: false, w
 
 const tunConfig = ref({
   stack: 'gvisor', device: '', autoRoute: true, autoDetect: true,
-  dnsHijack: ['any:53'], strictRoute: true, mtu: 1500
+  dnsHijack: ['any:53'], strictRoute: true, mtu: 1500, gso: false
 });
 
 const dnsConfig = ref<any>({

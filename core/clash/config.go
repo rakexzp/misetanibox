@@ -132,6 +132,9 @@ type TunConfig struct {
 	DNSHijack           []string `yaml:"dns-hijack" json:"dnsHijack"`
 	StrictRoute         bool     `yaml:"strict-route" json:"strictRoute"`
 	MTU                 int      `yaml:"mtu" json:"mtu"`
+	// GSO (generic segmentation offload) — ускорение throughput на Linux (virtio-заголовки
+	// TUN). На Windows/wintun и macOS sing-tun его игнорирует (безвредный no-op).
+	GSO bool `yaml:"gso" json:"gso"`
 }
 
 func GetDefaultTunConfig() TunConfig {
