@@ -108,6 +108,10 @@ func resolveStableDataDir(appDir string) string {
 		return filepath.Join(appDir, "data")
 	}
 
+	if d := platformDataDir(); d != "" {
+		return d
+	}
+
 	local, err := os.UserCacheDir()
 	if err == nil && strings.TrimSpace(local) != "" {
 		return filepath.Join(local, "GoclashZ")

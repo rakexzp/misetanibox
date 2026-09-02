@@ -1,0 +1,96 @@
+name: macOS Build
+
+on:
+  push:
+    tags:
+      - "mac-v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+
+      - name: Resolve version
+        run: |
+          VERSION="${GITHUB_REF_NAME#mac-v}"
+          case "$VERSION" in ''|mac-*|*[!0-9.]*) VERSION="0.0.0" ;; esac
+          echo "APP_VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "version: $VERSION"
+
+      - name: Fetch mihomo darwin cores (arm64 + amd64)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          rel=$(curl -sL -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/repos/MetaCubeX/mihomo/releases/latest)
+          for arch in arm64 amd64; do
+            url=$(echo "$rel" | grep -oE "\"browser_download_url\": *\"[^\"]*mihomo-darwin-${arch}-v[0-9.]+\.gz\"" | head -1 | sed 's/.*"browser_download_url": *"//; s/"$//')
+            echo "core $arch: $url"
+            mkdir -p build/mac/core-$arch
+            curl -sL "$url" -o /tmp/core-$arch.gz
+            gunzip -c /tmp/core-$arch.gz > build/mac/core-$arch/clash
+            chmod +x build/mac/core-$arch/clash
+          done
+          # universal-ядро: одно на оба чипа
+          mkdir -p build/mac/core
+          lipo -create build/mac/core-arm64/clash build/mac/core-amd64/clash -output build/mac/core/clash
+          lipo -info build/mac/core/clash
+
+      - name: Build (wails, universal)
+        run: |
+          export PATH="$(go env GOPATH)/bin:$PATH"
+          wails build -clean -platform darwin/universal -o Misetanibox
+
+      - name: Seed core into bundle + ad-hoc sign
+        run: |
+          set -e
+          APP=build/bin/Misetanibox.app
+          mkdir -p "$APP/Contents/MacOS/seed/core/bin"
+          cp build/mac/core/clash "$APP/Contents/MacOS/seed/core/bin/clash"
+          chmod +x "$APP/Contents/MacOS/seed/core/bin/clash"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $APP_VERSION" "$APP/Contents/Info.plist" || true
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $APP_VERSION" "$APP/Contents/Info.plist" || true
+          # без Developer ID — ad-hoc подпись; у юзера первый запуск через ПКМ→Открыть
+          codesign --force --deep --sign - "$APP"
+          codesign -dv "$APP" 2>&1 | head -5
+
+      - name: Package dmg + zip
+        run: |
+          set -e
+          mkdir -p dist dmgroot
+          cp -R build/bin/Misetanibox.app dmgroot/
+          ln -s /Applications dmgroot/Applications
+          hdiutil create -volname "Misetanibox" -srcfolder dmgroot -ov -format UDZO "dist/Misetanibox_${APP_VERSION}_macos_universal.dmg"
+          ditto -c -k --keepParent build/bin/Misetanibox.app "dist/Misetanibox_${APP_VERSION}_macos_universal.zip"
+          ls -la dist/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Misetanibox_macos_universal
+          path: |
+            dist/*.dmg
+            dist/*.zip
+          retention-days: 14

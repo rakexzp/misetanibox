@@ -136,6 +136,9 @@
           <label v-if="hasBg(editKey)" class="bg-row"><span>Затемнение</span>
             <input type="range" min="0" max="90" v-model.number="optsFor(editKey).scrim" @input="saveCardBgOpts" />
           </label>
+          <label v-if="hasBg(editKey)" class="bg-row"><span>Размытие</span>
+            <input type="range" min="0" max="30" v-model.number="optsFor(editKey).blur" @input="saveCardBgOpts" />
+          </label>
 
           <div class="bg-editor-footer">
             <button class="primary-btn accent-btn" @click="editingCard = null">Готово</button>
@@ -166,8 +169,8 @@ const cardPresets = reactive<Record<string, string>>(
 );
 const saveCardPresets = () => localStorage.setItem('mise_cardPresets', JSON.stringify(cardPresets));
 
-interface CardBgOpts { x: number; y: number; zoom: number; scrim: number }
-const defaultBgOpts = (): CardBgOpts => ({ x: 50, y: 50, zoom: 100, scrim: 45 });
+interface CardBgOpts { x: number; y: number; zoom: number; scrim: number; blur?: number }
+const defaultBgOpts = (): CardBgOpts => ({ x: 50, y: 50, zoom: 100, scrim: 45, blur: 0 });
 const cardBgOpts = reactive<Record<string, CardBgOpts>>(
   JSON.parse(localStorage.getItem('mise_cardBgOpts') || '{}')
 );
@@ -250,6 +253,7 @@ const cardStyle = (key: string, isOn?: boolean) => {
     backgroundPosition: `${o.x}% ${o.y}%`,
     backgroundSize: o.zoom <= 100 ? 'cover' : `${o.zoom}%`,
     '--card-scrim': String(o.scrim / 100),
+    '--card-blur': `${o.blur ?? 0}px`,
   } as any;
 };
 
@@ -502,6 +506,8 @@ const runModeWorker = async (targetMode: string) => {
   inset: 0;
   border-radius: inherit;
   background: rgba(0, 0, 0, var(--card-scrim, 0.45));
+  -webkit-backdrop-filter: blur(var(--card-blur, 0px));
+  backdrop-filter: blur(var(--card-blur, 0px));
   z-index: 0;
 }
 .card-has-bg .card-title, .card-has-bg .card-hint, .card-has-bg .status-heading,
