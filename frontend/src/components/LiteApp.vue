@@ -6,7 +6,7 @@
     <header class="cover-head">
       <div class="cover-brand-block">
         <span class="cover-brand">MISETANIBOX</span>
-        <span class="cover-meta">№ {{ pingingCurrent ? '…' : issueNo }} · {{ today }}</span>
+        <span class="cover-meta">{{ resolvedName || 'Без подписки' }}<template v-if="subMeta"> · {{ subMeta }}</template></span>
       </div>
       <div class="cover-head-actions">
         <button class="cover-icon-btn" title="Свои обои" @click="pickLiteBg"><span v-html="ICONS.image"></span></button>
@@ -205,13 +205,19 @@ const titleLines = computed(() => {
   if (!hasConfig.value) return ['НЕТ', 'ПОД', 'ПИСКИ'];
   return connected.value ? ['ПОД', 'КЛЮ', 'ЧЕНО'] : ['ОТ', 'КЛЮ', 'ЧЕНО'];
 });
-const issueNo = computed(() => {
-  const d = currentDelay.value;
-  const code = (flagUrl(currentServer.value) || '').match(/\/([a-z]{2})\.svg/i)?.[1]?.toUpperCase();
-  const n = d && d > 0 ? String(d) : '—';
-  return code ? `${n} · ${code}` : n;
+// срок подписки (если панель отдаёт expire), иначе число серверов
+const subMeta = computed(() => {
+  const cfg: any = configs.value.find((c: any) => c.id === resolvedId.value);
+  const exp = Number(cfg?.expire || 0);
+  if (exp > 0) {
+    const days = Math.ceil((exp * 1000 - Date.now()) / 86400000);
+    if (days < 0) return 'истекла';
+    if (days <= 30) return `осталось ${days} дн.`;
+    const d = new Date(exp * 1000); const p = (n: number) => String(n).padStart(2, '0');
+    return `до ${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()}`;
+  }
+  return servers.value.length ? `${servers.value.length} серверов` : '';
 });
-const today = (() => { const d = new Date(); const p = (n: number) => String(n).padStart(2, '0'); return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()}`; })();
 
 async function loadConfigs() {
   try {
@@ -536,7 +542,7 @@ onUnmounted(() => {
 
 .cover-head { display: flex; align-items: flex-start; justify-content: space-between; }
 .cover-brand-block { display: flex; flex-direction: column; gap: 4px; }
-.cover-brand { font-family: var(--display) !important; font-size: 15px; font-weight: 900; letter-spacing: -0.02em; }
+.cover-brand { font-family: var(--display) !important; font-size: 12px; font-weight: 800; letter-spacing: 0.16em; }
 .cover-meta { font-family: var(--font-mono) !important; font-size: 11px; letter-spacing: 0.12em; color: rgba(255,255,255,0.7); }
 .cover-head-actions { display: flex; gap: 6px; }
 .cover-icon-btn {
@@ -587,7 +593,7 @@ onUnmounted(() => {
 .cover-round { width: 52px; padding: 0; justify-content: center; cursor: pointer; transition: background 0.2s, transform 0.1s; }
 .cover-round:hover { background: rgba(255,255,255,0.22); }
 .cover-round:active { transform: scale(0.95); }
-.cover-round :deep(svg) { width: 20px; height: 20px; }
+.cover-round :deep(svg) { width: 26px; height: 26px; }
 
 /* лист серверов */
 .cover-sheet-overlay { position: absolute; inset: 0; z-index: 20; background: rgba(0,0,0,0.35); display: flex; align-items: flex-end; }
