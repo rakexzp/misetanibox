@@ -105,6 +105,8 @@ export function GetInitialData():Promise<Record<string, any>>;
 
 export function GetLocalConfigs():Promise<Array<clash.SubIndexItem>>;
 
+export function GetMainSelector():Promise<string>;
+
 export function GetNetworkConfig():Promise<clash.NetworkConfig>;
 
 export function GetOutboundIP(arg1:boolean):Promise<appcore.OutboundIPResult>;

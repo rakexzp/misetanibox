@@ -71,6 +71,7 @@ func cleanupResidualClashProcess(pidFile string, expectedExeName string) {
 func Start(ctx context.Context, tun bool) error {
 	mu.Lock()
 	defer mu.Unlock()
+	ResetAPIConnections()
 
 	if isRunning.Load() {
 		return nil
@@ -174,6 +175,7 @@ func Stop() error {
 	}
 
 	isRunning.Store(false)
+	ResetAPIConnections()
 	return nil
 }
 

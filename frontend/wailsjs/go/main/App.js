@@ -198,6 +198,10 @@ export function GetLocalConfigs() {
   return window['go']['main']['App']['GetLocalConfigs']();
 }
 
+export function GetMainSelector() {
+  return window['go']['main']['App']['GetMainSelector']();
+}
+
 export function GetNetworkConfig() {
   return window['go']['main']['App']['GetNetworkConfig']();
 }

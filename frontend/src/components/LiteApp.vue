@@ -288,6 +288,7 @@ const NON_SERVER_TYPES = new Set([
   'Direct', 'Reject', 'RejectDrop', 'Compatible', 'Pass', 'Dns',
 ]);
 
+const NO_EXIT_TYPES = new Set(['Direct', 'Reject', 'RejectDrop', 'Pass', 'Compatible', 'Dns']);
 const mainSelector = ref('GLOBAL'); // главный селектор подписки («Зарубежные сайты»); GLOBAL — запасной
 const autoGroup = ref('');          // url-test/fallback группа внутри селектора → пункт «Авто»
 function isGroupType(t: string | undefined) { return !!t && (t === 'Selector' || t === 'URLTest' || t === 'Fallback' || t === 'LoadBalance' || t === 'Smart'); }
@@ -311,14 +312,14 @@ async function loadServers() {
     const map = data?.groups || {};
     // главный селектор: первый Selector в порядке конфига (GLOBAL.all хранит порядок), запасной — самый длинный
     let best = '';
-    const order: string[] = (map.GLOBAL?.all || Object.keys(map)).filter((n: string) => n !== 'GLOBAL');
-    best = order.find((n) => map[n]?.type === 'Selector' && (map[n]?.all || []).length > 1) || '';
     if (!best) {
+      // запасной вариант: самый большой Selector, чей текущий выбор — не DIRECT
       let bestLen = 0;
       for (const [n, g] of Object.entries<any>(map)) {
         if (n === 'GLOBAL' || g?.type !== 'Selector') continue;
         const len = (g.all || []).length;
-        if (len > bestLen) { best = n; bestLen = len; }
+        const exits = String(g.now || '').toUpperCase() !== 'DIRECT';
+        if (len > bestLen || (len === bestLen && exits && best && String(map[best]?.now || '').toUpperCase() === 'DIRECT')) { best = n; bestLen = len; }
       }
     }
     // точный ответ от бэкенда: политика правила MATCH (что подставляется в «Зарубежные сайты»)
@@ -336,14 +337,15 @@ async function loadServers() {
       .filter((n) => n !== 'GLOBAL')
       .filter((n) => {
         const t = map[n]?.type;
-        // страны в подписке — Fallback/URLTest-группы: показываем как серверы; прячем вложенные Selector и «Авто»
-        return t && !NON_SERVER_TYPES.has(t) && t !== 'Selector' && n !== autoGroup.value;
+        // страны в подписке — Fallback/URLTest-группы: показываем как серверы; прячем не-выходы, вложенные Selector и «Авто»
+        return t && !NO_EXIT_TYPES.has(t) && t !== 'Selector' && n !== autoGroup.value;
       })
       .map((n) => ({ name: n }));
     if (!data?.isOffline) {
       try { localStorage.setItem(cacheKey, JSON.stringify({ mainSelector: mainSelector.value, autoGroup: autoGroup.value, servers: servers.value, current: currentServer.value })); } catch {}
     }
   } catch (e) {
+    console.error('lite:loadServers', String(e));
   }
 }
 async function pick(name: string) {

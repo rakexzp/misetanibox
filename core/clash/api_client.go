@@ -13,6 +13,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"goclashz/core/traffic"
 )
 
 const DefaultDelayTestURL = "http://www.gstatic.com/generate_204"
@@ -46,6 +48,12 @@ func isAPIHost(host string) bool {
 	apiBase.RUnlock()
 	u, err := url.Parse(base)
 	return err == nil && u.Host != "" && strings.EqualFold(u.Host, host)
+}
+
+// ResetAPIConnections — сбросить пул keep-alive: после перезапуска ядра старые соединения мёртвые
+func ResetAPIConnections() {
+	noProxyTransport.CloseIdleConnections()
+	traffic.CloseIdleConnections()
 }
 
 var localAPIClient = &http.Client{

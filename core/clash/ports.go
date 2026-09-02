@@ -7,6 +7,7 @@ import (
 	"net"
 	"strconv"
 	"sync"
+	"time"
 
 	"goclashz/core/logger"
 	"goclashz/core/traffic"
@@ -74,6 +75,21 @@ func resolveRuntimePorts(wantMixed int, wantController string) (int, string) {
 	defer effectivePorts.mu.Unlock()
 
 	if IsRunning() && effectivePorts.mixedPort != 0 && effectivePorts.controller != "" {
+		return effectivePorts.mixedPort, effectivePorts.controller
+	}
+	// перезапуск: порты выбраны один раз за жизнь приложения — ждём, пока старое ядро их отпустит
+	if effectivePorts.mixedPort != 0 && effectivePorts.controller != "" {
+		h, ps, err := net.SplitHostPort(effectivePorts.controller)
+		cp, _ := strconv.Atoi(ps)
+		if err == nil && (h == "" || h == "0.0.0.0" || h == "::") {
+			h = "127.0.0.1"
+		}
+		for i := 0; i < 60; i++ {
+			if err != nil || (portFree("127.0.0.1", effectivePorts.mixedPort) && portFree(h, cp)) {
+				break
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
 		return effectivePorts.mixedPort, effectivePorts.controller
 	}
 

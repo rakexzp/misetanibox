@@ -55,6 +55,8 @@ type ConnectionVO struct {
 // секрет API ядра (ставит пакет clash; traffic не может его импортировать — цикл)
 var AuthSecret func() string
 
+func CloseIdleConnections() { trafficStreamClient.CloseIdleConnections() }
+
 var trafficStreamClient = &http.Client{
 	Transport: &http.Transport{
 		Proxy: nil,
