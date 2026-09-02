@@ -615,7 +615,7 @@ onUnmounted(() => {
   background: linear-gradient(105deg, #fff 0%, #fff 38%, rgba(255,255,255,0.45) 50%, #fff 62%, #fff 100%);
   background-size: 260% 100%; background-position: 120% 0;
   -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: #fff;
-  animation: shine-sweep 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) calc(0.35s + var(--s) * 0.14s) both, shine-idle 9s linear calc(3s + var(--s) * 0.5s) infinite;
+  animation: shine-sweep 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) 0.35s both, shine-idle 9s linear 3s infinite;
 }
 @keyframes shine-sweep { from { background-position: 120% 0; } to { background-position: -40% 0; } }
 @keyframes shine-idle { 0%, 82% { background-position: 120% 0; } 100% { background-position: -40% 0; } }
