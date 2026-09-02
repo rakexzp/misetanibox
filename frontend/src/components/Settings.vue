@@ -95,7 +95,7 @@
               <span class="arrow">➔</span>
             </div>
 
-            <div class="setting-item clickable" @click="enterUwpManager">
+            <div class="setting-item clickable" v-if="isWindows" @click="enterUwpManager">
               <div class="info">
                 <h4>UWP loopback-исключения</h4>
                 <p>Доступ UWP-приложений (Store, Почта) к локальному прокси.</p>
@@ -279,14 +279,14 @@
               />
             </div>
 
-            <div class="divider"></div>
+            <div class="divider" v-if="isLinux"></div>
 
-            <div class="setting-item">
+            <div class="setting-item" v-if="isLinux">
               <div class="info">
                 <h4>Ускорение (GSO)</h4>
-                <p>Поднимает скорость на Linux (сегментация пакетов на стороне ядра). На Windows не влияет — там ни к чему. Применяется при переподключении.</p>
+                <p>Сегментация пакетов на стороне ядра — поднимает скорость TUN. Применяется при переподключении.</p>
               </div>
-              <label class="modern-switch"><input type="checkbox" v-model="tunConfig.gso" @change="saveTun" :disabled="!tunStatus.hasWintun"><span class="slider"></span></label>
+              <label class="modern-switch"><input type="checkbox" v-model="tunConfig.gso" @change="saveTun"><span class="slider"></span></label>
             </div>
 
             <div class="divider"></div>
@@ -715,7 +715,7 @@
             <div class="setting-item">
               <div class="info">
                 <h4>Автозапуск</h4>
-                <p>Запуск Misetanibox при входе в Windows.</p>
+                <p>Запуск Misetanibox при входе в систему.</p>
               </div>
               <label class="modern-switch">
                 <input type="checkbox" v-model="behavior.startupWithOS" @change="handleStartupWithOSChange">
@@ -1343,6 +1343,7 @@ import { showAlert, showConfirm, globalState, setUiMode } from '../store';
 // Разделы, применимые только к Windows (wintun, фоновая служба, Smart-ядро, GPU-тумблер).
 // На Linux/macOS прячем: они либо не нужны, либо собираются только под Windows.
 const isWindows = computed(() => globalState.platform === 'windows' || globalState.platform === '');
+const isLinux = computed(() => globalState.platform === 'linux');
 
 import { getSavedColors, saveColors, type CustomColors } from '../utils/colors';
 import { economyEnabled, setEconomy } from '../utils/perf';
