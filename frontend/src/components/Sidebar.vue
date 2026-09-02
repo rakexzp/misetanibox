@@ -181,13 +181,14 @@ const toggleTheme = () => {
   opacity: 0.8;
 }
 
-.icon { 
-  width: 16px; 
-  height: 16px; 
-  display: flex; 
-  align-items: center; 
-  flex-shrink: 0; 
+.icon {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
 }
+.icon :deep(svg) { width: 16px; height: 16px; }
 
 .nav-label { 
   font-size: 0.85rem; 

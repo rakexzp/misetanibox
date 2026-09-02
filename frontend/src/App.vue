@@ -311,7 +311,7 @@ let unsubUpdateError: (() => void) | null = null;
 const menu = [
   { id: 'home', label: 'Консоль', icon: ICONS.home },
   { id: 'proxies', label: 'Прокси-узлы', icon: ICONS.proxies },
-  { id: 'chains', label: 'Цепочки', icon: ICONS.connections },
+  { id: 'chains', label: 'Цепочки', icon: ICONS.chain },
   { id: 'connections', label: 'Соединения', icon: ICONS.connections },
   { id: 'logs', label: 'Журнал', icon: ICONS.logs },
   { id: 'rules', label: 'Правила', icon: ICONS.rules },
