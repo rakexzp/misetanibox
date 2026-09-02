@@ -2,9 +2,7 @@ package clash
 
 import "runtime"
 
-// coreExeName — имя бинаря ядра в core/bin по платформе. На Windows «clash.exe»,
-// на macOS/Linux — «clash» (без расширения). Раньше «clash.exe» был захардкожен и
-// на darwin ядро не находилось → «Mihomo не установлено» при лежащем бинаре.
+// имя бинаря ядра по платформе
 func coreExeName() string {
 	if runtime.GOOS == "windows" {
 		return "clash.exe"

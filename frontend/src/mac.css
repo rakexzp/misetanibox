@@ -1,0 +1,262 @@
+/* macOS-слой (html.mac): стекло поверх прозрачного окна */
+
+html.mac,
+html.mac body,
+html.mac #app {
+    background: transparent !important;
+}
+
+html.mac {
+    /* системный шрифт */
+    --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', 'Twemoji Country Flags', system-ui, sans-serif;
+    --font-mono: 'SF Mono', ui-monospace, Menlo, 'JetBrains Mono', monospace;
+    -webkit-font-smoothing: antialiased;
+    /* пружина */
+    --mac-spring: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* материалы */
+.app-shell.mac {
+    --mac-glass: rgba(255, 255, 255, 0.58);
+    --mac-glass-strong: rgba(255, 255, 255, 0.78);
+    --mac-fill: rgba(0, 0, 0, 0.05);
+    --mac-fill-hover: rgba(0, 0, 0, 0.09);
+    --mac-stroke: rgba(0, 0, 0, 0.08);
+    --mac-highlight: rgba(255, 255, 255, 0.75);
+    --mac-track: rgba(120, 120, 128, 0.16);
+    --mac-seg-thumb: #ffffff;
+    --mac-green: #34c759;
+    --surface: var(--mac-fill);
+    --surface-hover: var(--mac-fill-hover);
+    padding-top: 28px; /* зона нативных светофоров (TitleBarHiddenInset) */
+    box-sizing: border-box;
+}
+
+/* материалы */
+.app-shell.mac.dark {
+    --mac-glass: rgba(30, 30, 32, 0.55);
+    --mac-glass-strong: rgba(30, 30, 32, 0.78);
+    --mac-fill: rgba(255, 255, 255, 0.08);
+    --mac-fill-hover: rgba(255, 255, 255, 0.14);
+    --mac-stroke: rgba(255, 255, 255, 0.10);
+    --mac-highlight: rgba(255, 255, 255, 0.16);
+    --mac-track: rgba(120, 120, 128, 0.32);
+    --mac-seg-thumb: #636366;
+    --mac-green: #30d158;
+}
+
+/* сайдбар */
+.app-shell.mac .sidebar {
+    background: transparent;
+}
+.app-shell.mac .nav-item {
+    border-radius: 10px;
+    transition: background 0.2s var(--mac-spring), transform 0.1s ease-out;
+}
+.app-shell.mac .nav-item:hover {
+    background: var(--mac-fill-hover);
+}
+.app-shell.mac .nav-item:active {
+    transform: scale(0.97);
+}
+
+/* панель контента */
+.app-shell.mac .content.card-panel {
+    background: var(--mac-glass);
+    -webkit-backdrop-filter: blur(28px) saturate(1.6);
+    backdrop-filter: blur(28px) saturate(1.6);
+    border-radius: 18px;
+    box-shadow:
+        inset 0 1px 0 var(--mac-highlight),
+        inset 0 0 0 0.5px var(--mac-stroke);
+}
+
+/* заголовки */
+.app-shell.mac .content-header h1 {
+    font-weight: 700;
+    letter-spacing: -0.022em;
+}
+.app-shell.mac .sidebar-brand {
+    letter-spacing: -0.025em;
+}
+.app-shell.mac .card-hint,
+.app-shell.mac .brand-face {
+    letter-spacing: 0.01em;
+}
+
+/* карточки */
+.app-shell.mac .action-card,
+.app-shell.mac .segmented-control,
+.app-shell.mac .hero-panel,
+.app-shell.mac .mode-section {
+    background: var(--mac-fill);
+    box-shadow:
+        inset 0 1px 0 var(--mac-highlight),
+        inset 0 0 0 0.5px var(--mac-stroke);
+}
+.app-shell.mac .action-card {
+    border-radius: 16px;
+    transition: background 0.25s var(--mac-spring), transform 0.1s ease-out;
+}
+.app-shell.mac .action-card:active {
+    transform: scale(0.985);
+}
+.app-shell.mac .action-card.on {
+    background: var(--accent);
+    box-shadow: none;
+}
+.app-shell.mac .card-has-bg::before {
+    -webkit-backdrop-filter: blur(10px) saturate(1.3);
+    backdrop-filter: blur(10px) saturate(1.3);
+    background: linear-gradient(180deg, rgba(0, 0, 0, calc(var(--card-scrim, 0.45) - 0.1)), rgba(0, 0, 0, calc(var(--card-scrim, 0.45) + 0.15)));
+}
+.app-shell.mac .card-has-bg .segmented-control {
+    background: rgba(0, 0, 0, 0.35);
+    -webkit-backdrop-filter: blur(20px) saturate(1.5);
+    backdrop-filter: blur(20px) saturate(1.5);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 0 0 0.5px rgba(255, 255, 255, 0.10);
+}
+.app-shell.mac .card-has-bg .seg-item {
+    color: rgba(255, 255, 255, 0.8);
+}
+.app-shell.mac .card-has-bg .seg-item.active {
+    color: #fff;
+}
+
+/* сегмент-контрол по iOS */
+.app-shell.mac .segmented-control {
+    background: var(--mac-track);
+    border-radius: 12px;
+    padding: 3px;
+}
+.app-shell.mac .seg-item {
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: color 0.25s var(--mac-spring);
+}
+.app-shell.mac .seg-item.active {
+    color: var(--text-main);
+}
+.app-shell.mac .seg-slider {
+    background: var(--mac-seg-thumb);
+    border-radius: 9px;
+    box-shadow:
+        0 3px 8px rgba(0, 0, 0, 0.12),
+        0 3px 1px rgba(0, 0, 0, 0.04),
+        inset 0 0.5px 0 rgba(255, 255, 255, 0.35);
+    transition: left 0.35s var(--mac-spring);
+}
+
+/* тумблер по iOS */
+.app-shell.mac .modern-switch {
+    width: 51px;
+    height: 31px;
+}
+.app-shell.mac .modern-switch .slider {
+    border-radius: 31px;
+    background-color: var(--mac-track);
+    box-shadow: none;
+    transition: background-color 0.25s var(--mac-spring);
+}
+.app-shell.mac .modern-switch .slider::before {
+    width: 27px;
+    height: 27px;
+    left: 2px;
+    bottom: 2px;
+    background-color: #fff;
+    box-shadow:
+        0 3px 8px rgba(0, 0, 0, 0.15),
+        0 3px 1px rgba(0, 0, 0, 0.06);
+    transition: transform 0.25s var(--mac-spring);
+}
+.app-shell.mac .modern-switch input:checked + .slider {
+    background-color: var(--mac-green);
+}
+.app-shell.mac .modern-switch input:checked + .slider::before {
+    transform: translateX(20px);
+    background-color: #fff;
+}
+.app-shell.mac .modern-switch:active .slider::before {
+    width: 31px;
+}
+.app-shell.mac .modern-switch:active input:checked + .slider::before {
+    transform: translateX(16px);
+}
+
+/* кнопки */
+.app-shell.mac .action-btn,
+.app-shell.mac .primary-btn,
+.app-shell.mac .btn-icon,
+.app-shell.mac .ctrl-btn {
+    transition: transform 0.1s ease-out, background 0.2s var(--mac-spring), color 0.2s;
+}
+.app-shell.mac .action-btn:active,
+.app-shell.mac .primary-btn:active,
+.app-shell.mac .btn-icon:active,
+.app-shell.mac .ctrl-btn:active {
+    transform: scale(0.96);
+}
+.app-shell.mac .action-btn,
+.app-shell.mac .primary-btn {
+    border-radius: 10px;
+}
+
+/* модалки */
+.app-shell.mac .modal-overlay {
+    background: rgba(0, 0, 0, 0.35);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+}
+.app-shell.mac .custom-modal-card {
+    background: var(--mac-glass-strong);
+    -webkit-backdrop-filter: blur(40px) saturate(1.8);
+    backdrop-filter: blur(40px) saturate(1.8);
+    border: 0.5px solid var(--mac-stroke);
+    border-radius: 20px;
+    box-shadow:
+        0 24px 60px rgba(0, 0, 0, 0.35),
+        inset 0 1px 0 var(--mac-highlight);
+}
+.app-shell.mac .pop-enter-active,
+.app-shell.mac .pop-leave-active {
+    transition: opacity 0.25s var(--mac-spring), transform 0.3s var(--mac-spring), filter 0.3s var(--mac-spring);
+}
+.app-shell.mac .pop-enter-from,
+.app-shell.mac .pop-leave-to {
+    opacity: 0;
+    transform: scale(0.94);
+    filter: blur(6px);
+}
+
+/* скроллбар как оверлей macOS */
+.app-shell.mac ::-webkit-scrollbar {
+    width: 6px;
+}
+.app-shell.mac ::-webkit-scrollbar-thumb {
+    background: rgba(128, 128, 128, 0.45);
+    border-radius: 6px;
+}
+
+/* доступность */
+@media (prefers-reduced-transparency: reduce) {
+    .app-shell.mac { --mac-glass: #f2f2f4; --mac-glass-strong: #ffffff; }
+    .app-shell.mac.dark { --mac-glass: #1c1c1e; --mac-glass-strong: #2c2c2e; }
+    .app-shell.mac .content.card-panel,
+    .app-shell.mac .custom-modal-card,
+    .app-shell.mac .modal-overlay,
+    .app-shell.mac .card-has-bg::before {
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .app-shell.mac *,
+    .app-shell.mac *::before {
+        transition-duration: 0.01ms !important;
+    }
+    .app-shell.mac .pop-enter-from,
+    .app-shell.mac .pop-leave-to {
+        transform: none;
+        filter: none;
+    }
+}

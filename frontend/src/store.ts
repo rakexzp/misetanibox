@@ -189,7 +189,10 @@ export function updateStateFromBackend(rawData: any) {
   if (rawData.isRunning !== undefined) globalState.isRunning = rawData.isRunning;
   else if (rawData.IsRunning !== undefined) globalState.isRunning = rawData.IsRunning;
 
-  if (rawData.platform !== undefined) globalState.platform = rawData.platform;
+  if (rawData.platform !== undefined) {
+    globalState.platform = rawData.platform;
+    document.documentElement.classList.toggle('mac', rawData.platform === 'darwin');
+  }
   if (rawData.mode !== undefined) globalState.mode = rawData.mode;
   else if (rawData.Mode !== undefined) globalState.mode = rawData.Mode;
 

@@ -24,6 +24,15 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+// bgAlpha — на macOS фон окна прозрачный (виден системный материал), на Linux
+// webkit без композитора рисует чёрное вместо прозрачного → непрозрачный.
+func bgAlpha() uint8 {
+	if runtime.GOOS == "darwin" {
+		return 0
+	}
+	return 255
+}
+
 var singleInstanceLockFile *os.File
 
 func hasFlag(flag string) bool {
@@ -142,15 +151,19 @@ func main() {
 		// Linux: безрамочное окно с нашими кнопками. macOS: нативные «светофоры»,
 		// заголовок скрыт, контент под титлбаром (TitleBarHiddenInset) — по-Apple.
 		Frameless: runtime.GOOS != "darwin",
+		// Прозрачное окно + прозрачный webview: сквозь интерфейс виден системный
+		// материал macOS (vibrancy), поверх него фронт рисует стекло (mac.css).
 		Mac: &mac.Options{
-			TitleBar:   mac.TitleBarHiddenInset(),
-			Appearance: mac.DefaultAppearance,
+			TitleBar:             mac.TitleBarHiddenInset(),
+			Appearance:           mac.DefaultAppearance,
+			WindowIsTranslucent:  true,
+			WebviewIsTransparent: true,
 		},
 
 		HideWindowOnClose: false,
 		StartHidden:       true,
 
-		BackgroundColour: &options.RGBA{R: r, G: g, B: b, A: 255},
+		BackgroundColour: &options.RGBA{R: r, G: g, B: b, A: bgAlpha()},
 
 		AssetServer: &assetserver.Options{
 			Assets: assets,

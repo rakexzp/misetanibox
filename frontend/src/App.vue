@@ -1,7 +1,6 @@
 <template>
   <!-- macOS: нативные светофоры слева в скрытом титлбаре → отступ сверху, свои кнопки окна не рисуем -->
-  <div class="app-shell" :class="{ dark: globalState.theme === 'dark', mac: globalState.platform === 'darwin' }"
-       :style="globalState.platform === 'darwin' ? { paddingTop: '28px' } : undefined">
+  <div class="app-shell" :class="{ dark: globalState.theme === 'dark', mac: globalState.platform === 'darwin' }">
     <div class="drag-bar" style="--wails-draggable:drag">
       <div class="top-actions" style="--wails-draggable:none">
         <button
