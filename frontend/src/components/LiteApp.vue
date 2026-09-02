@@ -20,14 +20,12 @@
       <span class="hero-line hero-code" style="--i: 0">
         <img v-if="exitFlag" :src="exitFlag" class="hero-flag" alt="" />{{ exitCode }}
       </span>
-      <span class="hero-line hero-ping" style="--i: 1">
-        <template v-if="pingingCurrent"><i class="hero-dots"><b></b><b></b><b></b></i></template>
-        <template v-else>{{ currentDelay != null && currentDelay > 0 ? currentDelay : '—' }}<small>мс</small></template>
-      </span>
-      <span class="hero-line hero-timer" style="--i: 2">{{ busy ? '··:··' : sessionText }}</span>
+      <span class="hero-line hero-timer" style="--i: 1">{{ busy ? '··:··' : sessionText }}</span>
     </div>
     <div class="cover-sub">
       <span class="cover-sub-name truncate">{{ currentServer ? serverLabel(currentServer) : (hasConfig ? 'Сервер не выбран' : 'Добавьте подписку') }}</span>
+      <span v-if="pingingCurrent" class="cover-sub-ping is-pinging"><span class="lite-ping-spin"></span>пингую</span>
+      <span v-else-if="currentDelay != null" class="cover-sub-ping">{{ currentDelay > 0 ? currentDelay + ' мс' : '—' }}</span>
     </div>
     <div v-if="connected" class="cover-sub-traffic"><i v-html="ICONS.arrowDown"></i><span class="tv">{{ traffic.down }}</span><i v-html="ICONS.arrowUp"></i><span class="tv">{{ traffic.up }}</span></div>
 
