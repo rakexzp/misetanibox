@@ -627,6 +627,7 @@ onUnmounted(() => {
   animation: timer-shimmer 1.6s linear infinite;
 }
 @media (prefers-reduced-motion: reduce) { .shine-text.shine, .shine-text.loading { animation: none; background-position: -40% 0; } }
+.hero-dots { display: inline-flex; gap: 8px; align-items: center; height: 0.7em; }
 .hero-dots b { width: 0.22em; height: 0.22em; border-radius: 50%; background: #fff; animation: hero-dot 1s ease-in-out infinite; }
 .hero-dots b:nth-child(2) { animation-delay: 0.15s; } .hero-dots b:nth-child(3) { animation-delay: 0.3s; }
 @keyframes hero-dot { 0%, 100% { opacity: 0.25; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-0.12em); } }
