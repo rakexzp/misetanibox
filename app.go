@@ -1705,3 +1705,24 @@ func (a *App) safeQuit() {
 
 	os.Exit(0)
 }
+
+// GetMainSelector — политика последнего правила MATCH runtime-конфига (главный селектор подписки для Lite).
+func (a *App) GetMainSelector() string {
+	data, err := os.ReadFile(utils.GetRuntimeConfigPath())
+	if err != nil {
+		return ""
+	}
+	var cfg struct {
+		Rules []string `yaml:"rules"`
+	}
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return ""
+	}
+	for i := len(cfg.Rules) - 1; i >= 0; i-- {
+		r := strings.TrimSpace(cfg.Rules[i])
+		if strings.HasPrefix(strings.ToUpper(r), "MATCH,") {
+			return strings.TrimSpace(r[len("MATCH,"):])
+		}
+	}
+	return ""
+}

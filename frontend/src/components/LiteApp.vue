@@ -20,15 +20,15 @@
       <span v-for="(w, i) in titleLines" :key="i">{{ w }}</span>
     </div>
     <div class="cover-sub">
-      <span class="cover-sub-name truncate">{{ currentServer ? displayName(currentServer) : (hasConfig ? 'Сервер не выбран' : 'Добавьте подписку') }}</span>
+      <span class="cover-sub-name truncate">{{ currentServer ? serverLabel(currentServer) : (hasConfig ? 'Сервер не выбран' : 'Добавьте подписку') }}</span>
       <span v-if="currentDelay != null" class="cover-sub-ping">{{ currentDelay > 0 ? currentDelay + ' мс' : '—' }}</span>
+      <span v-if="connected" class="cover-sub-traffic"><i v-html="ICONS.arrowDown"></i>{{ traffic.down }} <i v-html="ICONS.arrowUp"></i>{{ traffic.up }}</span>
     </div>
 
     <div class="cover-bar">
       <button class="cover-primary" :disabled="busy || !hasConfig" @click="toggleConnect">
         {{ busy ? 'ПОДКЛЮЧАЮ…' : (connected ? 'ОТКЛЮЧИТЬ' : 'ПОДКЛЮЧИТЬ') }}
       </button>
-      <span v-if="connected" class="cover-pill cover-traffic"><i v-html="ICONS.arrowDown"></i>{{ traffic.down }} <i v-html="ICONS.arrowUp"></i>{{ traffic.up }}</span>
       <button class="cover-pill cover-round" title="Серверы" @click="openServers = true"><span v-html="ICONS.list"></span></button>
     </div>
 
@@ -52,6 +52,16 @@
               <span class="lite-smart-ico" v-html="ICONS.zap"></span>
               <span class="lite-item-name">Смарт (авто)</span>
               <span class="lite-item-tag">умный выбор</span>
+            </button>
+            <button
+              v-if="autoGroup"
+              class="lite-server-item lite-smart-item"
+              :class="{ active: currentServer === autoGroup }"
+              @click="pick(autoGroup)"
+            >
+              <span class="lite-smart-ico" v-html="ICONS.zap"></span>
+              <span class="lite-item-name">Авто</span>
+              <span class="lite-item-tag">быстрейший</span>
             </button>
             <div v-if="!servers.length" class="lite-empty">Нет серверов. Добавьте подписку.</div>
             <button
@@ -250,6 +260,11 @@ const statusText = computed(() => {
 });
 
 const currentDelay = computed(() => delayOf(currentServer.value));
+function serverLabel(name: string): string {
+  if (!name) return '';
+  if (name === autoGroup.value) return 'Авто · быстрейший';
+  return displayName(name);
+}
 
 function delayOf(name: string): number | null {
   const d = globalState.proxyDelays[name];
@@ -273,30 +288,68 @@ const NON_SERVER_TYPES = new Set([
   'Direct', 'Reject', 'RejectDrop', 'Compatible', 'Pass', 'Dns',
 ]);
 
+const mainSelector = ref('GLOBAL'); // главный селектор подписки («Зарубежные сайты»); GLOBAL — запасной
+const autoGroup = ref('');          // url-test/fallback группа внутри селектора → пункт «Авто»
+function isGroupType(t: string | undefined) { return !!t && (t === 'Selector' || t === 'URLTest' || t === 'Fallback' || t === 'LoadBalance' || t === 'Smart'); }
 async function loadServers() {
   try {
     const data: any = await API.GetInitialData();
+    const cacheKey = 'mise_lite_servers_' + resolvedId.value;
+    if (data?.isOffline) {
+      // оффлайн-снимок не видит provider-узлы — берём последний онлайн-список
+      try {
+        const c = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+        if (c && Array.isArray(c.servers) && c.servers.length) {
+          mainSelector.value = c.mainSelector || 'GLOBAL';
+          autoGroup.value = c.autoGroup || '';
+          servers.value = c.servers;
+          if (!currentServer.value) currentServer.value = c.current || '';
+          return;
+        }
+      } catch {}
+    }
     const map = data?.groups || {};
-    const g = map.GLOBAL;
-    if (g) {
-      currentServer.value = g.now || '';
-      const all: string[] = g.all || [];
-      servers.value = all
-        .filter((n) => n !== 'GLOBAL')
-        .filter((n) => {
-          const t = map[n]?.type;
-          return t && !NON_SERVER_TYPES.has(t);
-        })
-        .map((n) => ({ name: n }));
+    // главный селектор: первый Selector в порядке конфига (GLOBAL.all хранит порядок), запасной — самый длинный
+    let best = '';
+    const order: string[] = (map.GLOBAL?.all || Object.keys(map)).filter((n: string) => n !== 'GLOBAL');
+    best = order.find((n) => map[n]?.type === 'Selector' && (map[n]?.all || []).length > 1) || '';
+    if (!best) {
+      let bestLen = 0;
+      for (const [n, g] of Object.entries<any>(map)) {
+        if (n === 'GLOBAL' || g?.type !== 'Selector') continue;
+        const len = (g.all || []).length;
+        if (len > bestLen) { best = n; bestLen = len; }
+      }
+    }
+    // точный ответ от бэкенда: политика правила MATCH (что подставляется в «Зарубежные сайты»)
+    try {
+      const fin: string = await (API as any).GetMainSelector();
+      if (fin && map[fin]?.type === 'Selector') best = fin;
+    } catch {}
+    mainSelector.value = best || 'GLOBAL';
+    const g = map[mainSelector.value];
+    if (!g) return;
+    const all: string[] = g.all || [];
+    autoGroup.value = all.find((n) => map[n]?.type === 'URLTest' || map[n]?.type === 'Fallback') || '';
+    currentServer.value = g.now || '';
+    servers.value = all
+      .filter((n) => n !== 'GLOBAL')
+      .filter((n) => {
+        const t = map[n]?.type;
+        // страны в подписке — Fallback/URLTest-группы: показываем как серверы; прячем вложенные Selector и «Авто»
+        return t && !NON_SERVER_TYPES.has(t) && t !== 'Selector' && n !== autoGroup.value;
+      })
+      .map((n) => ({ name: n }));
+    if (!data?.isOffline) {
+      try { localStorage.setItem(cacheKey, JSON.stringify({ mainSelector: mainSelector.value, autoGroup: autoGroup.value, servers: servers.value, current: currentServer.value })); } catch {}
     }
   } catch (e) {
   }
 }
-
 async function pick(name: string) {
   try {
     wantSmart.value = false;
-    await API.SelectProxy('GLOBAL', name);
+    await API.SelectProxy(mainSelector.value, name);
     currentServer.value = name;
     openServers.value = false;
   } catch (e) {
@@ -309,7 +362,7 @@ async function pickSmart() {
   openServers.value = false;
   if (globalState.isRunning) {
     try {
-      await API.SelectProxy('GLOBAL', SMART_NAME);
+      await API.SelectProxy(mainSelector.value, SMART_NAME);
       currentServer.value = SMART_NAME;
     } catch (e) {
       await showAlert('Не удалось включить Смарт: ' + e, 'Ошибка', true);
@@ -339,19 +392,20 @@ async function toggleConnect() {
       if (!globalState.isRunning) {
         await API.StartClash(resolvedId.value);
       }
-      await API.UpdateClashMode('global').catch(() => {});
+      // режим правил: РФ напрямую, мост/dialer-proxy подписки работают как в Про
+      await API.UpdateClashMode('rule').catch(() => {});
       setTunIntent(true);
       await enableTun();
       if (wantSmart.value) {
-        await API.SelectProxy('GLOBAL', SMART_NAME).catch(() => {});
+        await API.SelectProxy(mainSelector.value, SMART_NAME).catch(() => {});
         currentServer.value = SMART_NAME;
       }
     }
     await loadServers();
     // GLOBAL по умолчанию смотрит в DIRECT — берём первый реальный узел
     const noExit = new Set(['', 'DIRECT', 'REJECT', 'REJECT-DROP', 'PASS', 'COMPATIBLE']);
-    if (globalState.isRunning && noExit.has(currentServer.value.toUpperCase()) && servers.value.length) {
-      await pick(servers.value[0].name);
+    if (globalState.isRunning && noExit.has(currentServer.value.toUpperCase()) && (autoGroup.value || servers.value.length)) {
+      await pick(autoGroup.value || servers.value[0].name);
     }
     if (globalState.isRunning && currentServer.value && currentServer.value !== SMART_NAME && delayOf(currentServer.value) == null) {
       API.TestAllProxies([currentServer.value]).catch(() => {});
@@ -391,10 +445,6 @@ async function enableTun() {
 
 async function pingAll() {
   if (testing.value || !servers.value.length) return;
-  if (!globalState.isRunning) {
-    await showAlert('Сначала подключитесь — задержки измеряются через запущенное ядро.', 'Нужно подключение');
-    return;
-  }
   testing.value = true;
   servers.value.forEach((s) => testingSet.add(s.name));
   try {
@@ -459,8 +509,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-@font-face { font-family: 'Unbounded'; font-style: normal; font-weight: 500 900; font-display: swap; src: url('/fonts/unbounded-900-cyr.woff2') format('woff2'); unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
-@font-face { font-family: 'Unbounded'; font-style: normal; font-weight: 500 900; font-display: swap; src: url('/fonts/unbounded-900-lat.woff2') format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
 
 .lite-root {
   position: relative; flex: 1; min-height: 0; overflow: hidden;
@@ -477,8 +525,8 @@ onUnmounted(() => {
 
 .cover-head { display: flex; align-items: flex-start; justify-content: space-between; }
 .cover-brand-block { display: flex; flex-direction: column; gap: 4px; }
-.cover-brand { font-family: var(--display); font-size: 15px; font-weight: 900; letter-spacing: -0.02em; }
-.cover-meta { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em; color: rgba(255,255,255,0.7); }
+.cover-brand { font-family: var(--display) !important; font-size: 15px; font-weight: 900; letter-spacing: -0.02em; }
+.cover-meta { font-family: var(--font-mono) !important; font-size: 11px; letter-spacing: 0.12em; color: rgba(255,255,255,0.7); }
 .cover-head-actions { display: flex; gap: 6px; }
 .cover-icon-btn {
   width: 40px; height: 40px; border-radius: 12px; border: none; cursor: pointer;
@@ -492,20 +540,23 @@ onUnmounted(() => {
 
 .cover-spacer { flex: 1; }
 
-.cover-title { display: flex; flex-direction: column; font-family: var(--display); font-weight: 900; font-size: clamp(44px, 14vw, 64px); line-height: 0.92; letter-spacing: -0.04em; text-transform: uppercase; }
+.cover-title { display: flex; flex-direction: column; font-family: var(--display) !important; font-weight: 900; font-size: clamp(44px, 14vw, 64px); line-height: 0.92; letter-spacing: -0.04em; text-transform: uppercase; }
 .cover-title span { display: block; }
 .lite-root.off .cover-title { color: rgba(255,255,255,0.55); }
 .lite-root.connecting .cover-title { animation: cover-pulse 1.2s ease-in-out infinite; }
 @keyframes cover-pulse { 50% { opacity: 0.6; } }
 
 .cover-sub { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.cover-sub-traffic { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-mono) !important; font-size: 12px; color: rgba(255,255,255,0.75); white-space: nowrap; flex-shrink: 0; }
+.cover-sub-traffic i { display: inline-flex; }
+.cover-sub-traffic i :deep(svg) { width: 11px; height: 11px; }
 .cover-sub-name { font-size: 15px; font-weight: 600; color: rgba(255,255,255,0.92); }
-.cover-sub-ping { font-family: var(--font-mono); font-size: 13px; color: rgba(255,255,255,0.7); flex-shrink: 0; }
+.cover-sub-ping { font-family: var(--font-mono) !important; font-size: 13px; color: rgba(255,255,255,0.7); flex-shrink: 0; }
 
 .cover-bar { display: flex; align-items: center; gap: 10px; }
 .cover-primary {
   flex: 1 1 auto; min-width: 150px; min-height: 52px; border: none; border-radius: 999px; cursor: pointer;
-  background: #fff; color: #111; font-family: var(--display); font-size: 13px; font-weight: 700; letter-spacing: 0.02em;
+  background: #fff; color: #111; font-family: var(--display) !important; font-size: 13px; font-weight: 700; letter-spacing: 0.02em;
   transition: transform 0.1s, opacity 0.2s;
 }
 .cover-primary:hover { opacity: 0.92; }
@@ -515,10 +566,8 @@ onUnmounted(() => {
   min-height: 52px; padding: 0 12px; flex-shrink: 1; min-width: 0; overflow: hidden; border: none; border-radius: 999px; cursor: default;
   background: rgba(255,255,255,0.14); color: #fff; display: inline-flex; align-items: center; gap: 6px;
   -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
-  font-family: var(--font-mono); font-size: 11px; font-weight: 600; white-space: nowrap;
+  font-family: var(--font-mono) !important; font-size: 11px; font-weight: 600; white-space: nowrap;
 }
-.cover-traffic i { display: inline-flex; }
-.cover-traffic i :deep(svg) { width: 12px; height: 12px; }
 .cover-round { width: 52px; padding: 0; justify-content: center; cursor: pointer; transition: background 0.2s, transform 0.1s; }
 .cover-round:hover { background: rgba(255,255,255,0.22); }
 .cover-round:active { transform: scale(0.95); }
@@ -529,7 +578,7 @@ onUnmounted(() => {
 .cover-sheet {
   width: 100%; max-height: 72%; display: flex; flex-direction: column; gap: 8px;
   padding: 10px 14px 18px; border-radius: 24px 24px 0 0;
-  background: rgba(20,20,22,0.82); color: #fff;
+  background: rgba(20,20,22,0.94); color: #fff;
   -webkit-backdrop-filter: blur(30px) saturate(1.6); backdrop-filter: blur(30px) saturate(1.6);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 -16px 50px rgba(0,0,0,0.4);
 }
@@ -550,7 +599,7 @@ onUnmounted(() => {
 .lite-dot.on { background: #fff; }
 .lite-flag { width: 20px; height: 15px; border-radius: 3px; object-fit: cover; flex-shrink: 0; }
 .lite-item-name { flex: 1; min-width: 0; font-size: 15px; }
-.lite-item-ping { font-family: var(--font-mono); font-size: 12px; font-weight: 600; flex-shrink: 0; color: rgba(255,255,255,0.75); }
+.lite-item-ping { font-family: var(--font-mono) !important; font-size: 12px; font-weight: 600; flex-shrink: 0; color: rgba(255,255,255,0.75); }
 .lite-item-ping.good { color: #fff; }
 .lite-item-ping.bad { color: rgba(255,255,255,0.45); }
 .lite-ping-spin { width: 14px; height: 14px; flex-shrink: 0; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; animation: lite-spin 0.8s linear infinite; }
