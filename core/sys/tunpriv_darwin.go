@@ -9,11 +9,14 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
 
 	"goclashz/core/logger"
 	"goclashz/core/utils"
 )
+
+var tunPrivMu sync.Mutex
 
 func corePathForTun() string {
 	return filepath.Join(utils.GetCoreBinDir(), "clash")
@@ -40,6 +43,12 @@ func EnsureTunPrivilege() error {
 		return nil
 	}
 
+	// один диалог на всех: ретраи восстановления ждут первого, не плодят окна
+	tunPrivMu.Lock()
+	defer tunPrivMu.Unlock()
+	if st, err = os.Stat(path); err == nil && hasRootSetuid(st) {
+		return nil
+	}
 	if err := grantSetuidWithAdminPrompt(path); err != nil {
 		return err
 	}
