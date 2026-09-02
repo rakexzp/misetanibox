@@ -16,13 +16,18 @@
 
     <div class="cover-spacer"></div>
 
-    <div class="cover-title">
-      <span v-for="(w, i) in titleLines" :key="i">{{ w }}</span>
+    <div class="cover-hero" :class="statusClass" :key="statusClass">
+      <span class="hero-line hero-code" style="--i: 0">
+        <img v-if="exitFlag" :src="exitFlag" class="hero-flag" alt="" />{{ exitCode }}
+      </span>
+      <span class="hero-line hero-ping" style="--i: 1">
+        <template v-if="pingingCurrent"><i class="hero-dots"><b></b><b></b><b></b></i></template>
+        <template v-else>{{ currentDelay != null && currentDelay > 0 ? currentDelay : '—' }}<small>мс</small></template>
+      </span>
+      <span class="hero-line hero-timer" style="--i: 2">{{ busy ? '··:··' : sessionText }}</span>
     </div>
     <div class="cover-sub">
       <span class="cover-sub-name truncate">{{ currentServer ? serverLabel(currentServer) : (hasConfig ? 'Сервер не выбран' : 'Добавьте подписку') }}</span>
-      <span v-if="pingingCurrent" class="cover-sub-ping is-pinging"><span class="lite-ping-spin"></span>пингую</span>
-      <span v-else-if="currentDelay != null" class="cover-sub-ping">{{ currentDelay > 0 ? currentDelay + ' мс' : '—' }}</span>
     </div>
     <div v-if="connected" class="cover-sub-traffic"><i v-html="ICONS.arrowDown"></i><span class="tv">{{ traffic.down }}</span><i v-html="ICONS.arrowUp"></i><span class="tv">{{ traffic.up }}</span></div>
 
@@ -150,7 +155,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue';
+import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue';
 import * as API from '../../wailsjs/go/main/App';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
 import {
@@ -201,9 +206,9 @@ async function pickLiteBg() {
   } catch (e) { await showAlert('Не удалось выбрать обои: ' + e, 'Ошибка', true); }
 }
 const titleLines = computed(() => {
-  if (busy.value) return ['ПОД', 'КЛЮ', 'ЧАЮ'];
-  if (!hasConfig.value) return ['НЕТ', 'ПОД', 'ПИСКИ'];
-  return connected.value ? ['ПОД', 'КЛЮ', 'ЧЕНО'] : ['ОТ', 'КЛЮ', 'ЧЕНО'];
+  if (busy.value) return ['ПОДКЛЮ', 'ЧАЮ…'];
+  if (!hasConfig.value) return ['НЕТ', 'ПОДПИСКИ'];
+  return connected.value ? ['ЗАЩИТА', 'ВКЛЮЧЕНА'] : ['ЗАЩИТА', 'ВЫКЛЮЧЕНА'];
 });
 // срок подписки (если панель отдаёт expire), иначе число серверов
 const subMeta = computed(() => {
@@ -268,6 +273,40 @@ const statusText = computed(() => {
 
 const currentDelay = computed(() => delayOf(currentServer.value));
 const pingingCurrent = computed(() => !!currentServer.value && testingSet.has(currentServer.value));
+
+// таймер сессии
+const sessionStart = ref(0);
+const nowTick = ref(Date.now());
+let tickTimer: ReturnType<typeof setInterval> | null = null;
+watch(connected, (on) => {
+  if (on) { sessionStart.value = Date.now(); if (!tickTimer) tickTimer = setInterval(() => { nowTick.value = Date.now(); }, 1000); }
+  else { sessionStart.value = 0; if (tickTimer) { clearInterval(tickTimer); tickTimer = null; } }
+}, { immediate: true });
+const sessionText = computed(() => {
+  if (!sessionStart.value) return '00:00';
+  const sec = Math.max(0, Math.floor((nowTick.value - sessionStart.value) / 1000));
+  const p = (n: number) => String(n).padStart(2, '0');
+  const h = Math.floor(sec / 3600);
+  return h > 0 ? `${h}:${p(Math.floor((sec % 3600) / 60))}` : `${p(Math.floor(sec / 60))}:${p(sec % 60)}`;
+});
+
+// страна фактического выхода: идём по цепочке now от выбранного пункта до узла
+const groupMap = ref<Record<string, any>>({});
+const exitLeaf = computed(() => {
+  const map = groupMap.value;
+  let n = currentServer.value;
+  const seen = new Set<string>();
+  while (n && map[n]?.now && !seen.has(n)) { seen.add(n); n = map[n].now; }
+  return n;
+});
+const exitFlag = computed(() => (exitLeaf.value ? flagUrl(exitLeaf.value) : '') || '');
+const exitCode = computed(() => {
+  const leaf = exitLeaf.value;
+  const code = (flagUrl(leaf) || '').match(/\/([a-z]{2})\.svg/i)?.[1];
+  if (code) return code.toUpperCase();
+  if (!hasConfig.value) return '—';
+  return leaf && leaf === autoGroup.value ? 'АВТО' : (leaf ? displayName(leaf).slice(0, 4).toUpperCase() : '—');
+});
 function pingOne(name: string) {
   if (!name || name === SMART_NAME || testingSet.has(name)) return;
   testingSet.add(name);
@@ -324,6 +363,7 @@ async function loadServers() {
       } catch {}
     }
     const map = data?.groups || {};
+    if (!data?.isOffline) groupMap.value = map;
     // главный селектор: первый Selector в порядке конфига (GLOBAL.all хранит порядок), запасной — самый длинный
     let best = '';
     if (!best) {
@@ -542,7 +582,7 @@ onUnmounted(() => {
 
 .cover-head { display: flex; align-items: flex-start; justify-content: space-between; }
 .cover-brand-block { display: flex; flex-direction: column; gap: 4px; }
-.cover-brand { font-family: var(--display) !important; font-size: 12px; font-weight: 800; letter-spacing: 0.16em; }
+.cover-brand { font-family: var(--display) !important; font-size: 15px; font-weight: 900; letter-spacing: -0.02em; }
 .cover-meta { font-family: var(--font-mono) !important; font-size: 11px; letter-spacing: 0.12em; color: rgba(255,255,255,0.7); }
 .cover-head-actions { display: flex; gap: 6px; }
 .cover-icon-btn {
@@ -557,11 +597,22 @@ onUnmounted(() => {
 
 .cover-spacer { flex: 1; }
 
-.cover-title { display: flex; flex-direction: column; font-family: var(--display) !important; font-weight: 900; font-size: clamp(44px, 14vw, 64px); line-height: 0.92; letter-spacing: -0.04em; text-transform: uppercase; }
-.cover-title span { display: block; }
-.lite-root.off .cover-title { color: rgba(255,255,255,0.55); }
-.lite-root.connecting .cover-title { animation: cover-pulse 1.2s ease-in-out infinite; }
-@keyframes cover-pulse { 50% { opacity: 0.6; } }
+.cover-hero { position: relative; display: flex; flex-direction: column; gap: 2px; align-items: flex-start; }
+.hero-line { display: block; animation: hero-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both; animation-delay: calc(var(--i) * 90ms); }
+@keyframes hero-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.hero-code, .hero-ping, .hero-timer { font-family: var(--display) !important; font-weight: 900; font-size: clamp(48px, 15vw, 64px); line-height: 0.92; letter-spacing: -0.04em; text-transform: uppercase; color: #fff; white-space: nowrap; }
+.hero-code { display: flex; align-items: center; gap: 12px; }
+.hero-flag { width: 0.62em; height: 0.46em; border-radius: 0.08em; object-fit: cover; box-shadow: 0 2px 10px rgba(0,0,0,0.35); }
+.hero-ping { display: flex; align-items: baseline; gap: 6px; font-variant-numeric: tabular-nums; }
+.hero-ping small { font-family: var(--font-mono) !important; font-size: 0.3em; letter-spacing: 0.12em; color: rgba(255,255,255,0.7); text-transform: lowercase; }
+.hero-timer { font-family: var(--font-mono) !important; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.cover-hero.off .hero-code, .cover-hero.off .hero-ping, .cover-hero.off .hero-timer { color: rgba(255,255,255,0.45); }
+.cover-hero.connecting .hero-code { animation: hero-in 0.55s both, cover-pulse 1.2s 0.6s ease-in-out infinite; }
+@keyframes cover-pulse { 50% { opacity: 0.55; } }
+.hero-dots { display: inline-flex; gap: 8px; align-items: center; height: 0.7em; }
+.hero-dots b { width: 0.22em; height: 0.22em; border-radius: 50%; background: #fff; animation: hero-dot 1s ease-in-out infinite; }
+.hero-dots b:nth-child(2) { animation-delay: 0.15s; } .hero-dots b:nth-child(3) { animation-delay: 0.3s; }
+@keyframes hero-dot { 0%, 100% { opacity: 0.25; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-0.12em); } }
 
 .cover-sub { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .cover-sub-traffic { display: flex; align-items: center; gap: 4px; margin-top: -6px; font-size: 12px; color: rgba(255,255,255,0.7); white-space: nowrap; }
@@ -578,7 +629,7 @@ onUnmounted(() => {
 .cover-bar { display: flex; align-items: center; gap: 10px; }
 .cover-primary {
   flex: 1 1 auto; min-width: 150px; min-height: 52px; border: none; border-radius: 999px; cursor: pointer;
-  background: #fff; color: #111; font-family: var(--display) !important; font-size: 13px; font-weight: 700; letter-spacing: 0.02em;
+  background: #fff; color: #111; font-family: var(--display) !important; font-size: 12px; font-weight: 700; letter-spacing: 0.14em;
   transition: transform 0.1s, opacity 0.2s;
 }
 .cover-primary:hover { opacity: 0.92; }
