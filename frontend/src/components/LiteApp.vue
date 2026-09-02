@@ -6,7 +6,7 @@
     <header class="cover-head">
       <div class="cover-brand-block">
         <span class="cover-brand">MISETANIBOX</span>
-        <span class="cover-meta">{{ resolvedName || 'Без подписки' }}<template v-if="subMeta"> · {{ subMeta }}</template></span>
+        <span class="cover-meta">{{ subTitle || 'Без подписки' }}<template v-if="subMeta"> · {{ subMeta }}</template></span>
       </div>
       <div class="cover-head-actions">
         <button class="cover-icon-btn" title="Свои обои" @click="pickLiteBg"><span v-html="ICONS.image"></span></button>
@@ -208,6 +208,8 @@ const titleLines = computed(() => {
   if (!hasConfig.value) return ['НЕТ', 'ПОДПИСКИ'];
   return connected.value ? ['ЗАЩИТА', 'ВКЛЮЧЕНА'] : ['ЗАЩИТА', 'ВЫКЛЮЧЕНА'];
 });
+// заголовок от панели (profile-title), иначе своё имя
+const subTitle = computed(() => (configs.value.find((c: any) => c.id === resolvedId.value) as any)?.title || resolvedName.value);
 // срок подписки (если панель отдаёт expire), иначе число серверов
 const subMeta = computed(() => {
   const cfg: any = configs.value.find((c: any) => c.id === resolvedId.value);

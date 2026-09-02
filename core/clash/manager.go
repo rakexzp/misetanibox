@@ -9,8 +9,10 @@ import (
 )
 
 type SubIndexItem struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	// заголовок подписки от панели (profile-title) — обновляется при каждой загрузке
+	Title    string `json:"title,omitempty"`
 	URL      string `json:"url"`
 	Type     string `json:"type"`
 	Upload   int64  `json:"upload"`

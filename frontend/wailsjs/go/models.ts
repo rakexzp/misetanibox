@@ -645,6 +645,7 @@ export namespace clash {
 	export class SubIndexItem {
 	    id: string;
 	    name: string;
+	    title?: string;
 	    url: string;
 	    type: string;
 	    upload: number;
@@ -665,6 +666,7 @@ export namespace clash {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
 	        this.name = source["name"];
+	        this.title = source["title"];
 	        this.url = source["url"];
 	        this.type = source["type"];
 	        this.upload = source["upload"];

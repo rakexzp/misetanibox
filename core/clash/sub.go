@@ -348,6 +348,9 @@ func DownloadSub(ctx context.Context, name, url, existingId, userAgent string, o
 			if strings.TrimSpace(name) == "" && strings.TrimSpace(headerName) != "" {
 				SubIndex[i].Name = strings.TrimSpace(headerName)
 			}
+			if t := strings.TrimSpace(headerName); t != "" {
+				SubIndex[i].Title = t
+			}
 			// фолбеки приходят из заголовка панели; если панель их не прислала — оставляем прежние
 			if len(headerFallbacks) > 0 {
 				SubIndex[i].FallbackURLs = headerFallbacks
@@ -365,6 +368,7 @@ func DownloadSub(ctx context.Context, name, url, existingId, userAgent string, o
 		SubIndex = append(SubIndex, SubIndexItem{
 			ID:       safeId,
 			Name:     resolvedName,
+			Title:    strings.TrimSpace(headerName),
 			URL:      url,
 			Type:     "remote",
 			Upload:   upload,
