@@ -619,7 +619,13 @@ onUnmounted(() => {
 }
 @keyframes shine-sweep { from { background-position: 120% 0; } to { background-position: -40% 0; } }
 @keyframes shine-idle { 0%, 82% { background-position: 120% 0; } 100% { background-position: -40% 0; } }
-@media (prefers-reduced-motion: reduce) { .shine-text.shine { animation: none; background-position: -40% 0; } }
+.hero-timer .shine-text.shine {
+  background: linear-gradient(105deg, #fff 0%, #fff 30%, rgba(255,255,255,0.5) 44%, #e9ecf2 50%, rgba(255,255,255,0.5) 56%, #fff 70%, #fff 100%);
+  background-size: 260% 100%;
+  animation: shine-sweep 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) 0.5s both, timer-shimmer 3.2s linear 1.7s infinite;
+}
+@keyframes timer-shimmer { from { background-position: 120% 0; } to { background-position: -40% 0; } }
+@media (prefers-reduced-motion: reduce) { .shine-text.shine, .hero-timer .shine-text.shine { animation: none; background-position: -40% 0; } }
 .hero-dots { display: inline-flex; gap: 8px; align-items: center; height: 0.7em; }
 .hero-dots b { width: 0.22em; height: 0.22em; border-radius: 50%; background: #fff; animation: hero-dot 1s ease-in-out infinite; }
 .hero-dots b:nth-child(2) { animation-delay: 0.15s; } .hero-dots b:nth-child(3) { animation-delay: 0.3s; }
