@@ -347,9 +347,9 @@ const sysProxyLabel = computed(() => {
 const tunLabel = computed(() => {
   if (globalState.tunPending) return 'Применяется…';
   if (globalState.tun && !globalState.actualTun) return 'Адаптер не поднялся — включите заново';
-  return globalState.actualTun
-    ? 'Виртуальный адаптер подключён'
-    : 'Драйвер прозрачного прокси не загружен';
+  if (globalState.actualTun) return 'Виртуальный адаптер подключён';
+  // на macOS нет wintun — TUN упирается в root-права ядра, а не в драйвер
+  return globalState.platform === 'darwin' ? 'Выключен' : 'Драйвер прозрачного прокси не загружен';
 });
 
 const toggleSysProxy = async () => {

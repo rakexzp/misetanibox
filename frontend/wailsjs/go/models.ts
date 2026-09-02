@@ -67,6 +67,7 @@ export namespace appcore {
 	export class AppState {
 	    isRunning: boolean;
 	    isAdmin: boolean;
+	    platform: string;
 	    mode: string;
 	    theme: string;
 	    hideLogs: boolean;
@@ -97,6 +98,7 @@ export namespace appcore {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.isRunning = source["isRunning"];
 	        this.isAdmin = source["isAdmin"];
+	        this.platform = source["platform"];
 	        this.mode = source["mode"];
 	        this.theme = source["theme"];
 	        this.hideLogs = source["hideLogs"];
@@ -334,17 +336,6 @@ export namespace appcore {
 
 export namespace clash {
 	
-	export class ProxyChain {
-	    name: string;
-	    nodes: string[];
-	    static createFrom(source: any = {}) { return new ProxyChain(source); }
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.name = source["name"];
-	        this.nodes = source["nodes"];
-	    }
-	}
-	
 	export class AppRouting {
 	    mode: string;
 	    apps: string[];
@@ -359,7 +350,6 @@ export namespace clash {
 	        this.apps = source["apps"];
 	    }
 	}
-	
 	export class BuildRuleRequest {
 	    type: string;
 	    payload: string;
@@ -523,6 +513,34 @@ export namespace clash {
 	        this.label = source["label"];
 	    }
 	}
+	export class ProxyChain {
+	    name: string;
+	    nodes: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ProxyChain(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.nodes = source["nodes"];
+	    }
+	}
+	export class RouteConfig {
+	    enabled: boolean;
+	    services: Record<string, string>;
+	
+	    static createFrom(source: any = {}) {
+	        return new RouteConfig(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.enabled = source["enabled"];
+	        this.services = source["services"];
+	    }
+	}
 	export class RuleTypeOption {
 	    value: string;
 	    label: string;
@@ -604,6 +622,26 @@ export namespace clash {
 	    }
 	}
 	
+	export class ServiceDef {
+	    key: string;
+	    label: string;
+	    icon: string;
+	    geosite: string;
+	    category: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ServiceDef(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.key = source["key"];
+	        this.label = source["label"];
+	        this.icon = source["icon"];
+	        this.geosite = source["geosite"];
+	        this.category = source["category"];
+	    }
+	}
 	export class SubIndexItem {
 	    id: string;
 	    name: string;
@@ -614,6 +652,10 @@ export namespace clash {
 	    total: number;
 	    expire: number;
 	    updated: number;
+	    fallbackUrls?: string[];
+	    headers?: Record<string, string>;
+	    webPageUrl?: string;
+	    convert?: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new SubIndexItem(source);
@@ -630,6 +672,26 @@ export namespace clash {
 	        this.total = source["total"];
 	        this.expire = source["expire"];
 	        this.updated = source["updated"];
+	        this.fallbackUrls = source["fallbackUrls"];
+	        this.headers = source["headers"];
+	        this.webPageUrl = source["webPageUrl"];
+	        this.convert = source["convert"];
+	    }
+	}
+	export class SubProbe {
+	    kind: string;
+	    nodeCount: number;
+	    error?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SubProbe(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.kind = source["kind"];
+	        this.nodeCount = source["nodeCount"];
+	        this.error = source["error"];
 	    }
 	}
 	export class TunConfig {
@@ -640,6 +702,7 @@ export namespace clash {
 	    dnsHijack: string[];
 	    strictRoute: boolean;
 	    mtu: number;
+	    gso: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new TunConfig(source);
@@ -654,6 +717,7 @@ export namespace clash {
 	        this.dnsHijack = source["dnsHijack"];
 	        this.strictRoute = source["strictRoute"];
 	        this.mtu = source["mtu"];
+	        this.gso = source["gso"];
 	    }
 	}
 
@@ -684,17 +748,6 @@ export namespace logger {
 
 export namespace main {
 	
-	export class GalleryItem {
-	    id: string;
-	    dataUrl: string;
-	    static createFrom(source: any = {}) { return new GalleryItem(source); }
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.id = source["id"];
-	        this.dataUrl = source["dataUrl"];
-	    }
-	}
-	
 	export class FileInfo {
 	    path: string;
 	    name: string;
@@ -707,6 +760,20 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.path = source["path"];
 	        this.name = source["name"];
+	    }
+	}
+	export class GalleryItem {
+	    id: string;
+	    dataUrl: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new GalleryItem(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.dataUrl = source["dataUrl"];
 	    }
 	}
 
@@ -821,7 +888,6 @@ export namespace sys {
 	        this.iconPng = source["iconPng"];
 	    }
 	}
-	
 	export class DataDirInfo {
 	    appDir: string;
 	    dataDir: string;

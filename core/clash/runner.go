@@ -90,7 +90,7 @@ func Start(ctx context.Context, tun bool) error {
 	}
 
 	binDir := utils.GetCoreBinDir()
-	exePath := filepath.Join(binDir, "clash.exe")
+	exePath := filepath.Join(binDir, coreExeName())
 	targetExeName := filepath.Base(exePath)
 
 	pidFile := utils.GetPidFilePath()
@@ -248,7 +248,7 @@ func Stop() error {
 		exitCh = processExitCh
 	}
 
-	targetExeName := filepath.Base(filepath.Join(utils.GetCoreBinDir(), "clash.exe"))
+	targetExeName := filepath.Base(filepath.Join(utils.GetCoreBinDir(), coreExeName()))
 	mu.Unlock()
 
 	if proc != nil {

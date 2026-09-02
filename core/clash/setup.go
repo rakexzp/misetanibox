@@ -59,7 +59,7 @@ func ClearLocalCoreVersionCache() {
 }
 
 func getLocalCoreVersionLocked(ctx context.Context) string {
-	path := filepath.Join(utils.GetCoreBinDir(), "clash.exe")
+	path := filepath.Join(utils.GetCoreBinDir(), coreExeName())
 
 	stat, err := os.Stat(path)
 	if err != nil || stat.IsDir() {
@@ -180,7 +180,7 @@ func PrepareCoreUpdate(ctx context.Context, assetURL string, strategy func() dow
 	defer coreBinaryMu.Unlock()
 
 	binDir := utils.GetCoreBinDir()
-	exePath := filepath.Join(binDir, "clash.exe")
+	exePath := filepath.Join(binDir, coreExeName())
 	zipPath := filepath.Join(binDir, "clash.update.zip")
 	stagedExe := exePath + ".new"
 

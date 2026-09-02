@@ -7,12 +7,14 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/mac"
 	"goclashz/core/logger"
 	"goclashz/core/runtimeassets"
 	"goclashz/core/sys"
@@ -137,7 +139,13 @@ func main() {
 		Height:    768,
 		MinWidth:  900,
 		MinHeight: 600,
-		Frameless: true,
+		// Linux: безрамочное окно с нашими кнопками. macOS: нативные «светофоры»,
+		// заголовок скрыт, контент под титлбаром (TitleBarHiddenInset) — по-Apple.
+		Frameless: runtime.GOOS != "darwin",
+		Mac: &mac.Options{
+			TitleBar:   mac.TitleBarHiddenInset(),
+			Appearance: mac.DefaultAppearance,
+		},
 
 		HideWindowOnClose: false,
 		StartHidden:       true,

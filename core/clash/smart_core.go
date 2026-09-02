@@ -37,7 +37,7 @@ func setSmartCoreActive(active bool) error {
 }
 
 func stockBackupPath() string { return filepath.Join(utils.GetCoreBinDir(), "clash.stock.exe") }
-func coreExePath() string     { return filepath.Join(utils.GetCoreBinDir(), "clash.exe") }
+func coreExePath() string     { return filepath.Join(utils.GetCoreBinDir(), coreExeName()) }
 func smartModelPath() string  { return filepath.Join(utils.GetCoreBinDir(), "Model.bin") }
 
 func InstallSmartCore(ctx context.Context) error {

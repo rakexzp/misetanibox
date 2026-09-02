@@ -10,8 +10,24 @@ export function AddRuleFromForm(arg1, arg2, arg3) {
   return window['go']['main']['App']['AddRuleFromForm'](arg1, arg2, arg3);
 }
 
+export function AddSubConverted(arg1, arg2, arg3) {
+  return window['go']['main']['App']['AddSubConverted'](arg1, arg2, arg3);
+}
+
+export function AddSubViaDNS(arg1, arg2) {
+  return window['go']['main']['App']['AddSubViaDNS'](arg1, arg2);
+}
+
+export function AddToGallery() {
+  return window['go']['main']['App']['AddToGallery']();
+}
+
 export function ApplyAppUpdate(arg1) {
   return window['go']['main']['App']['ApplyAppUpdate'](arg1);
+}
+
+export function ApplyGalleryToCard(arg1, arg2) {
+  return window['go']['main']['App']['ApplyGalleryToCard'](arg1, arg2);
 }
 
 export function CancelUpdateTask(arg1) {
@@ -28,6 +44,10 @@ export function CheckCoreUpdateAsync() {
 
 export function CheckTunEnv() {
   return window['go']['main']['App']['CheckTunEnv']();
+}
+
+export function ClearCardBg(arg1) {
+  return window['go']['main']['App']['ClearCardBg'](arg1);
 }
 
 export function ClearFinishedUpdateTasks() {
@@ -54,8 +74,16 @@ export function DeleteConfig(arg1) {
   return window['go']['main']['App']['DeleteConfig'](arg1);
 }
 
+export function DeleteFromGallery(arg1) {
+  return window['go']['main']['App']['DeleteFromGallery'](arg1);
+}
+
 export function DeleteRule(arg1, arg2, arg3) {
   return window['go']['main']['App']['DeleteRule'](arg1, arg2, arg3);
+}
+
+export function DisableWarp() {
+  return window['go']['main']['App']['DisableWarp']();
 }
 
 export function DoLocalImport(arg1, arg2) {
@@ -64,6 +92,10 @@ export function DoLocalImport(arg1, arg2) {
 
 export function DownloadPendingAppUpdateAsync() {
   return window['go']['main']['App']['DownloadPendingAppUpdateAsync']();
+}
+
+export function EnableWarp() {
+  return window['go']['main']['App']['EnableWarp']();
 }
 
 export function ExecuteRestore(arg1, arg2) {
@@ -90,12 +122,24 @@ export function GetAppBehavior() {
   return window['go']['main']['App']['GetAppBehavior']();
 }
 
+export function GetAppRouting(arg1) {
+  return window['go']['main']['App']['GetAppRouting'](arg1);
+}
+
 export function GetAppState() {
   return window['go']['main']['App']['GetAppState']();
 }
 
 export function GetAppVersion() {
   return window['go']['main']['App']['GetAppVersion']();
+}
+
+export function GetCardBgs() {
+  return window['go']['main']['App']['GetCardBgs']();
+}
+
+export function GetCloseConnOnSwitch() {
+  return window['go']['main']['App']['GetCloseConnOnSwitch']();
 }
 
 export function GetComponentFileInfo() {
@@ -134,6 +178,14 @@ export function GetEditableConfigs() {
   return window['go']['main']['App']['GetEditableConfigs']();
 }
 
+export function GetGallery() {
+  return window['go']['main']['App']['GetGallery']();
+}
+
+export function GetGpuSaver() {
+  return window['go']['main']['App']['GetGpuSaver']();
+}
+
 export function GetHelperServiceStatus() {
   return window['go']['main']['App']['GetHelperServiceStatus']();
 }
@@ -158,12 +210,20 @@ export function GetOutboundIPForRoute(arg1, arg2) {
   return window['go']['main']['App']['GetOutboundIPForRoute'](arg1, arg2);
 }
 
+export function GetProxyChains() {
+  return window['go']['main']['App']['GetProxyChains']();
+}
+
 export function GetProxyDelay(arg1, arg2) {
   return window['go']['main']['App']['GetProxyDelay'](arg1, arg2);
 }
 
 export function GetRecentLogs() {
   return window['go']['main']['App']['GetRecentLogs']();
+}
+
+export function GetRouteConfig() {
+  return window['go']['main']['App']['GetRouteConfig']();
 }
 
 export function GetRuleFormOptions(arg1) {
@@ -178,8 +238,20 @@ export function GetRuntimeAssetStatus() {
   return window['go']['main']['App']['GetRuntimeAssetStatus']();
 }
 
+export function GetServiceCatalog() {
+  return window['go']['main']['App']['GetServiceCatalog']();
+}
+
+export function GetSmartRoute() {
+  return window['go']['main']['App']['GetSmartRoute']();
+}
+
 export function GetStartupTaskInfo() {
   return window['go']['main']['App']['GetStartupTaskInfo']();
+}
+
+export function GetSubHeaders(arg1) {
+  return window['go']['main']['App']['GetSubHeaders'](arg1);
 }
 
 export function GetTunConfig() {
@@ -188,6 +260,10 @@ export function GetTunConfig() {
 
 export function GetUwpApps() {
   return window['go']['main']['App']['GetUwpApps']();
+}
+
+export function GetWarpEnabled() {
+  return window['go']['main']['App']['GetWarpEnabled']();
 }
 
 export function GetWintunVersion() {
@@ -202,6 +278,10 @@ export function InstallHelperService() {
   return window['go']['main']['App']['InstallHelperService']();
 }
 
+export function InstallSmartCore() {
+  return window['go']['main']['App']['InstallSmartCore']();
+}
+
 export function InstallTunDriverAsync(arg1) {
   return window['go']['main']['App']['InstallTunDriverAsync'](arg1);
 }
@@ -210,8 +290,24 @@ export function IsConfigEditable(arg1) {
   return window['go']['main']['App']['IsConfigEditable'](arg1);
 }
 
+export function IsSmartCore() {
+  return window['go']['main']['App']['IsSmartCore']();
+}
+
+export function ListInstalledApps() {
+  return window['go']['main']['App']['ListInstalledApps']();
+}
+
+export function ProbeSubURL(arg1, arg2) {
+  return window['go']['main']['App']['ProbeSubURL'](arg1, arg2);
+}
+
 export function ReadConfigText(arg1) {
   return window['go']['main']['App']['ReadConfigText'](arg1);
+}
+
+export function RemoveSmartCore() {
+  return window['go']['main']['App']['RemoveSmartCore']();
 }
 
 export function RemoveUpdateTask(arg1) {
@@ -262,6 +358,10 @@ export function SaveAppBehavior(arg1) {
   return window['go']['main']['App']['SaveAppBehavior'](arg1);
 }
 
+export function SaveCardToGallery(arg1) {
+  return window['go']['main']['App']['SaveCardToGallery'](arg1);
+}
+
 export function SaveConfigText(arg1, arg2) {
   return window['go']['main']['App']['SaveConfigText'](arg1, arg2);
 }
@@ -278,8 +378,20 @@ export function SaveNetworkConfig(arg1) {
   return window['go']['main']['App']['SaveNetworkConfig'](arg1);
 }
 
+export function SaveProxyChains(arg1) {
+  return window['go']['main']['App']['SaveProxyChains'](arg1);
+}
+
+export function SaveRouteConfig(arg1) {
+  return window['go']['main']['App']['SaveRouteConfig'](arg1);
+}
+
 export function SaveRuleSection(arg1, arg2, arg3) {
   return window['go']['main']['App']['SaveRuleSection'](arg1, arg2, arg3);
+}
+
+export function SaveSubHeaders(arg1, arg2) {
+  return window['go']['main']['App']['SaveSubHeaders'](arg1, arg2);
 }
 
 export function SaveThemePreference(arg1) {
@@ -298,6 +410,10 @@ export function SearchLogs(arg1) {
   return window['go']['main']['App']['SearchLogs'](arg1);
 }
 
+export function SelectAppExe() {
+  return window['go']['main']['App']['SelectAppExe']();
+}
+
 export function SelectBackupFile() {
   return window['go']['main']['App']['SelectBackupFile']();
 }
@@ -312,6 +428,30 @@ export function SelectLocalFile() {
 
 export function SelectProxy(arg1, arg2) {
   return window['go']['main']['App']['SelectProxy'](arg1, arg2);
+}
+
+export function SetAppRouting(arg1, arg2, arg3) {
+  return window['go']['main']['App']['SetAppRouting'](arg1, arg2, arg3);
+}
+
+export function SetCardBg(arg1) {
+  return window['go']['main']['App']['SetCardBg'](arg1);
+}
+
+export function SetCardBgData(arg1, arg2) {
+  return window['go']['main']['App']['SetCardBgData'](arg1, arg2);
+}
+
+export function SetCloseConnOnSwitch(arg1) {
+  return window['go']['main']['App']['SetCloseConnOnSwitch'](arg1);
+}
+
+export function SetGpuSaver(arg1) {
+  return window['go']['main']['App']['SetGpuSaver'](arg1);
+}
+
+export function SetSmartRoute(arg1) {
+  return window['go']['main']['App']['SetSmartRoute'](arg1);
 }
 
 export function ShowMainWindow() {
@@ -394,126 +534,46 @@ export function UpdateSub(arg1, arg2) {
   return window['go']['main']['App']['UpdateSub'](arg1, arg2);
 }
 
+export function UpdateSubEx(arg1, arg2, arg3) {
+  return window['go']['main']['App']['UpdateSubEx'](arg1, arg2, arg3);
+}
+
 export function ValidateConfigText(arg1) {
   return window['go']['main']['App']['ValidateConfigText'](arg1);
 }
 
-export function ListInstalledApps() {
-  return window['go']['main']['App']['ListInstalledApps']();
-}
-
-export function SelectAppExe() {
-  return window['go']['main']['App']['SelectAppExe']();
-}
-
-export function GetAppRouting(arg1) {
-  return window['go']['main']['App']['GetAppRouting'](arg1);
-}
-
-export function SetAppRouting(arg1, arg2, arg3) {
-  return window['go']['main']['App']['SetAppRouting'](arg1, arg2, arg3);
-}
-
-export function AddSubViaDNS(arg1, arg2) {
-  return window['go']['main']['App']['AddSubViaDNS'](arg1, arg2);
-}
-
-export function IsSmartCore() {
-  return window['go']['main']['App']['IsSmartCore']();
-}
-
-export function InstallSmartCore() {
-  return window['go']['main']['App']['InstallSmartCore']();
-}
-
-export function RemoveSmartCore() {
-  return window['go']['main']['App']['RemoveSmartCore']();
-}
-
-export function GetSmartRoute() {
-  return window['go']['main']['App']['GetSmartRoute']();
-}
-
-export function SetSmartRoute(arg1) {
-  return window['go']['main']['App']['SetSmartRoute'](arg1);
-}
-
-export function SetCardBg(arg1) {
-  return window['go']['main']['App']['SetCardBg'](arg1);
-}
-
-export function GetCardBgs() {
-  return window['go']['main']['App']['GetCardBgs']();
-}
-
-export function ClearCardBg(arg1) {
-  return window['go']['main']['App']['ClearCardBg'](arg1);
-}
-
-export function GetGallery() {
-  return window['go']['main']['App']['GetGallery']();
-}
-
-export function AddToGallery() {
-  return window['go']['main']['App']['AddToGallery']();
-}
-
-export function SaveCardToGallery(arg1) {
-  return window['go']['main']['App']['SaveCardToGallery'](arg1);
-}
-
-export function ApplyGalleryToCard(arg1, arg2) {
-  return window['go']['main']['App']['ApplyGalleryToCard'](arg1, arg2);
-}
-
-export function DeleteFromGallery(arg1) {
-  return window['go']['main']['App']['DeleteFromGallery'](arg1);
-}
-
-export function WorkshopList(arg1, arg2, arg3) {
-  return window['go']['main']['App']['WorkshopList'](arg1, arg2, arg3);
-}
-
-export function WorkshopGet(arg1) {
-  return window['go']['main']['App']['WorkshopGet'](arg1);
+export function WorkshopDelete(arg1) {
+  return window['go']['main']['App']['WorkshopDelete'](arg1);
 }
 
 export function WorkshopDownload(arg1) {
   return window['go']['main']['App']['WorkshopDownload'](arg1);
 }
 
-export function WorkshopLike(arg1) {
-  return window['go']['main']['App']['WorkshopLike'](arg1);
-}
-
-export function WorkshopReport(arg1, arg2) {
-  return window['go']['main']['App']['WorkshopReport'](arg1, arg2);
-}
-
-export function WorkshopPublish(arg1, arg2) {
-  return window['go']['main']['App']['WorkshopPublish'](arg1, arg2);
+export function WorkshopEdit(arg1, arg2, arg3) {
+  return window['go']['main']['App']['WorkshopEdit'](arg1, arg2, arg3);
 }
 
 export function WorkshopFetchImage(arg1) {
   return window['go']['main']['App']['WorkshopFetchImage'](arg1);
 }
 
-export function SetCardBgData(arg1, arg2) {
-  return window['go']['main']['App']['SetCardBgData'](arg1, arg2);
+export function WorkshopGet(arg1) {
+  return window['go']['main']['App']['WorkshopGet'](arg1);
 }
 
-export function GetProxyChains() {
-  return window['go']['main']['App']['GetProxyChains']();
+export function WorkshopLike(arg1) {
+  return window['go']['main']['App']['WorkshopLike'](arg1);
 }
 
-export function SaveProxyChains(arg1) {
-  return window['go']['main']['App']['SaveProxyChains'](arg1);
+export function WorkshopList(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['WorkshopList'](arg1, arg2, arg3, arg4, arg5);
 }
 
-export function GetGpuSaver() {
-  return window['go']['main']['App']['GetGpuSaver']();
+export function WorkshopPublish(arg1, arg2) {
+  return window['go']['main']['App']['WorkshopPublish'](arg1, arg2);
 }
 
-export function SetGpuSaver(arg1) {
-  return window['go']['main']['App']['SetGpuSaver'](arg1);
+export function WorkshopReport(arg1, arg2) {
+  return window['go']['main']['App']['WorkshopReport'](arg1, arg2);
 }

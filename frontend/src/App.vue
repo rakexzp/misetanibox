@@ -1,5 +1,7 @@
 <template>
-  <div class="app-shell" :class="{ dark: globalState.theme === 'dark' }">
+  <!-- macOS: нативные светофоры слева в скрытом титлбаре → отступ сверху, свои кнопки окна не рисуем -->
+  <div class="app-shell" :class="{ dark: globalState.theme === 'dark', mac: globalState.platform === 'darwin' }"
+       :style="globalState.platform === 'darwin' ? { paddingTop: '28px' } : undefined">
     <div class="drag-bar" style="--wails-draggable:drag">
       <div class="top-actions" style="--wails-draggable:none">
         <button
@@ -11,7 +13,7 @@
           <span v-html="globalState.uiMode === 'lite' ? ICONS.settings : ICONS.zap"></span>
           <span class="mode-switch-label">{{ globalState.uiMode === 'lite' ? 'Про' : 'Lite' }}</span>
         </button>
-        <div class="window-controls">
+        <div class="window-controls" v-if="globalState.platform !== 'darwin'">
           <button @click="WindowMinimise" class="ctrl-btn" title="Свернуть" v-html="ICONS.min"></button>
           <button @click="handleToggleMaximise" class="ctrl-btn" title="Развернуть/Восстановить" v-html="isMaximized ? ICONS.restore : ICONS.max"></button>
           <button @click="handleClose" class="ctrl-btn close-btn" title="Закрыть" v-html="ICONS.close"></button>
