@@ -595,6 +595,7 @@ const runModeWorker = async (targetMode: string) => {
 .switch-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .action-card { padding: 20px 24px; background: var(--surface); border: none; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.2s cubic-bezier(0.4,0,0.2,1); }
 .action-card.on { background: var(--accent); }
+.card-content { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .icon-ring { width: 40px; height: 40px; border-radius: 12px; background: var(--surface-hover); display: flex; align-items: center; justify-content: center; color: var(--text-sub); transition: 0.3s; }
 .icon-ring :deep(svg) { width: 22px; height: 22px; }
 .on .icon-ring { background: rgba(128,128,128,0.25) !important; color: var(--accent-fg); }
