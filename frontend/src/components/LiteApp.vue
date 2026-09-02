@@ -6,7 +6,7 @@
     <header class="cover-head">
       <div class="cover-brand-block">
         <span class="cover-brand">MISETANIBOX</span>
-        <span class="cover-meta">№ {{ issueNo }} · {{ today }}</span>
+        <span class="cover-meta">№ {{ pingingCurrent ? '…' : issueNo }} · {{ today }}</span>
       </div>
       <div class="cover-head-actions">
         <button class="cover-icon-btn" title="Свои обои" @click="pickLiteBg"><span v-html="ICONS.image"></span></button>
@@ -21,9 +21,10 @@
     </div>
     <div class="cover-sub">
       <span class="cover-sub-name truncate">{{ currentServer ? serverLabel(currentServer) : (hasConfig ? 'Сервер не выбран' : 'Добавьте подписку') }}</span>
-      <span v-if="currentDelay != null" class="cover-sub-ping">{{ currentDelay > 0 ? currentDelay + ' мс' : '—' }}</span>
-      <span v-if="connected" class="cover-sub-traffic"><i v-html="ICONS.arrowDown"></i>{{ traffic.down }} <i v-html="ICONS.arrowUp"></i>{{ traffic.up }}</span>
+      <span v-if="pingingCurrent" class="cover-sub-ping is-pinging"><span class="lite-ping-spin"></span>пингую</span>
+      <span v-else-if="currentDelay != null" class="cover-sub-ping">{{ currentDelay > 0 ? currentDelay + ' мс' : '—' }}</span>
     </div>
+    <div v-if="connected" class="cover-sub-traffic"><i v-html="ICONS.arrowDown"></i><span class="tv">{{ traffic.down }}</span><i v-html="ICONS.arrowUp"></i><span class="tv">{{ traffic.up }}</span></div>
 
     <div class="cover-bar">
       <button class="cover-primary" :disabled="busy || !hasConfig" @click="toggleConnect">
@@ -260,6 +261,13 @@ const statusText = computed(() => {
 });
 
 const currentDelay = computed(() => delayOf(currentServer.value));
+const pingingCurrent = computed(() => !!currentServer.value && testingSet.has(currentServer.value));
+function pingOne(name: string) {
+  if (!name || name === SMART_NAME || testingSet.has(name)) return;
+  testingSet.add(name);
+  API.TestAllProxies([name]).catch(() => testingSet.delete(name));
+  setTimeout(() => testingSet.delete(name), 12000);
+}
 function serverLabel(name: string): string {
   if (!name) return '';
   if (name === autoGroup.value) return 'Авто · быстрейший';
@@ -354,6 +362,7 @@ async function pick(name: string) {
     await API.SelectProxy(mainSelector.value, name);
     currentServer.value = name;
     openServers.value = false;
+    if (delayOf(name) == null) pingOne(name);
   } catch (e) {
     await showAlert('Не удалось выбрать сервер: ' + e, 'Ошибка', true);
   }
@@ -409,8 +418,8 @@ async function toggleConnect() {
     if (globalState.isRunning && noExit.has(currentServer.value.toUpperCase()) && (autoGroup.value || servers.value.length)) {
       await pick(autoGroup.value || servers.value[0].name);
     }
-    if (globalState.isRunning && currentServer.value && currentServer.value !== SMART_NAME && delayOf(currentServer.value) == null) {
-      API.TestAllProxies([currentServer.value]).catch(() => {});
+    if (globalState.isRunning && currentServer.value && delayOf(currentServer.value) == null) {
+      pingOne(currentServer.value);
     }
   } catch (e) {
     await showAlert('Не удалось переключить подключение: ' + e, 'Ошибка', true);
@@ -523,7 +532,7 @@ onUnmounted(() => {
   background-image: radial-gradient(120% 70% at 20% 0%, #4a5262 0%, transparent 60%), radial-gradient(90% 60% at 90% 40%, #2b303a 0%, transparent 60%), linear-gradient(160deg, #23262e, #0f1013);
 }
 .cover-scrim { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.15) 28%, rgba(0,0,0,0.3) 55%, rgba(0,0,0,0.85) 100%); }
-.cover-head, .cover-title, .cover-sub, .cover-bar, .cover-spacer { position: relative; }
+.cover-head, .cover-title, .cover-sub, .cover-sub-traffic, .cover-bar, .cover-spacer { position: relative; }
 
 .cover-head { display: flex; align-items: flex-start; justify-content: space-between; }
 .cover-brand-block { display: flex; flex-direction: column; gap: 4px; }
@@ -549,11 +558,16 @@ onUnmounted(() => {
 @keyframes cover-pulse { 50% { opacity: 0.6; } }
 
 .cover-sub { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.cover-sub-traffic { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-mono) !important; font-size: 12px; color: rgba(255,255,255,0.75); white-space: nowrap; flex-shrink: 0; }
+.cover-sub-traffic { display: flex; align-items: center; gap: 4px; margin-top: -6px; font-size: 12px; color: rgba(255,255,255,0.7); white-space: nowrap; }
+.cover-sub-traffic .tv { display: inline-block; min-width: 11ch; text-align: left; margin-right: 10px; font-family: var(--font-mono) !important; font-variant-numeric: tabular-nums; }
+.cover-sub-traffic i { display: inline-flex; }
+.cover-sub-traffic i :deep(svg) { width: 11px; height: 11px; }
 .cover-sub-traffic i { display: inline-flex; }
 .cover-sub-traffic i :deep(svg) { width: 11px; height: 11px; }
 .cover-sub-name { font-size: 15px; font-weight: 600; color: rgba(255,255,255,0.92); }
-.cover-sub-ping { font-family: var(--font-mono) !important; font-size: 13px; color: rgba(255,255,255,0.7); flex-shrink: 0; }
+.cover-sub-ping { font-family: var(--font-mono) !important; font-size: 13px; color: rgba(255,255,255,0.7); flex-shrink: 0; min-width: 6ch; text-align: right; font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.cover-sub-ping.is-pinging { color: rgba(255,255,255,0.55); }
+.cover-sub-ping .lite-ping-spin { width: 11px; height: 11px; }
 
 .cover-bar { display: flex; align-items: center; gap: 10px; }
 .cover-primary {
@@ -601,7 +615,7 @@ onUnmounted(() => {
 .lite-dot.on { background: #fff; }
 .lite-flag { width: 20px; height: 15px; border-radius: 3px; object-fit: cover; flex-shrink: 0; }
 .lite-item-name { flex: 1; min-width: 0; font-size: 15px; }
-.lite-item-ping { font-family: var(--font-mono) !important; font-size: 12px; font-weight: 600; flex-shrink: 0; color: rgba(255,255,255,0.75); }
+.lite-item-ping { font-family: var(--font-mono) !important; font-size: 12px; font-weight: 600; flex-shrink: 0; color: rgba(255,255,255,0.75); min-width: 6ch; text-align: right; font-variant-numeric: tabular-nums; }
 .lite-item-ping.good { color: #fff; }
 .lite-item-ping.bad { color: rgba(255,255,255,0.45); }
 .lite-ping-spin { width: 14px; height: 14px; flex-shrink: 0; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; animation: lite-spin 0.8s linear infinite; }
