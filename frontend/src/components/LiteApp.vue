@@ -1,121 +1,112 @@
 <template>
-  <div class="lite-root">
-    <div class="lite-phone">
-            <header class="lite-head">
-        <div class="lite-brand">Misetanibox</div>
-        <div class="lite-head-actions">
-          <button class="lite-icon-btn" title="Про-режим" @click="switchToPro">
-            <span v-html="ICONS.settings"></span>
-          </button>
-        </div>
-      </header>
+  <div class="lite-root" :class="statusClass">
+    <div class="cover-bg" :style="bgStyle"></div>
+    <div class="cover-scrim"></div>
 
-            <div class="lite-center">
-        <button
-          class="lite-orb"
-          :class="statusClass"
-          :disabled="busy || !hasConfig"
-          @click="toggleConnect"
-        >
-          <span class="lite-orb-ring"></span>
-          <span class="lite-orb-icon" v-html="ICONS.power"></span>
-        </button>
-        <div class="lite-status">{{ statusText }}</div>
-        <div class="lite-traffic" v-if="connected">
-          <span><i v-html="ICONS.arrowDown"></i> {{ traffic.down }}</span>
-          <span><i v-html="ICONS.arrowUp"></i> {{ traffic.up }}</span>
-        </div>
+    <header class="cover-head">
+      <div class="cover-brand-block">
+        <span class="cover-brand">MISETANIBOX</span>
+        <span class="cover-meta">№ {{ issueNo }} · {{ today }}</span>
       </div>
-
-            <div class="lite-server" @click="openServers = !openServers">
-        <div class="lite-server-main">
-          <span class="lite-server-label">Сервер</span>
-          <span class="lite-server-name truncate">{{ currentServer ? displayName(currentServer) : 'Не выбран' }}</span>
-        </div>
-        <span class="lite-server-ping" v-if="currentDelay != null" :class="pingClass(currentDelay)">
-          {{ currentDelay > 0 ? currentDelay + ' мс' : '—' }}
-        </span>
-        <span class="lite-chev" :class="{ open: openServers }" v-html="ICONS.chevronRight"></span>
+      <div class="cover-head-actions">
+        <button class="cover-icon-btn" title="Свои обои" @click="pickLiteBg"><span v-html="ICONS.image"></span></button>
+        <button class="cover-icon-btn" title="Про-режим" @click="switchToPro"><span v-html="ICONS.settings"></span></button>
       </div>
+    </header>
 
-            <Transition name="lite-expand">
-        <div v-if="openServers" class="lite-server-list">
+    <div class="cover-spacer"></div>
+
+    <div class="cover-title">
+      <span v-for="(w, i) in titleLines" :key="i">{{ w }}</span>
+    </div>
+    <div class="cover-sub">
+      <span class="cover-sub-name truncate">{{ currentServer ? displayName(currentServer) : (hasConfig ? 'Сервер не выбран' : 'Добавьте подписку') }}</span>
+      <span v-if="currentDelay != null" class="cover-sub-ping">{{ currentDelay > 0 ? currentDelay + ' мс' : '—' }}</span>
+    </div>
+
+    <div class="cover-bar">
+      <button class="cover-primary" :disabled="busy || !hasConfig" @click="toggleConnect">
+        {{ busy ? 'ПОДКЛЮЧАЮ…' : (connected ? 'ОТКЛЮЧИТЬ' : 'ПОДКЛЮЧИТЬ') }}
+      </button>
+      <span v-if="connected" class="cover-pill cover-traffic"><i v-html="ICONS.arrowDown"></i>{{ traffic.down }} <i v-html="ICONS.arrowUp"></i>{{ traffic.up }}</span>
+      <button class="cover-pill cover-round" title="Серверы" @click="openServers = true"><span v-html="ICONS.list"></span></button>
+    </div>
+
+    <Transition name="lite-fade">
+      <div v-if="openServers" class="cover-sheet-overlay" @click.self="openServers = false">
+        <div class="cover-sheet">
+          <span class="cover-sheet-handle"></span>
           <div class="lite-list-toolbar">
             <span>{{ servers.length }} серверов</span>
             <button class="lite-test-btn" @click.stop="pingAll" :disabled="testing">
               {{ testing ? 'Проверка…' : 'Проверить' }}
             </button>
           </div>
-                    <button
-            v-if="SMART_ENABLED"
-            class="lite-server-item lite-smart-item"
-            :class="{ active: currentServer === SMART_NAME }"
-            @click="pickSmart"
-          >
-            <span class="lite-smart-ico" v-html="ICONS.zap"></span>
-            <span class="lite-item-name">Смарт (авто)</span>
-            <span class="lite-item-tag">умный выбор</span>
-          </button>
-
-          <div v-if="!servers.length" class="lite-empty">Нет серверов. Добавьте подписку.</div>
-          <button
-            v-for="s in servers"
-            :key="s.name"
-            class="lite-server-item"
-            :class="{ active: s.name === currentServer }"
-            @click="pick(s.name)"
-          >
-            <span class="lite-dot" :class="{ on: s.name === currentServer }"></span>
-            <img v-if="flagUrl(s.name)" :src="flagUrl(s.name)!" class="lite-flag" alt="" />
-            <span class="lite-item-name truncate">{{ displayName(s.name) }}</span>
-            <span v-if="testingSet.has(s.name)" class="lite-ping-spin"></span>
-            <span v-else class="lite-item-ping" :class="pingClass(delayOf(s.name))">
-              {{ delayLabel(s.name) }}
-            </span>
-          </button>
+          <div class="lite-server-list">
+            <button
+              v-if="SMART_ENABLED"
+              class="lite-server-item lite-smart-item"
+              :class="{ active: currentServer === SMART_NAME }"
+              @click="pickSmart"
+            >
+              <span class="lite-smart-ico" v-html="ICONS.zap"></span>
+              <span class="lite-item-name">Смарт (авто)</span>
+              <span class="lite-item-tag">умный выбор</span>
+            </button>
+            <div v-if="!servers.length" class="lite-empty">Нет серверов. Добавьте подписку.</div>
+            <button
+              v-for="s in servers"
+              :key="s.name"
+              class="lite-server-item"
+              :class="{ active: s.name === currentServer }"
+              @click="pick(s.name)"
+            >
+              <span class="lite-dot" :class="{ on: s.name === currentServer }"></span>
+              <img v-if="flagUrl(s.name)" :src="flagUrl(s.name)!" class="lite-flag" alt="" />
+              <span class="lite-item-name truncate">{{ displayName(s.name) }}</span>
+              <span v-if="testingSet.has(s.name)" class="lite-ping-spin"></span>
+              <span v-else class="lite-item-ping" :class="pingClass(delayOf(s.name))">
+                {{ delayLabel(s.name) }}
+              </span>
+            </button>
+          </div>
+          <div v-if="showConfigs" class="lite-config-list">
+            <button
+              v-for="c in configs"
+              :key="c.id"
+              class="lite-config-item"
+              :class="{ active: c.id === resolvedId }"
+              @click="selectConfig(c.id)"
+            >
+              <span class="lite-dot" :class="{ on: c.id === resolvedId }"></span>
+              <span class="truncate">{{ c.name }}</span>
+            </button>
+          </div>
+          <footer class="lite-foot">
+            <button
+              class="lite-config-current truncate"
+              :class="{ clickable: configs.length > 1 }"
+              @click="configs.length > 1 && (showConfigs = !showConfigs)"
+            >
+              {{ resolvedName || 'Подписка не добавлена' }}
+              <span v-if="configs.length > 1" class="lite-chev-mini" :class="{ open: showConfigs }" v-html="ICONS.chevronRight"></span>
+            </button>
+            <button class="lite-add-link" @click="showAddSub = true">
+              {{ hasConfig ? '+ подписка' : '+ Добавить подписку' }}
+            </button>
+          </footer>
         </div>
-      </Transition>
+      </div>
+    </Transition>
 
-            <Transition name="lite-expand">
-        <div v-if="showConfigs" class="lite-config-list">
-          <button
-            v-for="c in configs"
-            :key="c.id"
-            class="lite-config-item"
-            :class="{ active: c.id === resolvedId }"
-            @click="selectConfig(c.id)"
-          >
-            <span class="lite-dot" :class="{ on: c.id === resolvedId }"></span>
-            <span class="truncate">{{ c.name }}</span>
-          </button>
-        </div>
-      </Transition>
-
-            <footer class="lite-foot">
-        <button
-          class="lite-config-current truncate"
-          :class="{ clickable: configs.length > 1 }"
-          @click="configs.length > 1 && (showConfigs = !showConfigs)"
-        >
-          {{ resolvedName || 'Подписка не добавлена' }}
-          <span v-if="configs.length > 1" class="lite-chev-mini" :class="{ open: showConfigs }" v-html="ICONS.chevronRight"></span>
-        </button>
-        <button class="lite-add-link" @click="showAddSub = true">
-          {{ hasConfig ? '+ подписка' : '+ Добавить подписку' }}
-        </button>
-      </footer>
-    </div>
-
-        <Transition name="lite-fade">
+    <Transition name="lite-fade">
       <div v-if="showAddSub" class="lite-modal-overlay" @click.self="closeAddSub">
         <div class="lite-modal">
           <h3>Добавить подписку</h3>
-
           <div class="lite-seg">
             <button class="lite-seg-btn" :class="{ active: addMode === 'url' }" @click="addMode = 'url'">По ссылке</button>
             <button class="lite-seg-btn" :class="{ active: addMode === 'dns' }" @click="addMode = 'dns'">Через DNS</button>
           </div>
-
           <label class="lite-field-label">{{ addMode === 'dns' ? 'Домен (TXT-запись)' : 'Ссылка на подписку' }}</label>
           <input
             v-model="subUrl"
@@ -152,7 +143,7 @@ import { ref, reactive, computed, onMounted, onUnmounted } from 'vue';
 import * as API from '../../wailsjs/go/main/App';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
 import {
-  globalState, setUiMode, setTunIntent, showAlert, showConfirm, updateStateFromBackend,
+  globalState, setUiMode, setTunIntent, showAlert, showConfirm, updateStateFromBackend, setCardBg,
 } from '../store';
 import { ICONS } from '../utils/icons';
 import { flagUrl, displayName } from '../utils/flags';
@@ -186,6 +177,30 @@ const resolvedName = computed(() =>
 );
 const hasConfig = computed(() => !!resolvedId.value);
 const connected = computed(() => globalState.isRunning && globalState.actualTun);
+
+// обложка: свои обои (ключ lite) → обои героя Консоли → дефолтный градиент
+const bgStyle = computed(() => {
+  const url = globalState.cardBgs.lite || globalState.cardBgs.hero;
+  return url ? { backgroundImage: `url(${url})` } : {};
+});
+async function pickLiteBg() {
+  try {
+    const url = await (API as any).SetCardBg('lite');
+    if (url) setCardBg('lite', url);
+  } catch (e) { await showAlert('Не удалось выбрать обои: ' + e, 'Ошибка', true); }
+}
+const titleLines = computed(() => {
+  if (busy.value) return ['ПОД', 'КЛЮ', 'ЧАЮ'];
+  if (!hasConfig.value) return ['НЕТ', 'ПОД', 'ПИСКИ'];
+  return connected.value ? ['ПОД', 'КЛЮ', 'ЧЕНО'] : ['ОТ', 'КЛЮ', 'ЧЕНО'];
+});
+const issueNo = computed(() => {
+  const d = currentDelay.value;
+  const code = (flagUrl(currentServer.value) || '').match(/\/([a-z]{2})\.svg/i)?.[1]?.toUpperCase();
+  const n = d && d > 0 ? String(d) : '—';
+  return code ? `${n} · ${code}` : n;
+});
+const today = (() => { const d = new Date(); const p = (n: number) => String(n).padStart(2, '0'); return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()}`; })();
 
 async function loadConfigs() {
   try {
@@ -436,188 +451,135 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+@font-face { font-family: 'Unbounded'; font-style: normal; font-weight: 500 900; font-display: swap; src: url('/fonts/unbounded-900-cyr.woff2') format('woff2'); unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: 'Unbounded'; font-style: normal; font-weight: 500 900; font-display: swap; src: url('/fonts/unbounded-900-lat.woff2') format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
 .lite-root {
-  position: relative;
-  flex: 1;
-  display: flex;
-  align-items: stretch;
-  justify-content: center;
-  padding: 16px;
-  overflow: hidden;
+  position: relative; flex: 1; min-height: 0; overflow: hidden;
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 24px 22px 26px; color: #fff; background: #0f1013;
+  --display: 'Unbounded', 'Arial Black', Impact, sans-serif;
 }
-
-.lite-phone {
-  width: 100%;
-  max-width: 420px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  background: var(--surface);
-  border: 1px solid var(--surface-hover);
-  border-radius: 24px;
-  padding: 20px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+.cover-bg {
+  position: absolute; inset: 0; background-size: cover; background-position: center;
+  background-image: radial-gradient(120% 70% at 20% 0%, #4a5262 0%, transparent 60%), radial-gradient(90% 60% at 90% 40%, #2b303a 0%, transparent 60%), linear-gradient(160deg, #23262e, #0f1013);
 }
+.cover-scrim { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.15) 28%, rgba(0,0,0,0.3) 55%, rgba(0,0,0,0.85) 100%); }
+.cover-head, .cover-title, .cover-sub, .cover-bar, .cover-spacer { position: relative; }
 
-.lite-head { display: flex; align-items: center; justify-content: space-between; }
-.lite-brand { font-size: 1.15rem; font-weight: 800; color: var(--text-main); letter-spacing: -0.01em; }
-.lite-icon-btn {
-  width: 36px; height: 36px; border-radius: 10px; border: none; cursor: pointer;
-  background: transparent; color: var(--text-muted);
-  display: flex; align-items: center; justify-content: center;
+.cover-head { display: flex; align-items: flex-start; justify-content: space-between; }
+.cover-brand-block { display: flex; flex-direction: column; gap: 4px; }
+.cover-brand { font-family: var(--display); font-size: 15px; font-weight: 900; letter-spacing: -0.02em; }
+.cover-meta { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em; color: rgba(255,255,255,0.7); }
+.cover-head-actions { display: flex; gap: 6px; }
+.cover-icon-btn {
+  width: 40px; height: 40px; border-radius: 12px; border: none; cursor: pointer;
+  background: rgba(255,255,255,0.12); color: #fff; display: flex; align-items: center; justify-content: center;
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  transition: background 0.2s, transform 0.1s;
 }
-.lite-icon-btn:hover { background: var(--surface-hover, rgba(127,127,127,0.1)); color: var(--text-main); }
-.lite-icon-btn :deep(svg) { width: 20px; height: 20px; }
+.cover-icon-btn:hover { background: rgba(255,255,255,0.2); }
+.cover-icon-btn:active { transform: scale(0.95); }
+.cover-icon-btn :deep(svg) { width: 18px; height: 18px; }
 
-.lite-center { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 24px 0 8px; }
+.cover-spacer { flex: 1; }
 
-.lite-orb {
-  position: relative;
-  width: 148px; height: 148px; border-radius: 50%;
-  border: none; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--surface-hover, rgba(127,127,127,0.08));
-  transition: background 0.25s, box-shadow 0.25s, transform 0.1s;
+.cover-title { display: flex; flex-direction: column; font-family: var(--display); font-weight: 900; font-size: clamp(44px, 14vw, 64px); line-height: 0.92; letter-spacing: -0.04em; text-transform: uppercase; }
+.cover-title span { display: block; }
+.lite-root.off .cover-title { color: rgba(255,255,255,0.55); }
+.lite-root.connecting .cover-title { animation: cover-pulse 1.2s ease-in-out infinite; }
+@keyframes cover-pulse { 50% { opacity: 0.6; } }
+
+.cover-sub { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.cover-sub-name { font-size: 15px; font-weight: 600; color: rgba(255,255,255,0.92); }
+.cover-sub-ping { font-family: var(--font-mono); font-size: 13px; color: rgba(255,255,255,0.7); flex-shrink: 0; }
+
+.cover-bar { display: flex; align-items: center; gap: 10px; }
+.cover-primary {
+  flex: 1; min-height: 52px; border: none; border-radius: 999px; cursor: pointer;
+  background: #fff; color: #111; font-family: var(--display); font-size: 13px; font-weight: 700; letter-spacing: 0.02em;
+  transition: transform 0.1s, opacity 0.2s;
 }
-.lite-orb:active { transform: scale(0.97); }
-.lite-orb:disabled { opacity: 0.6; cursor: not-allowed; }
-.lite-orb-icon { display: flex; }
-.lite-orb-icon :deep(svg) { width: 52px; height: 52px; }
-.lite-orb-ring {
-  position: absolute; inset: -6px; border-radius: 50%;
-  border: 2px solid transparent; transition: border-color 0.25s;
+.cover-primary:hover { opacity: 0.92; }
+.cover-primary:active { transform: scale(0.97); }
+.cover-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.cover-pill {
+  min-height: 52px; padding: 0 16px; border: none; border-radius: 999px; cursor: default;
+  background: rgba(255,255,255,0.14); color: #fff; display: inline-flex; align-items: center; gap: 6px;
+  -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+  font-family: var(--font-mono); font-size: 12px; font-weight: 600; white-space: nowrap;
 }
+.cover-traffic i { display: inline-flex; }
+.cover-traffic i :deep(svg) { width: 12px; height: 12px; }
+.cover-round { width: 52px; padding: 0; justify-content: center; cursor: pointer; transition: background 0.2s, transform 0.1s; }
+.cover-round:hover { background: rgba(255,255,255,0.22); }
+.cover-round:active { transform: scale(0.95); }
+.cover-round :deep(svg) { width: 20px; height: 20px; }
 
-.lite-orb.off { color: var(--text-muted); }
-.lite-orb.on {
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
-  color: var(--accent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent), 0 8px 30px color-mix(in srgb, var(--accent) 30%, transparent);
+/* лист серверов */
+.cover-sheet-overlay { position: absolute; inset: 0; z-index: 20; background: rgba(0,0,0,0.35); display: flex; align-items: flex-end; }
+.cover-sheet {
+  width: 100%; max-height: 72%; display: flex; flex-direction: column; gap: 8px;
+  padding: 10px 14px 18px; border-radius: 24px 24px 0 0;
+  background: rgba(20,20,22,0.82); color: #fff;
+  -webkit-backdrop-filter: blur(30px) saturate(1.6); backdrop-filter: blur(30px) saturate(1.6);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 -16px 50px rgba(0,0,0,0.4);
 }
-.lite-orb.on .lite-orb-ring { border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
-.lite-orb.connecting { color: var(--accent); }
-.lite-orb.connecting .lite-orb-ring { border-color: var(--accent); border-top-color: transparent; animation: lite-spin 0.8s linear infinite; }
-@keyframes lite-spin { to { transform: rotate(360deg); } }
-
-.lite-status { font-size: 1.05rem; font-weight: 700; color: var(--text-main); }
-.lite-traffic { display: flex; gap: 18px; font-size: 0.82rem; color: var(--text-muted); }
-.lite-traffic i { display: inline-flex; vertical-align: middle; }
-.lite-traffic i :deep(svg) { width: 13px; height: 13px; }
-
-.lite-server {
-  display: flex; align-items: center; gap: 10px;
-  padding: 14px 16px; border-radius: 14px; cursor: pointer;
-  background: var(--surface-hover, rgba(127,127,127,0.06));
-  border: 1px solid var(--surface-hover);
-}
-.lite-server:hover { border-color: var(--text-muted); }
-.lite-server-main { display: flex; flex-direction: column; min-width: 0; flex: 1; gap: 2px; }
-.lite-server-label { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
-.lite-server-name { font-size: 0.95rem; font-weight: 600; color: var(--text-main); }
-.lite-server-ping { font-size: 0.8rem; font-weight: 600; }
-.lite-chev { display: inline-flex; color: var(--text-muted); transition: transform 0.2s; }
-.lite-chev.open { transform: rotate(90deg); }
-.lite-chev :deep(svg) { width: 18px; height: 18px; }
-
-.lite-server-list { display: flex; flex-direction: column; gap: 4px; max-height: 34vh; overflow-y: auto; }
-.lite-list-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 2px 6px 6px; font-size: 0.76rem; color: var(--text-muted); }
-.lite-test-btn { border: none; background: transparent; color: var(--accent); font-weight: 600; cursor: pointer; font-size: 0.8rem; }
+.cover-sheet-handle { width: 36px; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.35); align-self: center; }
+.lite-list-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 2px 6px 4px; font-size: 12px; color: rgba(255,255,255,0.6); }
+.lite-test-btn { border: none; background: transparent; color: #fff; font-weight: 600; cursor: pointer; font-size: 13px; min-height: 36px; padding: 0 8px; }
 .lite-test-btn:disabled { opacity: 0.6; cursor: default; }
-.lite-empty { padding: 18px 6px; text-align: center; color: var(--text-muted); font-size: 0.85rem; }
-
+.lite-server-list { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; min-height: 0; }
+.lite-empty { padding: 18px 6px; text-align: center; color: rgba(255,255,255,0.6); font-size: 14px; }
 .lite-server-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 12px; border-radius: 10px; cursor: pointer;
-  background: transparent; border: 1px solid transparent; text-align: left; width: 100%;
+  display: flex; align-items: center; gap: 10px; min-height: 44px;
+  padding: 10px 12px; border-radius: 12px; cursor: pointer;
+  background: transparent; border: none; text-align: left; width: 100%; color: #fff;
 }
-.lite-server-item:hover { background: var(--surface-hover, rgba(127,127,127,0.08)); }
-.lite-server-item.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
-.lite-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; opacity: 0.5; }
-.lite-dot.on { background: var(--accent); opacity: 1; }
-.lite-item-name { flex: 1; min-width: 0; font-size: 0.9rem; color: var(--text-main); }
-.lite-item-ping { font-size: 0.78rem; font-weight: 600; flex-shrink: 0; }
-.lite-ping-spin {
-  width: 14px; height: 14px; flex-shrink: 0; border-radius: 50%;
-  border: 2px solid var(--surface-hover, rgba(127,127,127,0.3));
-  border-top-color: var(--accent);
-  animation: lite-spin 0.7s linear infinite;
-}
-
-.lite-smart-item { border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); background: color-mix(in srgb, var(--accent) 7%, transparent); }
-.lite-smart-item.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
-.lite-smart-ico { display: inline-flex; color: var(--accent); flex-shrink: 0; }
-.lite-smart-ico :deep(svg) { width: 18px; height: 18px; }
-.lite-item-tag { font-size: 0.72rem; color: var(--accent); font-weight: 600; flex-shrink: 0; }
-
-.ping-good { color: #16a34a; }
-.ping-mid { color: #d97706; }
-.ping-bad { color: #dc2626; }
-
-.lite-foot { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--text-muted); padding-top: 4px; }
-.lite-config-current {
-  max-width: 100%; border: none; background: transparent; color: var(--text-sub);
-  font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px;
-}
+.lite-server-item:hover { background: rgba(255,255,255,0.08); }
+.lite-server-item.active { background: rgba(255,255,255,0.14); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35); }
+.lite-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.35); flex-shrink: 0; }
+.lite-dot.on { background: #fff; }
+.lite-flag { width: 20px; height: 15px; border-radius: 3px; object-fit: cover; flex-shrink: 0; }
+.lite-item-name { flex: 1; min-width: 0; font-size: 15px; }
+.lite-item-ping { font-family: var(--font-mono); font-size: 12px; font-weight: 600; flex-shrink: 0; color: rgba(255,255,255,0.75); }
+.lite-item-ping.good { color: #fff; }
+.lite-item-ping.bad { color: rgba(255,255,255,0.45); }
+.lite-ping-spin { width: 14px; height: 14px; flex-shrink: 0; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; animation: lite-spin 0.8s linear infinite; }
+@keyframes lite-spin { to { transform: rotate(360deg); } }
+.lite-smart-ico { display: inline-flex; color: #fff; }
+.lite-smart-ico :deep(svg) { width: 16px; height: 16px; }
+.lite-item-tag { font-size: 11px; color: rgba(255,255,255,0.55); text-transform: uppercase; letter-spacing: 0.04em; }
+.lite-config-list { display: flex; flex-direction: column; gap: 2px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.1); }
+.lite-config-item { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 8px 12px; border-radius: 10px; border: none; background: transparent; color: #fff; cursor: pointer; text-align: left; width: 100%; font-size: 14px; }
+.lite-config-item.active { background: rgba(255,255,255,0.12); }
+.lite-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.1); }
+.lite-config-current { border: none; background: transparent; color: rgba(255,255,255,0.75); font-size: 13px; min-height: 40px; padding: 0 4px; display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
 .lite-config-current.clickable { cursor: pointer; }
-.lite-config-current.clickable:hover { color: var(--text-main); }
 .lite-chev-mini { display: inline-flex; transition: transform 0.2s; }
 .lite-chev-mini.open { transform: rotate(90deg); }
 .lite-chev-mini :deep(svg) { width: 14px; height: 14px; }
+.lite-add-link { border: none; background: transparent; color: #fff; font-weight: 600; font-size: 13px; cursor: pointer; min-height: 40px; padding: 0 6px; white-space: nowrap; }
 
-.lite-config-list { display: flex; flex-direction: column; gap: 4px; max-height: 26vh; overflow-y: auto; }
-.lite-config-item {
-  display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px;
-  background: transparent; border: 1px solid transparent; cursor: pointer; text-align: left; width: 100%;
-  color: var(--text-main); font-size: 0.88rem;
-}
-.lite-config-item:hover { background: var(--surface-hover, rgba(127,127,127,0.08)); }
-.lite-config-item.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
-.lite-add-link {
-  border: none; background: transparent; cursor: pointer;
-  color: var(--accent); font-weight: 700; font-size: 0.82rem; padding: 4px 8px;
-}
-.lite-add-link:hover { text-decoration: underline; }
+/* модалка подписки */
+.lite-modal-overlay { position: absolute; inset: 0; z-index: 30; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; padding: 20px; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.lite-modal { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 10px; padding: 20px; border-radius: 20px; background: rgba(24,24,26,0.92); color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,0.15), 0 24px 60px rgba(0,0,0,0.45); }
+.lite-modal h3 { margin: 0 0 4px; font-size: 17px; font-weight: 700; }
+.lite-seg { display: flex; gap: 4px; padding: 3px; border-radius: 12px; background: rgba(255,255,255,0.1); margin-bottom: 4px; }
+.lite-seg-btn { flex: 1; min-height: 40px; border: none; border-radius: 9px; background: transparent; color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 600; cursor: pointer; }
+.lite-seg-btn.active { background: #fff; color: #111; }
+.lite-field-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: rgba(255,255,255,0.55); margin-top: 4px; }
+.lite-field-hint { margin: 0; font-size: 12px; line-height: 1.5; color: rgba(255,255,255,0.55); }
+.lite-input { min-height: 44px; padding: 0 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.08); color: #fff; font-size: 14px; outline: none; }
+.lite-input:focus { border-color: rgba(255,255,255,0.5); }
+.lite-modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }
+.lite-btn-ghost { min-height: 42px; padding: 0 16px; border: none; border-radius: 12px; background: rgba(255,255,255,0.1); color: #fff; font-weight: 600; cursor: pointer; }
+.lite-btn-primary { min-height: 42px; padding: 0 18px; border: none; border-radius: 12px; background: #fff; color: #111; font-weight: 700; cursor: pointer; }
+.lite-btn-primary:disabled, .lite-btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.lite-modal-overlay {
-  position: absolute; inset: 0; z-index: 50;
-  display: flex; align-items: center; justify-content: center; padding: 20px;
-  background: rgba(0, 0, 0, 0.45);
-}
-.lite-modal {
-  width: 100%; max-width: 360px;
-  background: var(--surface); border: 1px solid var(--surface-hover);
-  border-radius: 18px; padding: 20px; display: flex; flex-direction: column; gap: 8px;
-  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.3);
-}
-.lite-modal h3 { margin: 0 0 6px; font-size: 1.05rem; color: var(--text-main); }
-.lite-seg { display: flex; gap: 4px; padding: 3px; border-radius: 10px; background: var(--surface-hover, rgba(127,127,127,0.1)); margin-bottom: 4px; }
-.lite-seg-btn {
-  flex: 1; padding: 7px; border: none; border-radius: 8px; cursor: pointer;
-  background: transparent; color: var(--text-muted); font-weight: 600; font-size: 0.82rem;
-}
-.lite-seg-btn.active { background: var(--surface); color: var(--text-main); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
-.lite-field-hint { font-size: 0.74rem; color: var(--text-muted); line-height: 1.4; margin: 2px 0 0; }
-.lite-field-label { font-size: 0.76rem; color: var(--text-muted); margin-top: 6px; }
-.lite-input {
-  width: 100%; padding: 10px 12px; border-radius: 10px;
-  border: 1px solid var(--surface-hover); background: var(--surface-hover, transparent);
-  color: var(--text-main); outline: none; font-size: 0.9rem;
-}
-.lite-input:focus { border-color: var(--accent); }
-.lite-modal-actions { display: flex; gap: 10px; margin-top: 14px; }
-.lite-btn-ghost, .lite-btn-primary {
-  flex: 1; padding: 10px; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 0.9rem; border: none;
-}
-.lite-btn-ghost { background: var(--surface-hover, rgba(127,127,127,0.12)); color: var(--text-main); }
-.lite-btn-primary { background: var(--accent); color: #fff; }
-.lite-btn-primary:disabled, .lite-btn-ghost:disabled { opacity: 0.6; cursor: default; }
-
-.lite-fade-enter-active, .lite-fade-leave-active { transition: opacity 0.18s; }
+.lite-fade-enter-active, .lite-fade-leave-active { transition: opacity 0.22s ease; }
 .lite-fade-enter-from, .lite-fade-leave-to { opacity: 0; }
-
+.lite-fade-enter-active .cover-sheet, .lite-fade-leave-active .cover-sheet { transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.lite-fade-enter-from .cover-sheet, .lite-fade-leave-to .cover-sheet { transform: translateY(40px); }
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-.lite-expand-enter-active, .lite-expand-leave-active { transition: opacity 0.18s, transform 0.18s; }
-.lite-expand-enter-from, .lite-expand-leave-to { opacity: 0; transform: translateY(-6px); }
-.lite-flag { width: 20px; height: 15px; border-radius: 2px; flex-shrink: 0; object-fit: cover; }
 </style>
