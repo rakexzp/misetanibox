@@ -111,7 +111,7 @@ textarea,
     --font-mono: 'Twemoji Country Flags', 'JetBrains Mono', 'MiSans', monospace;
 
     /* 将侧边栏宽度从 180px 进一步缩减到 160px */
-    --sidebar-width: 160px;
+    --sidebar-width: 192px;
 
     --layout-padding: 10px;
     /* 进一步收窄全局边距，提升视觉张力 */

@@ -37,7 +37,7 @@
         <div class="icon-box">
           <div :class="['dot', { online: globalState.isRunning }]"></div>
         </div>
-        <span :class="['status-text', { online: globalState.isRunning }]">{{ globalState.isRunning ? 'Ядро запущено' : 'Служба не работает' }}</span>
+        <span :class="['status-text', { online: globalState.isRunning }]">{{ globalState.isRunning ? 'Ядро запущено' : 'Ядро выключено' }}</span>
       </div>
     </div>
   </aside>
@@ -194,7 +194,7 @@ const toggleTheme = () => {
   letter-spacing: 0.05em; 
 }
 
-.sidebar-footer { padding: 16px; display: flex; flex-direction: column; gap: 12px; margin-top: auto; }
+.sidebar-footer { padding: 16px 6px 16px 16px; display: flex; flex-direction: column; gap: 12px; margin-top: auto; }
 
 .icon-box { 
   width: 16px; height: 16px; display: flex; align-items: center; 
@@ -206,7 +206,8 @@ const toggleTheme = () => {
 .side-traffic { display: flex; flex-direction: column; gap: 8px; }
 .t-item, .theme-switch-row, .status-indicator { display: flex; align-items: center; gap: 10px; height: 20px; }
 .t-label, .theme-switch-row .label { font-size: 0.8rem; color: var(--text-main); white-space: nowrap; flex-shrink: 0; }
-.status-text { font-size: 0.8rem; color: var(--text-sub); transition: 0.3s; white-space: nowrap; }
+.status-text { font-size: 0.8rem; color: var(--text-sub); transition: 0.3s; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.status-indicator { min-width: 0; }
 .status-text.online { color: var(--text-main); font-weight: 600; }
 .t-val { 
   margin-left: auto; 

@@ -565,9 +565,9 @@ const runModeWorker = async (targetMode: string) => {
 }
 .bg-gallery-item:hover .bg-gallery-del { display: flex; }
 .bg-gallery-empty { grid-column: span 4; font-size: 0.74rem; color: var(--text-muted); display: flex; align-items: center; }
-.hero-panel { padding: 28px 24px; background: var(--surface); border-radius: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: center; box-shadow: 0 4px 20px rgba(0,0,0,0.03); }
-.status-core { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; }
-.restart-trigger { position: absolute; left: 10px; width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 50%; transition: 0.3s; }
+.hero-panel { padding: 28px 24px; background: var(--surface); border-radius: 20px; display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; align-items: center; box-shadow: 0 4px 20px rgba(0,0,0,0.03); }
+.status-core { position: relative; display: flex; align-items: center; justify-content: flex-start; gap: 14px; width: 100%; min-width: 0; }
+.restart-trigger { position: relative; flex-shrink: 0; width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 50%; transition: 0.3s; }
 .restart-trigger:hover { background: var(--surface-hover); }
 .restart-trigger.is-loading { cursor: not-allowed; pointer-events: none; }
 .orb-visual { position: relative; width: 10px; height: 10px; z-index: 2; transition: all 0.3s cubic-bezier(0.4,0,0.2,1); }
@@ -583,12 +583,14 @@ const runModeWorker = async (targetMode: string) => {
 .refresh-icon.spin .scanner-bar { stroke: var(--accent); stroke-dasharray: 62.8; animation: scan-dash 1.2s infinite ease-in-out; }
 @keyframes spin-centered { 0%{transform:translate(-50%,-50%) rotate(-90deg)} 100%{transform:translate(-50%,-50%) rotate(270deg)} }
 @keyframes scan-dash { 0%{stroke-dashoffset:60} 50%{stroke-dashoffset:15} 100%{stroke-dashoffset:60} }
-.status-meta { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.status-meta { display: flex; flex-direction: column; align-items: flex-start; text-align: left; min-width: 0; }
+.status-meta .status-heading { overflow-wrap: anywhere; }
 .micro-title { font-size: 0.85rem; font-weight: 700; color: var(--text-sub); letter-spacing: 0.02em; margin-bottom: 8px; }
-.status-heading { font-size: 1.6rem; font-weight: 600; margin: 0; line-height: 1.2; color: var(--text-main); }
+.status-heading { font-size: 1.45rem; font-weight: 600; margin: 0; line-height: 1.2; color: var(--text-main); }
 .version-tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-sub); opacity: 0.8; margin-top: 8px; }
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.active-config-display { text-align: center; min-width: 0; display: flex; flex-direction: column; align-items: center; }
+.active-config-display { text-align: left; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
+.active-config-display .config-name { max-width: 100%; }
 .active-config-display .config-name { font-size: 1.1rem; font-weight: 700; color: var(--text-main); }
 .switch-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .action-card { padding: 20px 24px; background: var(--surface); border: none; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.2s cubic-bezier(0.4,0,0.2,1); }
