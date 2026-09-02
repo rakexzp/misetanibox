@@ -348,6 +348,11 @@ async function toggleConnect() {
       }
     }
     await loadServers();
+    // GLOBAL по умолчанию смотрит в DIRECT — берём первый реальный узел
+    const noExit = new Set(['', 'DIRECT', 'REJECT', 'REJECT-DROP', 'PASS', 'COMPATIBLE']);
+    if (globalState.isRunning && noExit.has(currentServer.value.toUpperCase()) && servers.value.length) {
+      await pick(servers.value[0].name);
+    }
   } catch (e) {
     await showAlert('Не удалось переключить подключение: ' + e, 'Ошибка', true);
   } finally {
@@ -496,7 +501,7 @@ onUnmounted(() => {
 
 .cover-bar { display: flex; align-items: center; gap: 10px; }
 .cover-primary {
-  flex: 1; min-height: 52px; border: none; border-radius: 999px; cursor: pointer;
+  flex: 1 1 auto; min-width: 150px; min-height: 52px; border: none; border-radius: 999px; cursor: pointer;
   background: #fff; color: #111; font-family: var(--display); font-size: 13px; font-weight: 700; letter-spacing: 0.02em;
   transition: transform 0.1s, opacity 0.2s;
 }
@@ -504,10 +509,10 @@ onUnmounted(() => {
 .cover-primary:active { transform: scale(0.97); }
 .cover-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 .cover-pill {
-  min-height: 52px; padding: 0 16px; border: none; border-radius: 999px; cursor: default;
+  min-height: 52px; padding: 0 12px; flex-shrink: 1; min-width: 0; overflow: hidden; border: none; border-radius: 999px; cursor: default;
   background: rgba(255,255,255,0.14); color: #fff; display: inline-flex; align-items: center; gap: 6px;
   -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
-  font-family: var(--font-mono); font-size: 12px; font-weight: 600; white-space: nowrap;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600; white-space: nowrap;
 }
 .cover-traffic i { display: inline-flex; }
 .cover-traffic i :deep(svg) { width: 12px; height: 12px; }
