@@ -353,6 +353,9 @@ async function toggleConnect() {
     if (globalState.isRunning && noExit.has(currentServer.value.toUpperCase()) && servers.value.length) {
       await pick(servers.value[0].name);
     }
+    if (globalState.isRunning && currentServer.value && currentServer.value !== SMART_NAME && delayOf(currentServer.value) == null) {
+      API.TestAllProxies([currentServer.value]).catch(() => {});
+    }
   } catch (e) {
     await showAlert('Не удалось переключить подключение: ' + e, 'Ошибка', true);
   } finally {
