@@ -19,8 +19,8 @@ html.mac {
 .app-shell.mac {
     --mac-glass: rgba(255, 255, 255, 0.58);
     --mac-glass-strong: rgba(255, 255, 255, 0.78);
-    --mac-fill: rgba(0, 0, 0, 0.05);
-    --mac-fill-hover: rgba(0, 0, 0, 0.09);
+    --mac-fill: rgba(0, 0, 0, 0.07);
+    --mac-fill-hover: rgba(0, 0, 0, 0.12);
     --mac-stroke: rgba(0, 0, 0, 0.08);
     --mac-highlight: rgba(255, 255, 255, 0.75);
     --mac-track: rgba(120, 120, 128, 0.16);
@@ -36,8 +36,8 @@ html.mac {
 .app-shell.mac.dark {
     --mac-glass: rgba(30, 30, 32, 0.55);
     --mac-glass-strong: rgba(30, 30, 32, 0.78);
-    --mac-fill: rgba(255, 255, 255, 0.08);
-    --mac-fill-hover: rgba(255, 255, 255, 0.14);
+    --mac-fill: rgba(255, 255, 255, 0.11);
+    --mac-fill-hover: rgba(255, 255, 255, 0.17);
     --mac-stroke: rgba(255, 255, 255, 0.10);
     --mac-highlight: rgba(255, 255, 255, 0.16);
     --mac-track: rgba(120, 120, 128, 0.32);
@@ -261,9 +261,9 @@ html.mac {
     }
 }
 
-/* sticky-тулбары вкладок */
+/* sticky-тулбары вкладок: без заливки, только blur контента под ними */
 .app-shell.mac .page-sticky-mask::before {
-    background: var(--mac-glass);
+    background: transparent;
     -webkit-backdrop-filter: blur(20px) saturate(1.6);
     backdrop-filter: blur(20px) saturate(1.6);
 }
@@ -271,4 +271,17 @@ html.mac {
 .app-shell.mac .proxy-toolbar-card {
     background: var(--mac-fill);
     box-shadow: inset 0 1px 0 var(--mac-highlight), inset 0 0 0 0.5px var(--mac-stroke);
+}
+.app-shell.mac .glass-card,
+.app-shell.mac .ch-empty-big,
+.app-shell.mac .ch-note,
+.app-shell.mac .rule-card,
+.app-shell.mac .node-item,
+.app-shell.mac .conn-card,
+.app-shell.mac .sub-card:not(.active-card) {
+    box-shadow: inset 0 1px 0 var(--mac-highlight), inset 0 0 0 0.5px var(--mac-stroke);
+}
+.app-shell.mac .glass-card {
+    background: var(--mac-fill);
+    border-color: transparent;
 }

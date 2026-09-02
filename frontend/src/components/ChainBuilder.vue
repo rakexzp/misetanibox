@@ -214,7 +214,7 @@ onMounted(() => { loadChains(); loadNodes(); loadWarp(); });
 .ch-ctrls button { width: 24px; height: 24px; border-radius: 6px; border: 1px solid var(--surface-hover); background: var(--surface); color: var(--text-sub); cursor: pointer; font-size: 0.75rem; }
 .ch-ctrls button:disabled { opacity: 0.35; cursor: default; }
 .ch-empty, .ch-empty-big { color: var(--text-muted); font-size: 0.82rem; padding: 16px; text-align: center; }
-.ch-empty-big { padding: 40px; }
+.ch-empty-big { grid-column: 1 / -1; padding: 44px 24px; font-size: 0.9rem; border: 1px dashed var(--surface-hover); border-radius: 14px; background: var(--surface); }
 .ch-editor-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
 .ch-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
 .ch-card-name { font-weight: 700; margin-bottom: 8px; }
@@ -223,7 +223,7 @@ onMounted(() => { loadChains(); loadNodes(); loadWarp(); });
 .ch-arrow { color: var(--accent); }
 .ch-card-actions { display: flex; gap: 8px; }
 .action-btn.danger { color: #d9534f; }
-.ch-note { color: var(--text-muted); font-size: 0.78rem; margin-top: 16px; line-height: 1.6; }
+.ch-note { color: var(--text-sub); font-size: 0.78rem; margin-top: 16px; line-height: 1.6; padding: 12px 14px; border-radius: 10px; background: var(--surface); }
 .ch-head-actions { display: flex; gap: 10px; align-items: center; flex: none; }
 .warp-btn { border: 1px solid var(--surface-hover); background: var(--surface); color: var(--text-sub); border-radius: 9px; padding: 8px 14px; cursor: pointer; font-size: 0.82rem; white-space: nowrap; }
 .warp-btn:hover:not(:disabled) { border-color: var(--accent); }
