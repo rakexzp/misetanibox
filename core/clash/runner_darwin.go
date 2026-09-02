@@ -93,7 +93,8 @@ func Start(ctx context.Context, tun bool) error {
 		logger.Warnf("режим TUN запрошен без прав root/CAP_NET_ADMIN — ядро может не поднять интерфейс")
 	}
 
-	cmd := exec.CommandContext(ctx, exePath, "-d", binDir, "-f", runtimeConfig)
+	// не CommandContext: ctx реконсайла живёт 8с, его отмена убивала ядро → цикл рестартов
+	cmd := exec.Command(exePath, "-d", binDir, "-f", runtimeConfig)
 	cmd.Dir = binDir
 
 	if err := cmd.Start(); err != nil {

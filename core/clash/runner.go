@@ -286,7 +286,8 @@ func startCoreProcessWithRetry(ctx context.Context, exePath, binDir, runtimeConf
 	var lastErr error
 
 	for i := 0; i < 8; i++ {
-		cmd := exec.CommandContext(ctx, exePath, "-d", binDir, "-f", runtimeConfig)
+		// не CommandContext: отмена ctx вызывающего (реконсайл 8с) убивала ядро
+		cmd := exec.Command(exePath, "-d", binDir, "-f", runtimeConfig)
 		cmd.Dir = binDir
 		utils.HideCommandWindow(cmd, 0)
 
