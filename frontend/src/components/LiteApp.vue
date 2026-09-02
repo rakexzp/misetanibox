@@ -20,7 +20,7 @@
       <span class="hero-line hero-code" style="--i: 0">
         <img v-if="exitFlag" :src="exitFlag" class="hero-flag" alt="" /><span class="shine-text" :class="{ shine: connected }" style="--s: 0">{{ exitCode }}</span>
       </span>
-      <span class="hero-line hero-timer" style="--i: 1"><span class="shine-text" :class="{ shine: connected }" style="--s: 1">{{ busy ? '··:··' : sessionText }}</span></span>
+      <span class="hero-line hero-timer" style="--i: 1"><span class="shine-text" :class="{ shine: connected, loading: busy }" style="--s: 1">{{ busy ? '··:··' : sessionText }}</span></span>
     </div>
     <div class="cover-sub">
       <span class="cover-sub-name truncate shine-text" :class="{ shine: connected }" style="--s: 2">{{ currentServer ? serverLabel(currentServer) : (hasConfig ? 'Сервер не выбран' : 'Добавьте подписку') }}</span>
