@@ -18,12 +18,12 @@
 
     <div class="cover-hero" :class="statusClass" :key="statusClass">
       <span class="hero-line hero-code" style="--i: 0">
-        <img v-if="exitFlag" :src="exitFlag" class="hero-flag" alt="" />{{ exitCode }}
+        <img v-if="exitFlag" :src="exitFlag" class="hero-flag" alt="" /><span class="shine-text" :class="{ shine: connected }" style="--s: 0">{{ exitCode }}</span>
       </span>
-      <span class="hero-line hero-timer" style="--i: 1">{{ busy ? '··:··' : sessionText }}</span>
+      <span class="hero-line hero-timer" style="--i: 1"><span class="shine-text" :class="{ shine: connected }" style="--s: 1">{{ busy ? '··:··' : sessionText }}</span></span>
     </div>
     <div class="cover-sub">
-      <span class="cover-sub-name truncate">{{ currentServer ? serverLabel(currentServer) : (hasConfig ? 'Сервер не выбран' : 'Добавьте подписку') }}</span>
+      <span class="cover-sub-name truncate shine-text" :class="{ shine: connected }" style="--s: 2">{{ currentServer ? serverLabel(currentServer) : (hasConfig ? 'Сервер не выбран' : 'Добавьте подписку') }}</span>
       <span v-if="pingingCurrent" class="cover-sub-ping is-pinging"><span class="lite-ping-spin"></span>пингую</span>
       <span v-else-if="currentDelay != null" class="cover-sub-ping">{{ currentDelay > 0 ? currentDelay + ' мс' : '—' }}</span>
     </div>
@@ -279,7 +279,7 @@ const sessionStart = ref(0);
 const nowTick = ref(Date.now());
 let tickTimer: ReturnType<typeof setInterval> | null = null;
 watch(connected, (on) => {
-  if (on) { sessionStart.value = Date.now(); if (!tickTimer) tickTimer = setInterval(() => { nowTick.value = Date.now(); }, 1000); }
+  if (on) { sessionStart.value = Date.now(); if (!tickTimer) tickTimer = setInterval(() => { nowTick.value = Date.now(); if (Math.floor((nowTick.value - sessionStart.value) / 1000) % 10 === 0) loadServers(); }, 1000); }
   else { sessionStart.value = 0; if (tickTimer) { clearInterval(tickTimer); tickTimer = null; } }
 }, { immediate: true });
 const sessionText = computed(() => {
@@ -609,6 +609,17 @@ onUnmounted(() => {
 .cover-hero.off .hero-code, .cover-hero.off .hero-ping, .cover-hero.off .hero-timer { color: rgba(255,255,255,0.45); }
 .cover-hero.connecting .hero-code { animation: hero-in 0.55s both, cover-pulse 1.2s 0.6s ease-in-out infinite; }
 @keyframes cover-pulse { 50% { opacity: 0.55; } }
+/* переливание: световая полоса по тексту при подключении, затем редкий тихий пробег */
+.shine-text { display: inline-block; }
+.shine-text.shine {
+  background: linear-gradient(105deg, #fff 0%, #fff 38%, rgba(255,255,255,0.45) 50%, #fff 62%, #fff 100%);
+  background-size: 260% 100%; background-position: 120% 0;
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: #fff;
+  animation: shine-sweep 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) calc(0.35s + var(--s) * 0.14s) both, shine-idle 9s linear calc(3s + var(--s) * 0.5s) infinite;
+}
+@keyframes shine-sweep { from { background-position: 120% 0; } to { background-position: -40% 0; } }
+@keyframes shine-idle { 0%, 82% { background-position: 120% 0; } 100% { background-position: -40% 0; } }
+@media (prefers-reduced-motion: reduce) { .shine-text.shine { animation: none; background-position: -40% 0; } }
 .hero-dots { display: inline-flex; gap: 8px; align-items: center; height: 0.7em; }
 .hero-dots b { width: 0.22em; height: 0.22em; border-radius: 50%; background: #fff; animation: hero-dot 1s ease-in-out infinite; }
 .hero-dots b:nth-child(2) { animation-delay: 0.15s; } .hero-dots b:nth-child(3) { animation-delay: 0.3s; }
