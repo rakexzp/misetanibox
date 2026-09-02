@@ -29,17 +29,36 @@ var noProxyTransport = &http.Transport{
 	TLSHandshakeTimeout: 10 * time.Second,
 }
 
+// Bearer-секрет только для запросов к нашему API
+type apiAuthTransport struct{ base http.RoundTripper }
+
+func (t apiAuthTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	if r.Header.Get("Authorization") == "" && isAPIHost(r.URL.Host) {
+		r = r.Clone(r.Context())
+		r.Header.Set("Authorization", "Bearer "+APISecret())
+	}
+	return t.base.RoundTrip(r)
+}
+
+func isAPIHost(host string) bool {
+	apiBase.RLock()
+	base := apiBase.value
+	apiBase.RUnlock()
+	u, err := url.Parse(base)
+	return err == nil && u.Host != "" && strings.EqualFold(u.Host, host)
+}
+
 var localAPIClient = &http.Client{
-	Transport: noProxyTransport,
+	Transport: apiAuthTransport{noProxyTransport},
 	Timeout:   2 * time.Second,
 }
 
 var speedTestClient = &http.Client{
-	Transport: noProxyTransport,
+	Transport: apiAuthTransport{noProxyTransport},
 }
 
 var streamClient = &http.Client{
-	Transport: noProxyTransport,
+	Transport: apiAuthTransport{noProxyTransport},
 }
 
 var apiBase = struct {

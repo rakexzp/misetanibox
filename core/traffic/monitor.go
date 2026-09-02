@@ -52,6 +52,9 @@ type ConnectionVO struct {
 	DurationStr string `json:"durationStr"`
 }
 
+// секрет API ядра (ставит пакет clash; traffic не может его импортировать — цикл)
+var AuthSecret func() string
+
 var trafficStreamClient = &http.Client{
 	Transport: &http.Transport{
 		Proxy: nil,
@@ -74,6 +77,11 @@ func StreamTraffic(ctx context.Context, apiURL string, callback func(upRaw, down
 		}
 
 		req, err := http.NewRequestWithContext(ctx, "GET", apiURL, nil)
+		if err == nil && AuthSecret != nil {
+			if s := AuthSecret(); s != "" {
+				req.Header.Set("Authorization", "Bearer "+s)
+			}
+		}
 		if err != nil {
 			if !sleepOrDone(ctx, 2*time.Second) {
 				return

@@ -232,8 +232,8 @@ func DownloadSub(ctx context.Context, name, url, existingId, userAgent string, o
 		Strategy: func() downloader.DownloadStrategy {
 			var pUrl string
 			if IsRunning() {
-				if netCfg, err := GetNetworkConfig(); err == nil && netCfg.MixedPort != 0 {
-					pUrl = fmt.Sprintf("http://127.0.0.1:%d", netCfg.MixedPort)
+				if p := GetProxyPort(); p != 0 {
+					pUrl = fmt.Sprintf("http://127.0.0.1:%d", p)
 				}
 			}
 			return downloader.DownloadStrategy{

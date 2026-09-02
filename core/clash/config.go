@@ -244,6 +244,9 @@ func GetNetworkConfig() (*NetworkConfig, error) {
 }
 
 func GetProxyPort() int {
+	if p := EffectiveProxyPort(); p != 0 {
+		return p
+	}
 	if netCfg, err := GetNetworkConfig(); err == nil && netCfg != nil {
 		if netCfg.MixedPort != 0 {
 			return netCfg.MixedPort
@@ -486,14 +489,23 @@ func BuildRuntimeConfig(id string, mode string, logLevel string, tunEnabled bool
 		rewriteRulesToSmart(root)
 	}
 
+	wantMixed := 7890
 	if userNet != nil && userNet.MixedPort != 0 {
-		root["mixed-port"] = userNet.MixedPort
+		wantMixed = userNet.MixedPort
 	} else if userNet != nil && userNet.Port != 0 {
+		wantMixed = 0
+	}
+	wantController := "127.0.0.1:9090"
+	if userNet != nil && strings.TrimSpace(userNet.ExternalController) != "" {
+		wantController = userNet.ExternalController
+	}
+	mixedPort, controller := resolveRuntimePorts(wantMixed, wantController)
 
+	if mixedPort != 0 {
+		root["mixed-port"] = mixedPort
+	} else {
 		root["port"] = userNet.Port
 		delete(root, "mixed-port")
-	} else {
-		root["mixed-port"] = 7890
 	}
 	allowLan := false
 	if userNet != nil {
@@ -501,12 +513,8 @@ func BuildRuntimeConfig(id string, mode string, logLevel string, tunEnabled bool
 	}
 	root["allow-lan"] = allowLan
 
-	controller := "127.0.0.1:9090"
-	if userNet != nil && strings.TrimSpace(userNet.ExternalController) != "" {
-		controller = NormalizeControllerHostPort(userNet.ExternalController)
-	}
 	root["external-controller"] = controller
-	root["secret"] = ""
+	root["secret"] = APISecret()
 
 	UpdateAPIBaseURL(controller)
 

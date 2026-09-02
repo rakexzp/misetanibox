@@ -15,7 +15,7 @@ func resolveLocalProxyURL() string {
 		return ""
 	}
 
-	port := netCfg.MixedPort
+	port := clash.GetProxyPort()
 	if port == 0 {
 		port = netCfg.Port
 	}
