@@ -627,7 +627,8 @@ onUnmounted(() => {
 .page-header { 
   display: flex; 
   justify-content: space-between; 
-  align-items: flex-end; 
+  align-items: flex-end;
+  gap: 16px; 
   margin-bottom: 32px; 
   padding: 4px 0 12px 0;
   background: transparent;
@@ -635,10 +636,12 @@ onUnmounted(() => {
 .page-header.page-sticky-mask {
   --sticky-mask-bleed: 4px;
 }
-.main-title { font-size: 1.6rem; font-weight: 600; margin-bottom: 4px; }
+.main-title { font-size: 1.35rem; white-space: nowrap; font-weight: 600; margin-bottom: 4px; }
 .sub-text { font-size: 0.85rem; color: var(--text-sub); }
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.header-actions { display: flex; gap: 12px; align-items: center; }
+.header-actions { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
+.header-actions .action-btn { white-space: nowrap; }
+.header-text { min-width: 0; }
 .header-action-btn {
   padding: 0 14px !important;
 }

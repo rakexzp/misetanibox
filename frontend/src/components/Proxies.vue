@@ -888,4 +888,8 @@ onUnmounted(() => {
   font-style: italic;
 }
 .n-flag { width: 20px; height: 15px; border-radius: 2px; flex-shrink: 0; object-fit: cover; margin-right: 6px; vertical-align: middle; }
+.node-info { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.n-flag { width: 20px; height: 15px; border-radius: 2px; flex-shrink: 0; object-fit: cover; }
+.n-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.proxy-tabs-viewport { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
 </style>

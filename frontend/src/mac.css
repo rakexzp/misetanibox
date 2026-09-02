@@ -260,3 +260,15 @@ html.mac {
         filter: none;
     }
 }
+
+/* sticky-тулбары вкладок */
+.app-shell.mac .page-sticky-mask::before {
+    background: var(--mac-glass);
+    -webkit-backdrop-filter: blur(20px) saturate(1.6);
+    backdrop-filter: blur(20px) saturate(1.6);
+}
+.app-shell.mac .action-bar.card-panel,
+.app-shell.mac .proxy-toolbar-card {
+    background: var(--mac-fill);
+    box-shadow: inset 0 1px 0 var(--mac-highlight), inset 0 0 0 0.5px var(--mac-stroke);
+}

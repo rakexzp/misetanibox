@@ -465,6 +465,8 @@ onActivated(() => {
 
 .rules-header { 
   display: flex; 
+  flex-wrap: wrap;
+  row-gap: 10px;
   align-items: center; 
   gap: 12px; 
   margin-bottom: 16px; 
@@ -539,8 +541,9 @@ onActivated(() => {
 }
 
 .search-bar.compact {
-  flex: 0 0 280px;
-  width: 280px;
+  flex: 0 1 280px;
+  width: auto;
+  min-width: 150px;
 }
 
 .header-action-btn {

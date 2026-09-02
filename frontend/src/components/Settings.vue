@@ -27,7 +27,7 @@
             <div class="setting-item clickable" @click="view = 'tun'">
               <div class="info">
                 <h4>Виртуальный адаптер (Режим TUN)</h4>
-                <p>Драйвер Wintun и глобальный прозрачный прокси для всего трафика.</p>
+                <p>Виртуальный сетевой адаптер — прозрачный прокси для всего трафика.</p>
               </div>
               <span class="arrow">➔</span>
             </div>
