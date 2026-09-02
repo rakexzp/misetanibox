@@ -252,7 +252,7 @@
 
             <div class="divider"></div>
 
-            <div class="setting-item">
+            <div v-if="isWindows" class="setting-item">
               <div class="info">
                 <h4>Установка драйвера адаптера</h4>
                 <p class="status-msg">
@@ -291,7 +291,7 @@
 
             <div class="divider"></div>
 
-            <div class="setting-item">
+            <div v-if="!isMac" class="setting-item">
               <div class="info"><h4>Имя адаптера (Device)</h4></div>
               <input type="text" class="modern-input" v-model="tunConfig.device" placeholder="Пусто = авто" @blur="saveTun" :disabled="!tunStatus.hasWintun" />
             </div>
@@ -1344,6 +1344,7 @@ import { showAlert, showConfirm, globalState, setUiMode } from '../store';
 // На Linux/macOS прячем: они либо не нужны, либо собираются только под Windows.
 const isWindows = computed(() => globalState.platform === 'windows' || globalState.platform === '');
 const isLinux = computed(() => globalState.platform === 'linux');
+const isMac = computed(() => globalState.platform === 'darwin');
 
 import { getSavedColors, saveColors, type CustomColors } from '../utils/colors';
 import { economyEnabled, setEconomy } from '../utils/perf';
