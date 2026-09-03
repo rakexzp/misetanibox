@@ -17,8 +17,11 @@ import (
 const (
 	smartCoreSettingKey = "smart_core"
 
-	smartMirrorZip   = "https://files.geodema.network/misetani/mihomo-smart-windows.zip"
-	smartMirrorModel = "https://files.geodema.network/misetani/Model.bin"
+	smartMirrorZip   = "https://files.misetani.app/misetani/mihomo-smart-windows.zip"
+	smartMirrorModel = "https://files.misetani.app/misetani/Model.bin"
+	// старое зеркало — запасное
+	smartMirrorZipOld   = "https://files.geodema.network/misetani/mihomo-smart-windows.zip"
+	smartMirrorModelOld = "https://files.geodema.network/misetani/Model.bin"
 
 	smartGithubZip   = "https://github.com/vernesong/mihomo/releases/download/Prerelease-Alpha/mihomo-windows-amd64-compatible-alpha-smart-3e709f6.zip"
 	smartModelGithub = "https://github.com/vernesong/mihomo/releases/download/LightGBM-Model/Model.bin"
@@ -49,7 +52,7 @@ func InstallSmartCore(ctx context.Context) error {
 	}
 
 	zipPath := filepath.Join(dir, "smart-core.zip")
-	if err := downloadToFirst(ctx, client, []string{smartMirrorZip, smartGithubZip}, zipPath); err != nil {
+	if err := downloadToFirst(ctx, client, []string{smartMirrorZip, smartMirrorZipOld, smartGithubZip}, zipPath); err != nil {
 		return fmt.Errorf("не удалось скачать смарт-ядро: %w", err)
 	}
 	defer os.Remove(zipPath)
@@ -61,7 +64,7 @@ func InstallSmartCore(ctx context.Context) error {
 	defer os.Remove(newExe)
 
 	modelTmp := smartModelPath() + ".new"
-	if err := downloadToFirst(ctx, client, []string{smartMirrorModel, smartModelGithub}, modelTmp); err == nil {
+	if err := downloadToFirst(ctx, client, []string{smartMirrorModel, smartMirrorModelOld, smartModelGithub}, modelTmp); err == nil {
 		_ = os.Rename(modelTmp, smartModelPath())
 	} else {
 		_ = os.Remove(modelTmp)

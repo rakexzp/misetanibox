@@ -14,41 +14,56 @@ import (
 	"time"
 )
 
-const BaseURL = "https://files.geodema.network/workshop/api"
+// BaseURL — основной адрес API мастерской; BaseURLs — с запасным старым хостом.
+const BaseURL = "https://api.misetani.app/workshop/api"
+
+var BaseURLs = []string{BaseURL, "https://files.geodema.network/workshop/api"}
+
+// doFallback — выполняет запрос по очереди хостов, пока один не ответит (любым HTTP-кодом).
+func doFallback(build func(base string) (*http.Request, error), hwid string) (string, error) {
+	var lastErr error
+	for _, base := range BaseURLs {
+		req, err := build(base)
+		if err != nil {
+			return "", err
+		}
+		if hwid != "" {
+			req.Header.Set("x-hwid", hwid)
+		}
+		resp, err := client().Do(req)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		b, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if resp.StatusCode >= 400 {
+			return "", fmt.Errorf("каталог вернул %d: %s", resp.StatusCode, string(b))
+		}
+		return string(b), nil
+	}
+	return "", lastErr
+}
 
 func client() *http.Client { return &http.Client{Timeout: 30 * time.Second} }
 
-func do(req *http.Request, hwid string) (string, error) {
-	if hwid != "" {
-		req.Header.Set("x-hwid", hwid)
-	}
-	resp, err := client().Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-	b, _ := io.ReadAll(resp.Body)
-	if resp.StatusCode >= 400 {
-		return "", fmt.Errorf("каталог вернул %d: %s", resp.StatusCode, string(b))
-	}
-	return string(b), nil
-}
 
 func get(hwid, path string) (string, error) {
-	req, err := http.NewRequest(http.MethodGet, BaseURL+path, nil)
-	if err != nil {
-		return "", err
-	}
-	return do(req, hwid)
+	return doFallback(func(base string) (*http.Request, error) {
+		return http.NewRequest(http.MethodGet, base+path, nil)
+	}, hwid)
 }
 
 func postForm(hwid, path string, form url.Values) (string, error) {
-	req, err := http.NewRequest(http.MethodPost, BaseURL+path, strings.NewReader(form.Encode()))
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	return do(req, hwid)
+	body := form.Encode()
+	return doFallback(func(base string) (*http.Request, error) {
+		req, err := http.NewRequest(http.MethodPost, base+path, strings.NewReader(body))
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		return req, nil
+	}, hwid)
 }
 
 // List — лента тем. sort: popular|new. Возвращает сырой JSON.
@@ -75,11 +90,9 @@ func Report(hwid string, id int, reason string) (string, error) {
 
 // Delete удаляет СВОЮ тему (сервер проверяет владельца по x-hwid).
 func Delete(hwid string, id int) (string, error) {
-	req, err := http.NewRequest(http.MethodDelete, BaseURL+fmt.Sprintf("/themes/%d", id), nil)
-	if err != nil {
-		return "", err
-	}
-	return do(req, hwid)
+	return doFallback(func(base string) (*http.Request, error) {
+		return http.NewRequest(http.MethodDelete, base+fmt.Sprintf("/themes/%d", id), nil)
+	}, hwid)
 }
 
 // Edit правит имя/теги СВОЕЙ темы (сервер проверяет владельца по x-hwid).
@@ -123,12 +136,15 @@ func Publish(hwid, manifestJSON string, imagesDataURI []string) (string, error) 
 		}
 	}
 	w.Close()
-	req, err := http.NewRequest(http.MethodPost, BaseURL+"/themes", &buf)
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("Content-Type", w.FormDataContentType())
-	return do(req, hwid)
+	payload := buf.Bytes()
+	return doFallback(func(base string) (*http.Request, error) {
+		req, err := http.NewRequest(http.MethodPost, base+"/themes", bytes.NewReader(payload))
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Content-Type", w.FormDataContentType())
+		return req, nil
+	}, hwid)
 }
 
 // FetchImage качает картинку темы по URL и возвращает data-URI (для применения фона карточки).

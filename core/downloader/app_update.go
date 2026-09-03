@@ -27,7 +27,11 @@ var strictVersionRe = regexp.MustCompile(`(?i)(?:^|[^0-9])v?(\d+\.\d+(?:\.\d+)?(
 
 func CheckAppUpdate(ctx context.Context, currentVersion string, strategy func() DownloadStrategy) (*AppUpdateInfo, error) {
 
-	apiURL := "https://files.geodema.network/misetani/update.json"
+	// новое зеркало misetani.app первым, старый хост — запасной (у части клиентов он ещё в кэше DNS/блоках)
+	apiURLs := []string{
+		"https://files.misetani.app/misetani/update.json",
+		"https://files.geodema.network/misetani/update.json",
+	}
 
 	clients := BuildOrderedClients(strategy, 60*time.Second)
 
@@ -42,6 +46,7 @@ func CheckAppUpdate(ctx context.Context, currentVersion string, strategy func() 
 	}
 
 	var lastErr error
+	for _, apiURL := range apiURLs {
 	for _, client := range clients {
 		req, reqErr := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
 		if reqErr != nil {
@@ -68,6 +73,10 @@ func CheckAppUpdate(ctx context.Context, currentVersion string, strategy func() 
 		if lastErr == nil && release.TagName != "" {
 			break
 		}
+	}
+	if lastErr == nil && release.TagName != "" {
+		break
+	}
 	}
 
 	if lastErr != nil {
