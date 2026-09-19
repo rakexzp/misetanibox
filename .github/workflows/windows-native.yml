@@ -1,0 +1,37 @@
+name: Windows Native Prototype
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Safe isolated Go tests
+        shell: pwsh
+        run: |
+          $env:GOCLASHZ_DATA_DIR = Join-Path $env:RUNNER_TEMP 'native-prototype-tests'
+          go test -count=1 ./core/appcore ./core/clash ./core/instance ./core/utils ./windows-native/ipc
+          if ($LASTEXITCODE -ne 0) { throw 'Go tests failed' }
+      - name: Build backend, helper and self-contained WinUI archive
+        shell: pwsh
+        run: ./windows-native/build-windows.ps1
+      - name: Upload prototype (not a release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Misetanibox-Lite-Windows-x64-prototype
+          path: windows-native/artifacts/Misetanibox-Lite-Windows-x64-prototype.zip
+          if-no-files-found: error
+          retention-days: 14

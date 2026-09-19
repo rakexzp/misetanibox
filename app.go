@@ -306,7 +306,17 @@ func (a *App) GetDiagnosticInfo() appcore.DiagnosticInfo {
 }
 
 func (a *App) ExportDiagnostics() error {
-	return a.core.ExportDiagnostics()
+	path, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		DefaultFilename: "goclashz_diagnostics.json",
+		Title:           "Экспорт диагностики",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "JSON Files (*.json)", Pattern: "*.json"},
+		},
+	})
+	if err != nil || path == "" {
+		return err
+	}
+	return appcore.ExportDiagnosticsToFile(path)
 }
 
 func (a *App) RestartCore() error {
@@ -381,9 +391,7 @@ func (a *App) SaveRouteConfig(cfg clash.RouteConfig) error {
 
 // ProbeSubURL — разведать формат подписки (clash/xray/unknown) до добавления.
 func (a *App) ProbeSubURL(url string, headers map[string]string) clash.SubProbe {
-	ctx, cancel := context.WithTimeout(a.ctx, 30*time.Second)
-	defer cancel()
-	return clash.ProbeSubURL(ctx, url, a.core.Behavior.Get().SubUA, headers)
+	return a.core.ProbeSubscription(a.ctx, url, headers)
 }
 
 // AddSubConverted — добавить подписку с конвертацией Xray→mihomo.
@@ -407,49 +415,7 @@ func (a *App) SaveSubHeaders(id string, headers map[string]string) error {
 }
 
 func (a *App) AddSubViaDNS(domain, name string) (string, error) {
-	content, err := clash.ResolveConfigViaDNS(a.ctx, domain)
-	if err != nil {
-		return "", fmt.Errorf("не удалось получить запись DNS: %w", err)
-	}
-	content = strings.TrimSpace(content)
-	if content == "" {
-		return "", fmt.Errorf("TXT-запись пуста")
-	}
-
-	if strings.HasPrefix(content, "http://") || strings.HasPrefix(content, "https://") {
-		if err := a.core.UpdateSub(a.ctx, name, content, nil); err != nil {
-			return "", err
-		}
-		return content, nil
-	}
-
-	raw := []byte(content)
-	trimmed := strings.TrimPrefix(content, "base64:")
-	if dec, decErr := base64.StdEncoding.DecodeString(strings.TrimSpace(trimmed)); decErr == nil && len(dec) > 0 {
-		raw = dec
-	}
-
-	tmp, err := os.CreateTemp("", "mise-dns-*.yaml")
-	if err != nil {
-		return "", err
-	}
-	tmpPath := tmp.Name()
-	defer os.Remove(tmpPath)
-	if _, err := tmp.Write(raw); err != nil {
-		tmp.Close()
-		return "", err
-	}
-	tmp.Close()
-
-	finalName := strings.TrimSpace(name)
-	if finalName == "" {
-		finalName = "DNS-конфиг"
-	}
-	id, err := a.core.DoLocalImport(tmpPath, finalName)
-	if err != nil {
-		return "", fmt.Errorf("получено из DNS, но не удалось импортировать: %w", err)
-	}
-	return id, nil
+	return a.core.AddSubscriptionViaDNS(a.ctx, domain, name)
 }
 
 func (a *App) IsSmartCore() bool {
@@ -1706,23 +1672,7 @@ func (a *App) safeQuit() {
 	os.Exit(0)
 }
 
-// GetMainSelector — политика последнего правила MATCH runtime-конфига (главный селектор подписки для Lite).
+// GetMainSelector — главный селектор выбранного профиля, включая режим без ядра.
 func (a *App) GetMainSelector() string {
-	data, err := os.ReadFile(utils.GetRuntimeConfigPath())
-	if err != nil {
-		return ""
-	}
-	var cfg struct {
-		Rules []string `yaml:"rules"`
-	}
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return ""
-	}
-	for i := len(cfg.Rules) - 1; i >= 0; i-- {
-		r := strings.TrimSpace(cfg.Rules[i])
-		if strings.HasPrefix(strings.ToUpper(r), "MATCH,") {
-			return strings.TrimSpace(r[len("MATCH,"):])
-		}
-	}
-	return ""
+	return a.core.GetMainSelector()
 }

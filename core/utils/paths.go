@@ -3,8 +3,10 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
+	"goclashz/core/instance"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -38,6 +40,7 @@ var (
 	appDir        string
 	dataDir       string
 	legacyDataDir string
+	dataOwnership *instance.Lock
 )
 
 func init() {
@@ -49,6 +52,17 @@ func initDirs() {
 
 	legacyDataDir = resolveLegacyAppDataDir()
 	dataDir = resolveStableDataDir(appDir)
+	// Only native Lite owns this lock. Wails must reach its existing second-instance
+	// activation handler instead of exiting during package initialization.
+	// The handle is retained for process lifetime, including deferred shutdown.
+	if runtime.GOOS == "windows" && nativeLiteMode() {
+		lock, err := instance.Acquire(dataDir)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "data directory is already in use or inaccessible")
+			os.Exit(1)
+		}
+		dataOwnership = lock
+	}
 
 	_ = os.MkdirAll(dataDir, 0755)
 	_ = os.MkdirAll(filepath.Join(dataDir, "profiles"), 0755)
@@ -87,6 +101,17 @@ func resolveAppDir() string {
 }
 
 func resolveStableDataDir(appDir string) string {
+	// Native mode never honors legacy data-dir overrides/install profiles.
+	for _, arg := range os.Args[1:] {
+		if arg == "--native-lite" {
+			base, err := os.UserCacheDir()
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "native data directory unavailable")
+				os.Exit(1)
+			}
+			return filepath.Join(base, "Misetanibox.Lite")
+		}
+	}
 	if dir := parseDataDirArg(); dir != "" {
 		return filepath.Clean(dir)
 	}
@@ -120,7 +145,20 @@ func resolveStableDataDir(appDir string) string {
 	return filepath.Join(appDir, "data")
 }
 
+func nativeLiteMode() bool {
+	for _, arg := range os.Args[1:] {
+		if arg == "--native-lite" {
+			return true
+		}
+	}
+	return false
+}
+
 func resolveLegacyAppDataDir() string {
+	// Native must not migrate or fall back to an existing client's core assets.
+	if nativeLiteMode() {
+		return ""
+	}
 	configDir, err := os.UserConfigDir()
 	if err != nil {
 		return ""

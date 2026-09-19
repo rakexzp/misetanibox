@@ -58,3 +58,8 @@ mobile/android/app/src/main/assets/public/
 *.jks
 *.keystore
 keystore.properties
+
+# Native Windows prototype build outputs
+/windows-native/artifacts/
+/windows-native/Misetanibox.Lite/bin/
+/windows-native/Misetanibox.Lite/obj/

@@ -10,8 +10,6 @@ import (
 	goruntime "runtime"
 	"strings"
 
-	"github.com/wailsapp/wails/v2/pkg/runtime"
-
 	"goclashz/core/clash"
 	"goclashz/core/downloader"
 	"goclashz/core/logger"
@@ -37,6 +35,7 @@ type AutoDelayRefreshOptions struct {
 type BootstrapOptions struct {
 	IsStartupLaunch bool
 	Silent          bool
+	NativeLite      bool
 }
 
 type Options struct {
@@ -110,6 +109,7 @@ type Controller struct {
 	mu                sync.RWMutex
 	coreLifecycleMu   sync.Mutex
 	componentUpdateMu sync.Mutex
+	systemProxy       *systemProxyRuntime
 	sysProxyActive    bool
 	lastSysProxyApply time.Time
 	tunActive         bool
@@ -187,6 +187,7 @@ func NewController(opts Options) *Controller {
 		Offline:       NewOfflineNodeStore(activeConfig),
 		Tasks:         tasks.NewManager(opts.Events),
 		Desired:       NewDesiredStateStore(),
+		systemProxy:   newSystemProxyRuntime(),
 	}
 
 	if !behavior.Get().RestoreOnStartup {
@@ -279,7 +280,12 @@ func (c *Controller) ClearUpdateCache(key string) {
 
 func (c *Controller) Bootstrap(ctx context.Context, opts BootstrapOptions) {
 	c.ctx = ctx
-	CleanLegacyFiles(c.version)
+	if opts.NativeLite {
+		c.systemProxy.native.Store(true)
+	}
+	if !opts.NativeLite {
+		CleanLegacyFiles(c.version)
+	}
 
 	clash.SetOnExitCallback(func(e clash.ExitEvent) {
 		if !e.Intentional {
@@ -294,7 +300,7 @@ func (c *Controller) Bootstrap(ctx context.Context, opts BootstrapOptions) {
 			c.runtimeState.Clear()
 
 			if wasSysProxy {
-				if err := sys.DisableSystemProxy(); err != nil {
+				if err := c.systemProxy.Disable(); err != nil {
 					c.logWarn("Не удалось отключить системный прокси после аварийного завершения ядра: %v", err)
 				}
 			}
@@ -305,6 +311,16 @@ func (c *Controller) Bootstrap(ctx context.Context, opts BootstrapOptions) {
 		}
 	})
 
+	if opts.NativeLite {
+		desired := c.Desired.Get()
+		desired.CoreRunning, desired.SystemProxy, desired.Tun = false, false, false
+		if err := c.Desired.SetAndSave(desired); err != nil {
+			panic(err)
+		}
+		c.Supervisor.Start(ctx)
+		c.SyncState()
+		return
+	}
 	c.syncStartupTaskStateSafe()
 
 	c.Supervisor.Start(ctx)
@@ -537,6 +553,9 @@ func (c *Controller) SyncState() {
 }
 
 func (c *Controller) ensureCoreRunningWithDesiredState(ctx context.Context, desired DesiredState) error {
+	if c.systemProxy.native.Load() {
+		return ErrNativeProxyOwnershipUnavailable
+	}
 
 	if c.runtimeSatisfiesCore(RuntimePlan{
 		NeedTun:      desired.Tun,
@@ -752,9 +771,12 @@ func (c *Controller) reconcileSystemProxy(plan RuntimePlan) error {
 }
 
 func (c *Controller) ensureSystemProxyEnabled() error {
+	if c.systemProxy.native.Load() {
+		return ErrNativeProxyOwnershipUnavailable
+	}
 	port := clash.GetProxyPort()
 	target := fmt.Sprintf("127.0.0.1:%d", port)
-	current, err := sys.GetSystemProxyState()
+	current, err := c.systemProxy.Get()
 
 	// Уже наш прокси стоит? Проверяем устойчиво (Contains, а не байт-в-байт ==) —
 	// per-connection WinINet API пишет ProxyServer не всегда точь-в-точь, и строгое ==
@@ -777,7 +799,7 @@ func (c *Controller) ensureSystemProxyEnabled() error {
 	c.lastSysProxyApply = time.Now()
 	c.mu.Unlock()
 
-	err = sys.EnableSystemProxy(
+	err = c.systemProxy.Enable(
 		"127.0.0.1",
 		port,
 		"localhost;127.*;10.*;172.16.*;172.17.*;172.18.*;172.19.*;172.20.*;172.21.*;172.22.*;172.23.*;172.24.*;172.25.*;172.26.*;172.27.*;172.28.*;172.29.*;172.30.*;172.31.*;192.168.*;<local>",
@@ -796,13 +818,16 @@ func (c *Controller) ensureSystemProxyEnabled() error {
 }
 
 func (c *Controller) ensureSystemProxyDisabled() error {
-	current, err := sys.GetSystemProxyState()
+	if c.systemProxy.native.Load() {
+		return nil
+	}
+	current, err := c.systemProxy.Get()
 	if err != nil {
 		return fmt.Errorf("Не удалось прочитать состояние системного прокси Windows: %w", err)
 	}
 
 	if current.Enabled {
-		if err := sys.DisableSystemProxy(); err != nil {
+		if err := c.systemProxy.Disable(); err != nil {
 			return fmt.Errorf("Не удалось отключить системный прокси Windows: %w", err)
 		}
 	}
@@ -829,7 +854,7 @@ func (c *Controller) DisableAll() {
 	defer c.coreLifecycleMu.Unlock()
 
 	c.stopCoreProcessLocked()
-	_ = sys.DisableSystemProxy()
+	_ = c.systemProxy.Disable()
 
 	c.mu.Lock()
 	c.sysProxyActive = false
@@ -1081,6 +1106,9 @@ func (c *Controller) NeedsDelayWarmup() bool {
 }
 
 func (c *Controller) StartCoreOnly(ctx context.Context, id string) error {
+	if c.systemProxy.native.Load() {
+		return ErrNativeProxyOwnershipUnavailable
+	}
 	behavior := c.Behavior.Get()
 
 	if err := clash.BuildRuntimeConfig(id, behavior.ActiveMode, behavior.LogLevel, false); err != nil {
@@ -1817,18 +1845,4 @@ func proxyGroupContainsNode(group map[string]interface{}, nodeName string) bool 
 
 func (c *Controller) GetDiagnosticInfo() DiagnosticInfo {
 	return GetDiagnosticInfo()
-}
-
-func (c *Controller) ExportDiagnostics() error {
-	path, err := runtime.SaveFileDialog(c.ctx, runtime.SaveDialogOptions{
-		DefaultFilename: "goclashz_diagnostics.json",
-		Title:           "Экспорт диагностики",
-		Filters: []runtime.FileFilter{
-			{DisplayName: "JSON Files (*.json)", Pattern: "*.json"},
-		},
-	})
-	if err != nil || path == "" {
-		return err
-	}
-	return ExportDiagnosticsToFile(path)
 }

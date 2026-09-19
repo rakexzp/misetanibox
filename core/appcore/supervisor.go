@@ -117,6 +117,11 @@ func (s *CoreSupervisor) Reconcile(ctx context.Context, reason string) error {
 	defer s.mu.Unlock()
 
 	desired := s.desired.Get()
+	// Reject native runtime activation before starting a core or touching assets,
+	// including queued/watchdog requests that bypass LiteService.Connect.
+	if s.controller.systemProxy.native.Load() && (desired.CoreRunning || desired.SystemProxy || desired.Tun) {
+		return ErrNativeProxyOwnershipUnavailable
+	}
 	behavior := s.controller.Behavior.Get()
 
 	if desired.ActiveConfig == "" {
