@@ -29,6 +29,7 @@ public sealed class MainWindow : Window
 
     public MainWindow()
     {
+        StartupDiagnostics.Stage("window.resize");
         Title = "Misetanibox Lite";
         // Standard system title bar keeps resizing, accessibility and DPI behavior native.
         AppWindow.Resize(new SizeInt32(500, 740));
@@ -37,6 +38,7 @@ public sealed class MainWindow : Window
             presenter.PreferredMinimumWidth = 360;
             presenter.PreferredMinimumHeight = 560;
         }
+        StartupDiagnostics.Stage("window.layout");
         layout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         layout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         layout.RowDefinitions.Add(new RowDefinition());
@@ -45,10 +47,14 @@ public sealed class MainWindow : Window
         error.Margin = new Thickness(0, 0, 0, 12); Grid.SetRow(error, 1); layout.Children.Add(error);
         Grid.SetRow(page, 2); layout.Children.Add(page); root.Children.Add(layout);
         progress.VerticalAlignment = VerticalAlignment.Top; root.Children.Add(progress);
+        StartupDiagnostics.Stage("window.cover");
         cover = new CoverView(() => _ = AddSubscription(), () => Navigate("subscriptions"), () => _ = OpenServers(), () => Navigate("settings"));
         coverScroll = UI.Scroll(cover);
         coverScroll.SizeChanged += (_, _) => cover.MinHeight = Math.Max(490, coverScroll.ActualHeight);
+        StartupDiagnostics.Stage("window.content");
+        root.Loaded += (_, _) => StartupDiagnostics.Stage("window.loaded");
         Content = root; ApplyTheme(false); Navigate("home");
+        StartupDiagnostics.Stage("window.tray");
         root.SizeChanged += (_, _) => layout.Padding = new Thickness(root.ActualWidth < 380 ? 16 : 26);
         Closed += async (_, _) =>
         {
@@ -75,10 +81,17 @@ public sealed class MainWindow : Window
         Activated -= Start;
         await Run(async () =>
         {
-            await backend.StartAsync(); started = true;
-            await RefreshSnapshot();
-            timer.Start(); // Keep the lease alive even if topology cannot be read.
-            await LoadTopology();
+            StartupDiagnostics.Stage("backend.start");
+            try
+            {
+                await backend.StartAsync(); started = true;
+                StartupDiagnostics.Stage("backend.snapshot");
+                await RefreshSnapshot();
+                timer.Start(); // Keep the lease alive even if topology cannot be read.
+                await LoadTopology();
+                StartupDiagnostics.Stage("backend.ready");
+            }
+            catch (Exception ex) { StartupDiagnostics.Failure("backend.start", ex); throw; }
         });
     }
     private void ApplyTheme(bool light)
