@@ -27,7 +27,9 @@ internal sealed class ImportDialog : ContentDialog
         void Validate() => IsPrimaryButtonEnabled = !working && (mode.SelectedIndex == 2 ? path.Length > 0 : source.Text.Trim().Length > 0);
         void SetBusy(bool value)
         {
-            working = value; form.IsEnabled = !value; IsSecondaryButtonEnabled = !value;
+            working = value;
+            foreach (var control in form.Children.OfType<Control>()) control.IsEnabled = !value;
+            IsSecondaryButtonEnabled = !value;
             PrimaryButtonText = value ? "Добавляем…" : "Добавить"; Validate();
         }
         paste.Click += async (_, _) =>

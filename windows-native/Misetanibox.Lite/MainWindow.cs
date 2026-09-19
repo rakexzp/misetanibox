@@ -56,7 +56,7 @@ public sealed class MainWindow : Window
             if (!closing) { closing = true; await backend.DisposeAsync(); }
         };
         tray = new TrayIcon(WinRT.Interop.WindowNative.GetWindowHandle(this), () => { AppWindow.Show(); Activate(); }, () => _ = Exit());
-        AppWindow.Closing += (_, args) =>
+        AppWindow.Closing += (sender, args) =>
         {
             if (closing) return;
             args.Cancel = true;
