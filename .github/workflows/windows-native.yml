@@ -30,7 +30,7 @@ jobs:
         run: ./windows-native/build-windows.ps1
       - name: Source startup and UI guards
         shell: pwsh
-        run: python -m unittest discover -s windows-native/tests -v
+        run: python -X utf8 -m unittest discover -s windows-native/tests -v
       - name: Smoke extracted published ZIP (no VPN or helper)
         shell: pwsh
         run: ./windows-native/smoke-windows.ps1
