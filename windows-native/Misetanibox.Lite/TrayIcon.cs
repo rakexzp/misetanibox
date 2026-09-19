@@ -16,7 +16,7 @@ internal sealed class TrayIcon : IDisposable
     {
         hwnd = window; this.show = show; this.exit = exit; callback = Handle;
         previous = SetWindowLongPtr(hwnd, -4, Marshal.GetFunctionPointerForDelegate(callback));
-        data = new NotifyData { Size = (uint)Marshal.SizeOf<NotifyData>(), Window = hwnd, Id = 1, Flags = 7, Message = Callback, Icon = LoadIcon(0, (nint)32512), Tip = "Misetanibox Lite · double click: show; right click: exit", Info = "", InfoTitle = "" };
+        data = new NotifyData { Size = (uint)Marshal.SizeOf<NotifyData>(), Window = hwnd, Id = 1, Flags = 7, Message = Callback, Icon = LoadIcon(0, (nint)32512), Tip = "Misetanibox Lite · двойной щелчок: открыть; правая кнопка: выйти", Info = "", InfoTitle = "" };
         Ready = previous != 0 && ShellNotifyIcon(0, ref data);
     }
     private nint Handle(nint window, uint message, nuint w, nint l)

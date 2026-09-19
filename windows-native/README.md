@@ -94,10 +94,23 @@ are preserved, but dynamic provider members are not selectable yet.
   `requiredCoreVersion` currently declares a target, not runtime enforcement.
   No user core was changed. mips is optional mihomo IP stack, not architecture or
   Wintun replacement: https://github.com/MetaCubeX/mihomo/releases/tag/v1.19.31 .
-- Settings/theme/startup, explicit probe, pending-state DTO, cancellation/reconnect,
-  typed C# DTO/MVVM separation, C# tests and Windows build/runtime acceptance.
-- UI is currently a functional single scrolling surface, not the final four
-  polished Lite surfaces. Do not distribute it as a finished client.
+- Persistent settings/startup, explicit probe, pending-state DTO, cancellation/reconnect,
+  C# behavioral tests and Windows build/runtime acceptance remain open.
+- Native UI now separates the Russian Lite cover/onboarding, subscriptions,
+  grouped server picker and compact settings. The cover uses the desktop Lite
+  gradient/wordmark composition, system typography and native controls (no WebView).
+  Theme and close-to-tray choices apply only to this launch and are labelled so.
+  Imports use an explicit paste action or an owner-initialized native YAML picker.
+  Profiles are visible without a core; session/traffic telemetry is not invented.
+  Connect remains visibly disabled, and no UI action calls connect or ping.
+  No Windows rendering/interactive acceptance has been performed for this redesign;
+  do not distribute it as a finished client.
+
+UI source contract checks (not compilation or rendering):
+`python3 -m unittest discover -s windows-native/tests -v`.
+Window minimum bounds use Windows App SDK 1.8 `OverlappedPresenter`
+[`PreferredMinimumWidth`](https://learn.microsoft.com/en-us/windows/windows-app-sdk/api/winrt/microsoft.ui.windowing.overlappedpresenter.preferredminimumwidth?view=windows-app-sdk-1.8)
+and `PreferredMinimumHeight`; the standard system title bar is retained.
 
 Available checks: `go test -race ./core/appcore ./core/clash ./core/instance
 ./windows-native/ipc`, Windows backend/desktop cross-build. Windows host required

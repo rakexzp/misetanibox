@@ -1,103 +1,239 @@
+using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using System.Text.Json;
-using Windows.Storage.Pickers;
+using Microsoft.UI.Xaml.Media;
+using Windows.Foundation;
+using Windows.Graphics;
 
 namespace Misetanibox.Lite;
 
-// All connection indicators come from backend snapshots. Buttons serialize
-// through Run; no optimistic "connected" state is maintained in the view.
 public sealed class MainWindow : Window
 {
     private readonly BackendClient backend = new();
-    private readonly StackPanel panel = new() { Spacing = 12, Margin = new Thickness(24) };
-    private readonly TextBlock status = new() { Text = "Starting backend…" };
-    private readonly TextBlock error = new() { TextWrapping = TextWrapping.Wrap };
-    private readonly TextBox name = new() { Header = "Profile name" };
-    private readonly TextBox source = new() { Header = "Subscription URL or DNS domain" };
-    private readonly ComboBox profiles = new() { Header = "Subscriptions", HorizontalAlignment = HorizontalAlignment.Stretch };
-    private readonly ComboBox groups = new() { Header = "Group", HorizontalAlignment = HorizontalAlignment.Stretch };
-    private readonly ComboBox servers = new() { Header = "Server", HorizontalAlignment = HorizontalAlignment.Stretch };
+    private readonly Grid root = new() { RequestedTheme = ElementTheme.Dark };
+    private readonly Grid layout = new() { Padding = new Thickness(26), MaxWidth = 540, HorizontalAlignment = HorizontalAlignment.Stretch };
+    private readonly ContentControl page = new() { HorizontalContentAlignment = HorizontalAlignment.Stretch, VerticalContentAlignment = VerticalAlignment.Stretch };
+    private readonly InfoBar error = new() { Severity = InfoBarSeverity.Error, IsClosable = true };
+    private readonly ProgressBar progress = new() { IsIndeterminate = true, Height = 3, Visibility = Visibility.Collapsed };
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(5) };
-    private string profileId = "";
-    private JsonElement topology;
-    private bool busy, closing;
+    private readonly CoverView cover;
+    private readonly ScrollViewer coverScroll;
+    private readonly Button back;
+    private LiteProfile[] profiles = [];
+    private string profileId = "", selectedServer = "", surface = "home";
+    private LiteTopology? topology;
+    private bool busy, closing, started, dialogOpen, exitRequested, closeToTray = true;
+    private bool running, systemProxy;
+    private long viewGeneration;
     private TrayIcon? tray;
+
     public MainWindow()
     {
         Title = "Misetanibox Lite";
-        panel.Children.Add(new TextBlock { Text = "Misetanibox Lite", FontSize = 28 });
-        panel.Children.Add(status); panel.Children.Add(error);
-        panel.Children.Add(name); panel.Children.Add(source);
-        Add("Paste explicitly", async () => { var data = Windows.ApplicationModel.DataTransfer.Clipboard.GetContent(); if (data.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.Text)) source.Text = await data.GetTextAsync(); });
-        Add("Import URL", async () => await backend.CallAsync("profiles.addURL", new { name = name.Text, url = source.Text }));
-        Add("Import DNS", async () => await backend.CallAsync("profiles.addDNS", new { name = name.Text, domain = source.Text }));
-        Add("Import local YAML", async () => {
-            var picker = new FileOpenPicker(); picker.FileTypeFilter.Add(".yaml"); picker.FileTypeFilter.Add(".yml");
-            WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
-            var file = await picker.PickSingleFileAsync(); if (file != null) await backend.CallAsync("profiles.addLocal", new { name = name.Text, path = file.Path });
-        });
-        panel.Children.Add(profiles);
-        Add("Use selected profile", async () => await backend.CallAsync("profiles.select", new { id = SelectedProfile() }));
-        Add("Refresh selected subscription", async () => await backend.CallAsync("profiles.refresh", new { id = SelectedProfile() }));
-        Add("Delete selected profile", async () => {
-            var dialog = new ContentDialog { XamlRoot = panel.XamlRoot, Title = "Delete this profile?", PrimaryButtonText = "Delete", CloseButtonText = "Cancel" };
-            if (await dialog.ShowAsync() == ContentDialogResult.Primary) await backend.CallAsync("profiles.delete", new { id = SelectedProfile() });
-        });
-        panel.Children.Add(groups); panel.Children.Add(servers);
-        groups.SelectionChanged += (_, _) => FillMembers();
-        Add("Use server", async () => await backend.CallAsync("servers.select", new { profileId, group = groups.SelectedItem?.ToString(), name = servers.SelectedItem?.ToString() }));
-        Add("Ping server", async () => { var result = await backend.CallAsync("servers.ping", new { profileId, name = servers.SelectedItem?.ToString() }); error.Text = $"Delay: {result} ms"; });
-        Add("Connect · system proxy", async () => { if (profileId.Length == 0) throw new InvalidOperationException("Import and select a valid profile first."); await backend.CallAsync("connect"); });
-        Add("Full stop", async () => await backend.CallAsync("stop"));
-        panel.Children.Add(new TextBlock { Text = "TUN unavailable: privileged helper policy is not ready.\nRequired core: mihomo v1.19.31; mips optional after verification. Core is not installed automatically.", TextWrapping = TextWrapping.Wrap });
-        Add("Exit", async () => { closing = true; timer.Stop(); await backend.DisposeAsync(); Close(); });
-        Content = new ScrollViewer { Content = panel };
-        Closed += async (_, _) => { tray?.Dispose(); timer.Stop(); if (!closing) { closing = true; await backend.DisposeAsync(); } };
-        tray = new TrayIcon(WinRT.Interop.WindowNative.GetWindowHandle(this), () => { AppWindow.Show(); Activate(); }, async () => { if (busy) return; closing = true; timer.Stop(); await backend.DisposeAsync(); Close(); });
-        AppWindow.Closing += (_, args) => { if (!closing && tray.Ready) { args.Cancel = true; AppWindow.Hide(); } };
-        timer.Tick += async (_, _) => { if (!busy) await Run(Refresh); };
+        // Standard system title bar keeps resizing, accessibility and DPI behavior native.
+        AppWindow.Resize(new SizeInt32(500, 740));
+        if (AppWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter presenter)
+        {
+            presenter.PreferredMinimumWidth = 360;
+            presenter.PreferredMinimumHeight = 560;
+        }
+        layout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        layout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        layout.RowDefinitions.Add(new RowDefinition());
+        back = UI.Button("Назад", () => Navigate("home"));
+        back.Visibility = Visibility.Collapsed; back.Margin = new Thickness(0, 0, 0, 16); layout.Children.Add(back);
+        error.Margin = new Thickness(0, 0, 0, 12); Grid.SetRow(error, 1); layout.Children.Add(error);
+        Grid.SetRow(page, 2); layout.Children.Add(page); root.Children.Add(layout);
+        progress.VerticalAlignment = VerticalAlignment.Top; root.Children.Add(progress);
+        cover = new CoverView(() => _ = AddSubscription(), () => Navigate("subscriptions"), () => _ = OpenServers(), () => Navigate("settings"));
+        coverScroll = UI.Scroll(cover);
+        coverScroll.SizeChanged += (_, _) => cover.MinHeight = Math.Max(490, coverScroll.ActualHeight);
+        Content = root; ApplyTheme(false); Navigate("home");
+        root.SizeChanged += (_, _) => layout.Padding = new Thickness(root.ActualWidth < 380 ? 16 : 26);
+        Closed += async (_, _) =>
+        {
+            tray?.Dispose(); timer.Stop();
+            if (!closing) { closing = true; await backend.DisposeAsync(); }
+        };
+        tray = new TrayIcon(WinRT.Interop.WindowNative.GetWindowHandle(this), () => { AppWindow.Show(); Activate(); }, () => _ = Exit());
+        AppWindow.Closing += (_, args) =>
+        {
+            if (closing) return;
+            args.Cancel = true;
+            if (closeToTray && tray.Ready) AppWindow.Hide(); else _ = Exit();
+        };
+        timer.Tick += async (_, _) =>
+        {
+            if (busy || closing || !started) return;
+            // Do not replace controls or selections on the five-second heartbeat.
+            await Run(() => RefreshSnapshot(), quiet: true);
+        };
         Activated += Start;
     }
     private async void Start(object sender, WindowActivatedEventArgs args)
     {
         Activated -= Start;
-        await Run(async () => { await backend.StartAsync(); await Refresh(); timer.Start(); });
+        await Run(async () =>
+        {
+            await backend.StartAsync(); started = true;
+            await RefreshSnapshot();
+            timer.Start(); // Keep the lease alive even if topology cannot be read.
+            await LoadTopology();
+        });
     }
-    private void Add(string title, Func<Task> action)
+    private void ApplyTheme(bool light)
     {
-        var button = new Button { Content = title }; button.Click += async (_, _) => await Run(async () => { await action(); if (!closing) await Refresh(); }); panel.Children.Add(button);
+        root.RequestedTheme = light ? ElementTheme.Light : ElementTheme.Dark;
+        var brush = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(.8, 1) };
+        brush.GradientStops.Add(new GradientStop { Offset = 0, Color = light ? ColorHelper.FromArgb(255, 225, 231, 240) : ColorHelper.FromArgb(255, 64, 73, 90) });
+        brush.GradientStops.Add(new GradientStop { Offset = .48, Color = light ? ColorHelper.FromArgb(255, 240, 242, 246) : ColorHelper.FromArgb(255, 35, 40, 49) });
+        brush.GradientStops.Add(new GradientStop { Offset = 1, Color = light ? ColorHelper.FromArgb(255, 250, 250, 252) : ColorHelper.FromArgb(255, 12, 14, 19) });
+        root.Background = brush;
     }
-    private async Task Run(Func<Task> action)
+    private void UpdateCover() => cover.Update(profiles.FirstOrDefault(p => p.Id == profileId), profiles.Length > 0, selectedServer, running, systemProxy, started);
+    private void Navigate(string target)
     {
-        if (busy) return; busy = true; error.Text = "";
-        try { await action(); } catch (Exception e) { error.Text = e.Message; } finally { busy = false; }
+        if (closing) return;
+        viewGeneration++; surface = target; back.Visibility = target == "home" ? Visibility.Collapsed : Visibility.Visible;
+        if (target == "home") { UpdateCover(); page.Content = coverScroll; }
+        else if (target == "subscriptions") page.Content = UI.Scroll(new SubscriptionsView(profiles, profileId,
+            () => _ = AddSubscription(), id => _ = SelectProfile(id), id => _ = RefreshProfile(id), p => _ = DeleteProfile(p)));
+        else if (target == "settings") page.Content = UI.Scroll(new SettingsView(root.RequestedTheme == ElementTheme.Light, closeToTray, tray?.Ready == true,
+            ApplyTheme, value => closeToTray = value, () => _ = Exit()));
+        else if (target == "servers" && topology is not null) page.Content = new ServersView(topology, (group, name) => _ = SelectServer(group, name));
     }
-    private string SelectedProfile() => (profiles.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? throw new InvalidOperationException("Select a profile");
-    private async Task Refresh()
+    private async Task Run(Func<Task> action, bool quiet = false)
+    {
+        if (busy || closing) return;
+        busy = true;
+        if (!quiet) { progress.Visibility = Visibility.Visible; page.IsEnabled = false; back.IsEnabled = false; error.IsOpen = false; }
+        try { await action(); }
+        catch (Exception ex) { if (!closing) { error.Message = RussianError.Describe(ex); error.IsOpen = true; } }
+        finally
+        {
+            busy = false;
+            if (!quiet) { progress.Visibility = Visibility.Collapsed; page.IsEnabled = true; back.IsEnabled = true; }
+            if (exitRequested) await Exit();
+        }
+    }
+    private async Task RefreshSnapshot()
     {
         var snapshot = await backend.CallAsync("snapshot");
-        profileId = snapshot.GetProperty("activeProfile").GetString() ?? "";
-        status.Text = snapshot.GetProperty("running").GetBoolean() && snapshot.GetProperty("systemProxy").GetBoolean() ? "System proxy connected" : "Stopped / not connected";
-        string? selected = (profiles.SelectedItem as ComboBoxItem)?.Tag?.ToString();
-        profiles.Items.Clear();
-        foreach (var p in snapshot.GetProperty("profiles").EnumerateArray()) {
-            var item = new ComboBoxItem { Content = p.GetProperty("name").GetString(), Tag = p.GetProperty("id").GetString() }; profiles.Items.Add(item);
-            if ((string?)item.Tag == (selected ?? profileId)) profiles.SelectedItem = item;
-        }
-        if (profileId.Length == 0) { status.Text = "Welcome · import and select your first profile"; groups.Items.Clear(); servers.Items.Clear(); return; }
-        topology = await backend.CallAsync("servers.list");
-        var old = groups.SelectedItem?.ToString(); groups.Items.Clear();
-        foreach (var g in topology.GetProperty("groups").EnumerateArray()) groups.Items.Add(g.GetProperty("name").GetString());
-        groups.SelectedItem = old ?? topology.GetProperty("selector").GetString(); FillMembers();
+        if (closing) return;
+        string oldProfile = profileId;
+        profiles = Data.Profiles(snapshot); profileId = Data.Text(snapshot, "activeProfile");
+        running = Data.Flag(snapshot, "running"); systemProxy = Data.Flag(snapshot, "systemProxy");
+        if (oldProfile != profileId) { topology = null; selectedServer = ""; }
+        UpdateCover();
     }
-    private void FillMembers()
+    private async Task LoadTopology()
     {
-        servers.Items.Clear(); if (topology.ValueKind != JsonValueKind.Object) return;
-        foreach (var g in topology.GetProperty("groups").EnumerateArray()) {
-            if (g.GetProperty("name").GetString() != groups.SelectedItem?.ToString()) continue;
-            foreach (var member in g.GetProperty("members").EnumerateArray()) servers.Items.Add(member.GetString());
-            servers.SelectedItem = g.GetProperty("selected").GetString();
+        if (profileId.Length == 0) { topology = null; selectedServer = ""; UpdateCover(); return; }
+        string requestedProfile = profileId;
+        var response = LiteTopology.Parse(await backend.CallAsync("servers.list"));
+        if (closing || profileId != requestedProfile || response.ProfileId != requestedProfile) return;
+        topology = response;
+        selectedServer = response.Groups.FirstOrDefault(g => g.Name == response.Selector)?.Selected ?? "";
+        UpdateCover();
+    }
+    private async Task OpenServers()
+    {
+        long generation = viewGeneration;
+        await Run(async () =>
+        {
+            await LoadTopology();
+            if (generation == viewGeneration && topology is not null) Navigate("servers");
+        });
+    }
+    private async Task SelectProfile(string id)
+    {
+        await Run(async () =>
+        {
+            await backend.CallAsync("profiles.select", new { id });
+            await RefreshSnapshot(); Navigate("home");
+            await LoadTopology();
+        });
+    }
+    private async Task RefreshProfile(string id)
+    {
+        long generation = viewGeneration;
+        await Run(async () =>
+        {
+            await backend.CallAsync("profiles.refresh", new { id }); await RefreshSnapshot();
+            if (generation == viewGeneration) Navigate("subscriptions");
+            await LoadTopology();
+        });
+    }
+    private async Task DeleteProfile(LiteProfile profile)
+    {
+        if (busy || dialogOpen || closing) return;
+        dialogOpen = true;
+        var dialog = new ContentDialog
+        {
+            XamlRoot = root.XamlRoot, RequestedTheme = root.RequestedTheme, Title = "Удалить подписку?",
+            Content = UI.Text("«" + profile.Name + "» будет удалена с этого устройства."),
+            PrimaryButtonText = "Удалить", CloseButtonText = "Отмена", DefaultButton = ContentDialogButton.Close
+        };
+        try
+        {
+            if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+            await Run(async () =>
+            {
+                await backend.CallAsync("profiles.delete", new { id = profile.Id }); await RefreshSnapshot();
+                Navigate(profiles.Length == 0 ? "home" : "subscriptions"); await LoadTopology();
+            });
         }
+        finally { dialogOpen = false; if (exitRequested) await Exit(); }
+    }
+    private async Task AddSubscription()
+    {
+        if (busy || dialogOpen || closing || !started) return;
+        dialogOpen = true;
+        var before = profiles.Select(p => p.Id).ToHashSet();
+        var dialog = new ImportDialog(this, root.XamlRoot, root.RequestedTheme, async (method, parameters) =>
+        {
+            // Heartbeats remain active while the user edits; only mutations pause them.
+            if (busy) throw new InvalidOperationException("Операция ещё выполняется");
+            busy = true;
+            try { await backend.CallAsync(method, parameters); }
+            finally { busy = false; }
+        });
+        try
+        {
+            await dialog.ShowAsync();
+            if (!dialog.Imported || closing) return;
+            await Run(async () =>
+            {
+                await RefreshSnapshot();
+                // Imports need not auto-select in appcore. Select only a new validated profile.
+                var added = profiles.FirstOrDefault(p => !before.Contains(p.Id));
+                Navigate("home");
+                if (added is not null && added.Id != profileId)
+                {
+                    await backend.CallAsync("profiles.select", new { id = added.Id }); await RefreshSnapshot();
+                }
+                await LoadTopology();
+            });
+        }
+        finally { dialogOpen = false; if (exitRequested) await Exit(); }
+    }
+    private async Task SelectServer(string group, string name)
+    {
+        string requestedProfile = profileId;
+        long generation = viewGeneration;
+        await Run(async () =>
+        {
+            await backend.CallAsync("servers.select", new { profileId = requestedProfile, group, name });
+            await LoadTopology();
+            if (requestedProfile == profileId && generation == viewGeneration) Navigate("home");
+        });
+    }
+    private async Task Exit()
+    {
+        if (closing) return;
+        if (busy || dialogOpen) { exitRequested = true; return; }
+        closing = true; timer.Stop();
+        try { await backend.DisposeAsync(); }
+        finally { Close(); }
     }
 }
