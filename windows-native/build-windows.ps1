@@ -21,5 +21,7 @@ try {
     foreach ($file in @('Misetanibox.Lite.exe', 'Misetanibox.Backend.exe', 'Microsoft.UI.Xaml.dll', 'coreclr.dll')) {
         if (!(Test-Path "windows-native/artifacts/package/$file")) { throw "Missing packaged dependency: $file" }
     }
+    if (!(Test-Path 'windows-native/artifacts/package/App.xbf')) { throw 'Missing compiled App.xaml' }
+    if (!(Test-Path 'windows-native/artifacts/package/resources.pri') -and !(Test-Path 'windows-native/artifacts/package/Misetanibox.Lite.pri')) { throw 'Missing application resource index' }
     Compress-Archive -Path windows-native/artifacts/package/* -DestinationPath windows-native/artifacts/Misetanibox-Lite-Windows-x64-prototype.zip -Force
 } finally { Pop-Location }

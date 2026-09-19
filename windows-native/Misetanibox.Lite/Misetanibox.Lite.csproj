@@ -18,4 +18,14 @@
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260804001" />
     <None Include="../artifacts/Misetanibox.Backend.exe" Link="Misetanibox.Backend.exe" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <Target Name="PublishXamlResources" AfterTargets="Publish">
+    <!-- Unpackaged output needs the application's compiled XAML and resource index. -->
+    <ItemGroup>
+      <_PublishedXaml Include="$(OutputPath)**\*.xbf" />
+      <_PublishedXaml Include="$(OutputPath)*.pri" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_PublishedXaml)"
+          DestinationFiles="@(_PublishedXaml->'$(PublishDir)%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+  </Target>
 </Project>
