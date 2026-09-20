@@ -217,6 +217,11 @@ func PrepareCoreUpdate(ctx context.Context, assetURL string, strategy func() dow
 		return nil, err
 	}
 
+	if err := validateReplacementTun(ctx, stagedExe); err != nil {
+		_ = os.Remove(stagedExe)
+		return nil, err
+	}
+
 	return map[string]string{
 		"stagedExe": stagedExe,
 		"exePath":   exePath,
@@ -232,6 +237,10 @@ func CommitCoreUpdate(ctx context.Context, prepared map[string]string) (string, 
 
 	if stagedExe == "" || exePath == "" {
 		return "", fmt.Errorf("обновление ядра: отсутствует staging-информация")
+	}
+
+	if err := validateReplacementTun(ctx, stagedExe); err != nil {
+		return "", err
 	}
 
 	if !isDirWritable(filepath.Dir(exePath)) {

@@ -7,6 +7,8 @@ import {runtimeassets} from '../models';
 import {sys} from '../models';
 import {logger} from '../models';
 
+export function GetTunCapabilities():Promise<clash.TunCapabilities>;
+
 export function AddRule(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function AddRuleFromForm(arg1:string,arg2:string,arg3:clash.BuildRuleRequest):Promise<void>;

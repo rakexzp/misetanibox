@@ -33,18 +33,19 @@ function Download-File($url, $dest) {
   }
 }
 
-# 1. mihomo latest (стабильное ядро MetaCubeX)
-# Авторизованный запрос (если доступен GITHUB_TOKEN) — иначе анонимный лимит API быстро исчерпывается.
+# 1. Pinned stock core; compatible amd64 does not require newer CPU instructions.
 $ghHeaders = @{ "User-Agent" = "misetanibox-ci" }
 if ($env:GITHUB_TOKEN) { $ghHeaders["Authorization"] = "Bearer $env:GITHUB_TOKEN" }
-$release = Invoke-RestMethod "https://api.github.com/repos/MetaCubeX/mihomo/releases/latest" -Headers $ghHeaders
-$asset = $release.assets | Where-Object { $_.name -match "mihomo-windows-amd64.*\.zip$" } | Select-Object -First 1
-if ($null -eq $asset) {
-  throw "mihomo windows amd64 asset not found"
-}
+$release = Invoke-RestMethod "https://api.github.com/repos/MetaCubeX/mihomo/releases/tags/v1.19.31" -Headers $ghHeaders
+$asset = $release.assets | Where-Object { $_.name -eq "mihomo-windows-amd64-compatible-v1.19.31.zip" } | Select-Object -First 1
+if ($null -eq $asset) { throw "Pinned mihomo windows amd64-compatible asset not found" }
 
 $tmp = Join-Path $env:TEMP $asset.name
 Download-File $asset.browser_download_url $tmp
+# Official release API digest, pinned together with the asset version.
+if ((Get-Sha256 $tmp) -ne "93d14e9a13b49b2f2d256202d02cc8d14a7c4695edf084cae0f941986bc9c218") {
+  throw "Mihomo archive SHA256 mismatch"
+}
 
 $extract = Join-Path $env:TEMP ("mihomo_" + [guid]::NewGuid())
 Expand-Archive -Path $tmp -DestinationPath $extract -Force

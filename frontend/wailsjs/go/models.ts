@@ -335,6 +335,21 @@ export namespace appcore {
 }
 
 export namespace clash {
+
+    export class TunCapabilities {
+        status: string;
+        reason: string;
+
+        static createFrom(source: any = {}) {
+            return new TunCapabilities(source);
+        }
+
+        constructor(source: any = {}) {
+            if ('string' === typeof source) source = JSON.parse(source);
+            this.status = source["status"];
+            this.reason = source["reason"];
+        }
+    }
 	
 	export class AppRouting {
 	    mode: string;

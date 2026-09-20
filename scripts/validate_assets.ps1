@@ -2,7 +2,14 @@ param(
     [string]$AssetRoot = ".\build\runtime-assets"
 )
 
+$ErrorActionPreference = "Stop"
 $ErrorCount = 0
+# Accept both the bundle root and the existing release invocation's core/bin.
+$AssetRoot = (Resolve-Path $AssetRoot).Path
+if ((Split-Path $AssetRoot -Leaf) -eq "bin" -and (Split-Path (Split-Path $AssetRoot -Parent) -Leaf) -eq "core") {
+    $AssetRoot = Split-Path (Split-Path $AssetRoot -Parent) -Parent
+}
+$binRoot = Join-Path $AssetRoot "core\bin"
 
 function Assert-FileExists {
     param([string]$Path, [string]$Label)
@@ -64,27 +71,40 @@ if (Assert-FileExists ".\build\bin\MisetaniboxHelper.exe" "Helper 服务") {
 }
 
 # === 2. Mihomo 内核校验 ===
-$clashPath = "$AssetRoot\clash.exe"
-if (Assert-FileExists $clashPath "Mihomo 内核") {
-    if (Assert-MZHeader $clashPath "Mihomo 内核") {
-        Assert-MinSize $clashPath "Mihomo 内核" (5 * 1024 * 1024) | Out-Null
-
-        # 尝试执行 -v 验证架构
-        try {
-            $versionOutput = & $clashPath -v 2>&1
-            if ($LASTEXITCODE -eq 0 -or $versionOutput) {
-                Write-Host "OK: Mihomo 内核可执行, 版本: $($versionOutput | Select-Object -First 1)" -ForegroundColor Green
-            } else {
-                Write-Host "WARN: Mihomo 内核 -v 无输出 (可能架构不匹配)" -ForegroundColor Yellow
+$clashPath = "$binRoot\clash.exe"
+if (Assert-FileExists $clashPath "Mihomo") {
+    Assert-MZHeader $clashPath "Mihomo" | Out-Null
+    Assert-MinSize $clashPath "Mihomo" (5 * 1024 * 1024) | Out-Null
+    $clashPath = (Resolve-Path $clashPath).Path
+    $probeDir = Join-Path $env:TEMP ("mihomo-probe-" + [guid]::NewGuid())
+    New-Item -ItemType Directory $probeDir | Out-Null
+    try {
+        foreach ($stack in @("gvisor", "mips", "misetanibox-invalid-stack")) {
+            $yaml = "mode: direct`nlog-level: silent`ndns:`n  enable: false`ntun:`n  enable: false`n  stack: $stack`nrules: []`n"
+            $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($yaml))
+            $info = New-Object System.Diagnostics.ProcessStartInfo
+            $info.FileName = $clashPath
+            $info.Arguments = "-t -config $encoded -d `"$probeDir`""
+            $info.WorkingDirectory = $probeDir
+            $info.UseShellExecute = $false
+            $info.CreateNoWindow = $true
+            foreach ($key in @($info.EnvironmentVariables.Keys)) {
+                if ($key -match '^(CLASH_|MIHOMO_)') { $info.EnvironmentVariables.Remove($key) }
             }
-        } catch {
-            Write-Host "WARN: Mihomo 内核 -v 执行失败: $_" -ForegroundColor Yellow
+            $process = [System.Diagnostics.Process]::Start($info)
+            if (!$process.WaitForExit(10000)) { $process.Kill(); throw "Mihomo probe timed out: $stack" }
+            $code = $process.ExitCode
+            $process.Dispose()
+            if (($stack -eq "misetanibox-invalid-stack" -and $code -eq 0) -or ($stack -ne "misetanibox-invalid-stack" -and $code -ne 0)) {
+                throw "Mihomo parser control failed: $stack (exit $code)"
+            }
         }
-    }
+        Write-Host "OK: gVisor/MIPS parser probes; this is NOT a working-TUN test"
+    } finally { Remove-Item $probeDir -Recurse -Force }
 }
 
 # === 3. Wintun 驱动 DLL 校验 ===
-$wintunPath = "$AssetRoot\wintun.dll"
+$wintunPath = "$binRoot\wintun.dll"
 if (Assert-FileExists $wintunPath "Wintun DLL") {
     Assert-MZHeader $wintunPath "Wintun DLL" | Out-Null
     Assert-MinSize $wintunPath "Wintun DLL" (32 * 1024) | Out-Null
@@ -99,7 +119,7 @@ $geoFiles = @(
 )
 
 foreach ($geo in $geoFiles) {
-    $geoPath = "$AssetRoot\$($geo.Name)"
+    $geoPath = "$binRoot\$($geo.Name)"
     if (Assert-FileExists $geoPath $geo.Label) {
         Assert-MinSize $geoPath $geo.Label $geo.MinSize | Out-Null
         Assert-NotHTML $geoPath $geo.Label | Out-Null
@@ -107,27 +127,18 @@ foreach ($geo in $geoFiles) {
 }
 
 # === 5. Manifest SHA256 校验 ===
-$manifestPath = "$AssetRoot\asset-manifest.json"
-if (Test-Path $manifestPath) {
-    try {
-        $manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
-        Write-Host "OK: asset-manifest.json 存在, 包含 $($manifest.assets.Count) 个资产" -ForegroundColor Green
-
-        foreach ($asset in $manifest.assets) {
-            $assetPath = "$AssetRoot\$($asset.name)"
-            if (Test-Path $assetPath) {
-                $actualHash = (Get-FileHash -Path $assetPath -Algorithm SHA256).Hash.ToLower()
-                if ($asset.sha256 -and $actualHash -ne $asset.sha256.ToLower()) {
-                    Write-Host "FAIL: $($asset.name) SHA256 不匹配 (期望: $($asset.sha256), 实际: $actualHash)" -ForegroundColor Red
-                    $ErrorCount++
-                }
-            }
-        }
-    } catch {
-        Write-Host "WARN: asset-manifest.json 解析失败: $_" -ForegroundColor Yellow
-    }
-} else {
-    Write-Host "WARN: asset-manifest.json 不存在，跳过 SHA256 校验" -ForegroundColor Yellow
+$manifestPath = "$AssetRoot\core\asset-manifest.json"
+$manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
+foreach ($name in @("clash.exe", "wintun.dll", "geoip.metadb", "geosite.dat", "country.mmdb", "asn.dat")) {
+    $entries = @($manifest.assets | Where-Object { $_.name -eq $name })
+    if ($entries.Count -ne 1) { throw "Missing/duplicate manifest entry: $name" }
+    $asset = $entries[0]
+    if ($asset.path -ne "core/bin/$name") { throw "Invalid manifest path: $name" }
+    $assetPath = Join-Path $AssetRoot $asset.path
+    if ($asset.sha256 -notmatch '^[a-fA-F0-9]{64}$') { throw "Missing/invalid SHA256: $name" }
+    $actualHash = (Get-FileHash -Path $assetPath -Algorithm SHA256).Hash.ToLower()
+    if ($actualHash -ne $asset.sha256.ToLower()) { throw "SHA256 mismatch: $name" }
+    if ($name -eq "clash.exe" -and $asset.version -ne "v1.19.31") { throw "Unexpected stock version" }
 }
 
 # === 结果汇总 ===

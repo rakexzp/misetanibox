@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 
+	"goclashz/core/logger"
 	"goclashz/core/utils"
 
 	"gopkg.in/yaml.v3"
@@ -156,6 +157,9 @@ func GetTunConfig() (*TunConfig, error) {
 }
 
 func UpdateTunConfig(newTun *TunConfig) error {
+	if err := ValidateTunConfig(newTun); err != nil {
+		return err
+	}
 	return utils.SaveSetting("tun", newTun)
 }
 
@@ -441,6 +445,13 @@ func BuildRuntimeConfig(id string, mode string, logLevel string, tunEnabled bool
 
 	if userTun != nil {
 		tunRuntime := *userTun
+		if tunRuntime.Stack == "mips" {
+			var warning string
+			tunRuntime, warning = resolveTunRuntime(tunRuntime, GetTunCapabilities())
+			if warning != "" {
+				logger.Warnf("%s", warning)
+			}
+		}
 		tunRuntime.Enable = tunEnabled
 		root["tun"] = tunRuntime
 	}

@@ -2,15 +2,48 @@ package appcore
 
 import (
 	"context"
+	"fmt"
 	"goclashz/core/clash"
+	"goclashz/core/utils"
+	"sync"
 )
 
+var tunSaveMu sync.Mutex
+
 func (c *Controller) SaveTunConfig(ctx context.Context, cfg *clash.TunConfig) error {
-	if err := clash.UpdateTunConfig(cfg); err != nil {
+	tunSaveMu.Lock()
+	defer tunSaveMu.Unlock()
+	if err := clash.ValidateTunConfig(cfg); err != nil {
 		return err
 	}
-	if clash.IsRunning() {
-		return c.RestartCore(ctx)
+	previous, err := clash.GetTunConfig()
+	if err != nil {
+		return err
+	}
+	wasRunning := clash.IsRunning()
+	return applyTunTransaction(previous, cfg, func(value *clash.TunConfig) error {
+		// Rollback must restore even a saved MIPS selection after a downgrade.
+		return utils.SaveSetting("tun", value)
+	}, func() error {
+		if wasRunning {
+			return c.RestartCore(ctx)
+		}
+		return nil
+	})
+}
+
+func applyTunTransaction(previous, next *clash.TunConfig, save func(*clash.TunConfig) error, restart func() error) error {
+	if err := save(next); err != nil {
+		return err
+	}
+	if err := restart(); err != nil {
+		if restoreErr := save(previous); restoreErr != nil {
+			return fmt.Errorf("применение TUN: %w; восстановление настроек: %v", err, restoreErr)
+		}
+		if restoreErr := restart(); restoreErr != nil {
+			return fmt.Errorf("применение TUN: %w; восстановление runtime: %v", err, restoreErr)
+		}
+		return fmt.Errorf("настройки TUN отменены, прежний runtime восстановлен: %w", err)
 	}
 	return nil
 }

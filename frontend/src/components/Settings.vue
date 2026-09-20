@@ -270,6 +270,7 @@
               <div class="info">
                 <h4>Стек (Stack)</h4>
                 <p>{{ stackHint }}</p>
+                <p v-if="isWindows">{{ tunCapability.reason }}<template v-if="tunConfig.stack === 'mips' && tunCapability.status !== 'supported'"> При запуске без подтверждённой поддержки используется gVisor; сохранённый выбор MIPS не изменён.</template></p>
               </div>
               <ModernSelect
                 v-model="tunConfig.stack"
@@ -1480,12 +1481,21 @@ const dbList = [
 const dbTitles: Record<string, string> = { geoip: 'GeoIP', geosite: 'GeoSite', mmdb: 'MMDB', asn: 'ASN' };
 
 // LWIP убран: ядро (metacubex mihomo) его больше не поддерживает — выбор ломал TUN.
-const stackOptions = [
+const tunCapability = ref({ status: 'unknown', reason: 'Поддержка MIPS ещё не проверена.' });
+const refreshTunCapability = async () => {
+  if (globalState.platform !== 'windows') return;
+  try { tunCapability.value = await API.GetTunCapabilities(); }
+  catch (e) { tunCapability.value = { status: 'unknown', reason: String(e) }; }
+};
+watch(() => view.value, (value) => { if (value === 'tun') void refreshTunCapability(); });
+const stackOptions = computed(() => [
   { label: 'gVisor', value: 'gvisor' },
   { label: 'Mixed', value: 'mixed' },
   { label: 'System', value: 'system' },
-];
+  ...(globalState.platform === 'windows' ? [{ label: 'MIPS (новый)', value: 'mips' }] : []),
+]);
 const STACK_HINTS: Record<string, string> = {
+  mips: 'Новый userspace-стек. Требует поддержки установленным ядром; проверка -t не гарантирует работу TUN. При сохранении активное соединение перезапускается.',
   gvisor: 'Полностью в userspace. Самый совместимый и стабильный, но медленнее. Выбирай при странных обрывах.',
   mixed: 'TCP через ядро (быстро), UDP через gVisor (надёжно). Золотая середина — рекомендуется для скорости.',
   system: 'Всё через сетевой стек ОС. Максимум скорости и меньше нагрузка на CPU, но совместимость ниже (проверь игры/звонки).',
@@ -1945,7 +1955,13 @@ watch(() => behavior.value.updateInterval, async (newVal) => {
 });
 
 const saveTun = async () => {
-  try { await API.SaveTunConfig(tunConfig.value); } catch (e) { console.error('保存失败', e); }
+  try { await API.SaveTunConfig(tunConfig.value); }
+  catch (e) {
+    try { tunConfig.value = await API.GetTunConfig(); }
+    catch (reloadError) { await showAlert('Не удалось перечитать настройки TUN: ' + reloadError, 'Ошибка'); }
+    await showAlert('Настройки TUN не применены: ' + e, 'Ошибка');
+  }
+  await refreshTunCapability();
 };
 
 const appUpdatePercent = computed(() => {

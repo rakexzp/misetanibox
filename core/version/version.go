@@ -2,7 +2,7 @@ package version
 
 import "strings"
 
-var AppVersion = "v1.2.2"
+var AppVersion = "v1.5.29"
 
 func NormalizeVersion(v string) string {
 	v = strings.TrimSpace(v)

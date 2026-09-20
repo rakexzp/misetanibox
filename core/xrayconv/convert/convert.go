@@ -162,7 +162,7 @@ func Convert(configs []*xray.Config, opts Options) (*Result, error) {
 				if opts.Strict {
 					return nil, fmt.Errorf("%s: %w", c.src, err)
 				}
-				c.skip(err.Error())
+				c.skip("%s", err.Error())
 				continue
 			}
 			for _, p := range proxies {

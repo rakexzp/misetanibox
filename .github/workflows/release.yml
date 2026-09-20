@@ -70,6 +70,13 @@ jobs:
         run: |
           .\scripts\fetch_runtime_assets.ps1
 
+      - name: Test core and actual Windows MIPS parser
+        shell: pwsh
+        run: |
+          $env:MISETANIBOX_TEST_CORE = (Resolve-Path "build/runtime-assets/core/bin/clash.exe").Path
+          go test ./core/...
+          if ($LASTEXITCODE -ne 0) { throw "Core tests failed" }
+
       - name: Build Wails app
         shell: pwsh
         run: |

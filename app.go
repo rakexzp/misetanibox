@@ -423,6 +423,9 @@ func (a *App) IsSmartCore() bool {
 }
 
 func (a *App) InstallSmartCore() error {
+	if err := clash.CheckSmartCoreSwitch(); err != nil {
+		return err
+	}
 	wasRunning := a.core.GetAppState().IsRunning
 	a.core.StopCoreProcess()
 	if err := clash.InstallSmartCore(a.ctx); err != nil {
@@ -439,6 +442,9 @@ func (a *App) InstallSmartCore() error {
 }
 
 func (a *App) RemoveSmartCore() error {
+	if err := clash.CheckSmartCoreSwitch(); err != nil {
+		return err
+	}
 	wasRunning := a.core.GetAppState().IsRunning
 	a.core.StopCoreProcess()
 	if err := clash.RevertToStockCore(); err != nil {
@@ -1042,6 +1048,10 @@ func (a *App) GetDNSConfig() (*clash.DNSConfig, error) {
 
 func (a *App) SaveDNSConfig(cfg *clash.DNSConfig) error {
 	return a.core.SaveDNSConfig(a.ctx, cfg)
+}
+
+func (a *App) GetTunCapabilities() clash.TunCapabilities {
+	return clash.GetTunCapabilities()
 }
 
 func (a *App) GetTunConfig() (*clash.TunConfig, error) {

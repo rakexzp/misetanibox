@@ -44,6 +44,11 @@ func coreExePath() string     { return filepath.Join(utils.GetCoreBinDir(), core
 func smartModelPath() string  { return filepath.Join(utils.GetCoreBinDir(), "Model.bin") }
 
 func InstallSmartCore(ctx context.Context) error {
+	coreBinaryMu.Lock()
+	defer coreBinaryMu.Unlock()
+	if err := CheckSmartCoreSwitch(); err != nil {
+		return err
+	}
 	client := &http.Client{Timeout: 120 * time.Second}
 
 	dir := utils.GetCoreBinDir()
@@ -84,6 +89,11 @@ func InstallSmartCore(ctx context.Context) error {
 }
 
 func RevertToStockCore() error {
+	coreBinaryMu.Lock()
+	defer coreBinaryMu.Unlock()
+	if err := CheckSmartCoreSwitch(); err != nil {
+		return err
+	}
 	backup := stockBackupPath()
 	if _, err := os.Stat(backup); err != nil {
 
