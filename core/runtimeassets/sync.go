@@ -123,6 +123,15 @@ func RepairFromSeed(ctx context.Context, req Requirement, mode RepairMode) error
 		seedPath := seedPathForCanonicalName(name)
 		runtimePath := runtimePathForCanonicalName(name)
 
+		// Wails startup owns core reconciliation. Generic repair must not bypass
+		// its hash/ownership checks, Smart isolation or a pending transaction.
+		if key == AssetCore && bundledCoreMaintenance.Load() {
+			if mode == RepairForce {
+				errs = append(errs, "явное восстановление ядра требует координатора Windows Wails")
+			}
+			continue
+		}
+
 		seedHealth := checkAssetByPath(ctx, key, def.Label, seedPath)
 		if !seedHealth.Ready {
 			if def.Required {
@@ -194,7 +203,9 @@ func RepairFromSeed(ctx context.Context, req Requirement, mode RepairMode) error
 	}
 
 	if changed || appUpdated {
-		state.SeedManifestSha256 = manifestHash
+		if len(errs) == 0 && !bundledCoreMaintenance.Load() {
+			state.SeedManifestSha256 = manifestHash
+		}
 		if err := saveAssetState(state); err != nil {
 			errs = append(errs, fmt.Sprintf("не удалось сохранить asset-state: %v", err))
 		}

@@ -66,26 +66,10 @@ func getLocalCoreVersionLocked(ctx context.Context) string {
 		return "не установлено"
 	}
 
-	localCoreVersionCache.mu.Lock()
-	if localCoreVersionCache.path == path &&
-		localCoreVersionCache.size == stat.Size() &&
-		localCoreVersionCache.modTime == stat.ModTime().UnixMilli() &&
-		localCoreVersionCache.version != "" {
-		version := localCoreVersionCache.version
-		localCoreVersionCache.mu.Unlock()
-		return version
+	version, err := runtimeassets.ProbeCoreVersion(ctx, path)
+	if err != nil {
+		return "установлено, версия неизвестна"
 	}
-	localCoreVersionCache.mu.Unlock()
-
-	version := readLocalCoreVersionByCommand(path)
-
-	localCoreVersionCache.mu.Lock()
-	localCoreVersionCache.path = path
-	localCoreVersionCache.size = stat.Size()
-	localCoreVersionCache.modTime = stat.ModTime().UnixMilli()
-	localCoreVersionCache.version = version
-	localCoreVersionCache.mu.Unlock()
-
 	return version
 }
 
@@ -105,7 +89,7 @@ func readLocalCoreVersionByCommand(path string) string {
 	utils.HideCommandWindow(cmd, 0)
 
 	out, err := cmd.CombinedOutput()
-	if err != nil && len(out) == 0 {
+	if err != nil {
 		return "установлено, версия неизвестна"
 	}
 

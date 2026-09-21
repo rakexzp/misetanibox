@@ -1,16 +1,16 @@
 <template>
   <!-- macOS: нативные светофоры слева в скрытом титлбаре → отступ сверху, свои кнопки окна не рисуем -->
-  <div class="app-shell" :class="{ dark: globalState.theme === 'dark', mac: globalState.platform === 'darwin' }">
+  <div class="app-shell" :class="{ dark: globalState.theme === 'dark', mac: globalState.platform === 'darwin', 'lite-shell': globalState.uiMode === 'lite' }">
     <div class="drag-bar" style="--wails-draggable:drag">
       <div class="top-actions" style="--wails-draggable:none">
         <button
+          v-if="globalState.uiMode !== 'lite'"
           @click="toggleUiMode"
           class="ctrl-btn mode-switch-btn"
-          :class="{ 'is-lite': globalState.uiMode === 'lite' }"
-          :title="globalState.uiMode === 'lite' ? 'Переключить в Про-режим' : 'Переключить в простой режим (Lite)'"
+          title="Переключить в простой режим (Lite)"
         >
-          <span v-html="globalState.uiMode === 'lite' ? ICONS.settings : ICONS.zap"></span>
-          <span class="mode-switch-label">{{ globalState.uiMode === 'lite' ? 'Про' : 'Lite' }}</span>
+          <span v-html="ICONS.zap"></span>
+          <span class="mode-switch-label">Lite</span>
         </button>
         <div class="window-controls" v-if="globalState.platform !== 'darwin'">
           <button @click="WindowMinimise" class="ctrl-btn" title="Свернуть" v-html="ICONS.min"></button>
@@ -596,8 +596,8 @@ onMounted(async () => {
     globalState.appUpdateChecking = false;
     globalState.modal = {
       show: true,
-      title: "Установлена последняя версия",
-      message: payload?.message || "У вас уже последняя версия.",
+      title: "Проверка обновления приложения",
+      message: payload?.message || "По доступным источникам обновлений приложения нет.",
       detail: '',
       type: "alert",
       isDanger: false,
@@ -757,6 +757,15 @@ const resetViewScroller = () => {
   display: flex; flex-direction: column; height: 100vh; color: var(--text-main); 
 }
 .drag-bar { height: 42px; display: flex; align-items: center; justify-content: flex-end; padding: 0 8px; }
+
+/* В Lite обложка доходит до края окна, а область перетаскивания лежит поверх неё. */
+.lite-shell { position: relative; }
+.lite-shell .drag-bar { position: absolute; inset: 0 0 auto; z-index: 35; background: transparent; }
+.lite-shell .window-controls { margin-left: 0; gap: 2px; }
+.lite-shell .ctrl-btn { color: rgba(255,255,255,0.8); }
+.lite-shell .ctrl-btn:hover { background: rgba(255,255,255,0.14); color: #fff; }
+.lite-shell .ctrl-btn:focus-visible { outline: 2px solid #fff; outline-offset: -3px; }
+.lite-shell :deep(.lite-root) { padding-top: 66px; }
 
 .icon-btn { background: none; border: none; cursor: pointer; color: var(--text-sub); width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; transition: color 0.2s; }
 .icon-btn:hover { color: var(--text-main); }

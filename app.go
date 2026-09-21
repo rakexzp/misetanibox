@@ -119,6 +119,12 @@ func NewApp() *App {
 func (a *App) runStartupRuntimeAssetMaintenance(ctx context.Context) {
 	runtimeassets.MigrateLegacyAssets()
 
+	if result, err := clash.ReconcileBundledCore(ctx); err != nil {
+		logger.Warnf("согласование встроенного ядра отложено: %v", err)
+	} else if result.Message != "" {
+		logger.Infof("%s", result.Message)
+	}
+
 	coreStatus, coreErr := runtimeassets.EnsureReady(ctx, runtimeassets.RequireTun, runtimeassets.RepairInvalid)
 	if coreErr != nil {
 		logger.Errorf("самовосстановление основных компонентов не удалось: %v", coreErr)
@@ -1129,7 +1135,7 @@ func (a *App) GetRuntimeAssetStatus() runtimeassets.RuntimeAssetStatus {
 }
 
 func (a *App) RepairRuntimeAssets() runtimeassets.RuntimeAssetStatus {
-	status, err := runtimeassets.EnsureReady(a.ctx, runtimeassets.RequireAll, runtimeassets.RepairForce)
+	status, err := clash.RepairRuntimeAssets(a.ctx)
 	if err != nil {
 		a.core.LogApp("error", "не удалось восстановить компоненты: %v", err)
 	}

@@ -3,7 +3,7 @@
 ; =========================================================
 
 #define MyAppName "Misetanibox"
-#define MyAppVersion "1.5.29"
+#define MyAppVersion "1.5.30"
 #define MyAppPublisher "Zzz"
 #define MyAppExeName "Misetanibox.exe"
 
@@ -12,7 +12,7 @@ AppMutex=Global\GoclashZ_Single_Instance_Mutex
 CloseApplications=yes
 RestartApplications=no
 WizardStyle=modern dynamic includetitlebar
-VersionInfoVersion=1.5.29.0
+VersionInfoVersion=1.5.30.0
 VersionInfoCompany=Zzz
 VersionInfoDescription=Misetanibox Installer
 VersionInfoCopyright=Copyright (C) 2026 Zzz

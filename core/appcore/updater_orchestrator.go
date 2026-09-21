@@ -219,8 +219,12 @@ func (c *Controller) CheckAppUpdateAsync(ctx context.Context, currentVersion str
 
 		if info == nil || !info.HasUpdate {
 			if manual {
+				message := "По проверенным источникам обновлений приложения нет."
+				if info != nil && info.Partial {
+					message = "По доступным источникам обновлений приложения нет; часть источников недоступна."
+				}
 				c.events.Emit("app-update-none", map[string]string{
-					"message": "Установлена последняя версия.",
+					"message": message,
 				})
 			}
 			return nil

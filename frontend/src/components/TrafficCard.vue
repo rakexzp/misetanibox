@@ -10,8 +10,8 @@
         :title="outboundIPTitle"
         @click="refreshOutboundIPRouteAware('manual')"
       >
-        <span class="ip-label">Текущий исходящий IP</span>
-        <span class="ip-value" :class="{ detecting: !outboundIPText || outboundIPText === 'Ошибка проверки' }">
+        <span class="ip-label">Текущий исходящий IPv4</span>
+        <span class="ip-value" :class="{ detecting: !outboundIPHasValue }">
           {{ outboundIPText }}
         </span>
         <span v-if="globalState.ipDetecting && outboundIPHasValue" class="ip-refreshing">Обновление…</span>
@@ -78,7 +78,7 @@ const props = defineProps<{
 }>();
 
 const outboundIPHasValue = computed(() => {
-  return !!(globalState.outboundIP?.preferred);
+  return !!globalState.outboundIP?.ipv4 && !globalState.outboundIPStale;
 });
 
 const outboundIPText = computed(() => {
@@ -88,11 +88,11 @@ const outboundIPText = computed(() => {
     return globalState.ipDetecting ? 'Проверка…' : 'Не проверено';
   }
 
-  if (!r.preferred) {
-    return globalState.ipDetecting ? 'Проверка…' : 'Ошибка проверки';
+  if (!outboundIPHasValue.value) {
+    return globalState.ipDetecting ? 'Проверка…' : 'IPv4 недоступен';
   }
 
-  return r.preferred;
+  return r.ipv4;
 });
 
 const outboundIPTitle = computed(() => {

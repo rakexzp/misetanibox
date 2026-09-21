@@ -21,6 +21,7 @@ import (
 var (
 	coreVersionRe        = regexp.MustCompile(`v?\d+\.\d+\.\d+(?:[-+][^\s]+)?`)
 	coreVersionCache     string
+	coreVersionCacheKey  string
 	coreVersionCacheTime time.Time
 	coreVersionCacheMu   sync.Mutex
 )
@@ -32,6 +33,13 @@ func CheckCore(ctx context.Context) AssetHealth {
 
 func checkCoreByPath(ctx context.Context, path string) AssetHealth {
 	h := baseHealth(AssetCore, "Ядро Mihomo", path, true)
+	if bundledCoreMaintenance.Load() {
+		if _, err := os.Lstat(path + ".seed-transaction.json"); err == nil || !os.IsNotExist(err) {
+			h.ErrorCode = ErrInvalidPE
+			h.Error = "Замена ядра не завершена; автозапуск отложен до восстановления"
+			return h
+		}
+	}
 
 	info, err := os.Stat(path)
 	if err != nil {
@@ -77,48 +85,47 @@ func checkCoreByPath(ctx context.Context, path string) AssetHealth {
 	return h
 }
 
-func readCoreVersion(path string) (string, error) {
+// ProbeCoreVersion requires a successful process exit and keys cached results by
+// absolute path and content hash, including replacements with identical timestamps.
+func ProbeCoreVersion(ctx context.Context, path string) (string, error) {
+	path, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+	hash, err := calculateSHA256(path)
+	if err != nil {
+		return "", err
+	}
+	key := path + "\x00" + hash
 	coreVersionCacheMu.Lock()
 	defer coreVersionCacheMu.Unlock()
-
-	if coreVersionCache != "" && time.Since(coreVersionCacheTime) < time.Minute {
+	if coreVersionCacheKey == key && coreVersionCache != "" && time.Since(coreVersionCacheTime) < time.Minute {
 		return coreVersionCache, nil
 	}
-
-	cmdCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	cmdCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-
 	cmd := exec.CommandContext(cmdCtx, path, "-v")
 	cmd.Dir = filepath.Dir(path)
 	utils.HideCommandWindow(cmd, 0)
-
 	out, err := cmd.CombinedOutput()
-	s := strings.TrimSpace(string(out))
-
 	if err != nil {
-		if s != "" {
-			return s, nil
-		}
-		return "", fmt.Errorf("не удалось выполнить clash.exe -v: %w", err)
+		return "", fmt.Errorf("не удалось выполнить ядро -v: %w", err)
 	}
-
-	if s == "" {
-		return "установлено, версия неизвестна", nil
+	m := coreVersionRe.FindString(strings.TrimSpace(string(out)))
+	if m == "" {
+		return "", fmt.Errorf("версия ядра неизвестна")
 	}
-
-	ver := s
-	if m := coreVersionRe.FindString(s); m != "" {
-		if strings.HasPrefix(m, "v") {
-			ver = m
-		} else {
-			ver = "v" + m
-		}
+	after, err := calculateSHA256(path)
+	if err != nil || after != hash {
+		return "", fmt.Errorf("ядро изменилось во время проверки версии")
 	}
-
-	coreVersionCache = ver
-	coreVersionCacheTime = time.Now()
-
+	ver := "v" + strings.TrimPrefix(m, "v")
+	coreVersionCacheKey, coreVersionCache, coreVersionCacheTime = key, ver, time.Now()
 	return ver, nil
+}
+
+func readCoreVersion(path string) (string, error) {
+	return ProbeCoreVersion(context.Background(), path)
 }
 
 func CheckWintun() AssetHealth {

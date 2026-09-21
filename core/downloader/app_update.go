@@ -2,10 +2,8 @@ package downloader
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -16,6 +14,7 @@ import (
 
 type AppUpdateInfo struct {
 	HasUpdate   bool   `json:"hasUpdate"`
+	Partial     bool   `json:"partial"`
 	Version     string `json:"version"`
 	Body        string `json:"body"`
 	ReleaseURL  string `json:"releaseUrl"`
@@ -26,74 +25,10 @@ type AppUpdateInfo struct {
 var strictVersionRe = regexp.MustCompile(`(?i)(?:^|[^0-9])v?(\d+\.\d+(?:\.\d+)?(?:\.\d+)?)`)
 
 func CheckAppUpdate(ctx context.Context, currentVersion string, strategy func() DownloadStrategy) (*AppUpdateInfo, error) {
-
-	// новое зеркало misetani.app первым, старый хост — запасной (у части клиентов он ещё в кэше DNS/блоках)
-	apiURLs := []string{
+	return checkAppUpdateSources(ctx, currentVersion, []string{
 		"https://files.misetani.app/misetani/update.json",
 		"https://files.geodema.network/misetani/update.json",
-	}
-
-	clients := BuildOrderedClients(strategy, 60*time.Second)
-
-	var release struct {
-		TagName string `json:"tag_name"`
-		Body    string `json:"body"`
-		HTMLURL string `json:"html_url"`
-		Assets  []struct {
-			Name               string `json:"name"`
-			BrowserDownloadURL string `json:"browser_download_url"`
-		} `json:"assets"`
-	}
-
-	var lastErr error
-	for _, apiURL := range apiURLs {
-	for _, client := range clients {
-		req, reqErr := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
-		if reqErr != nil {
-			lastErr = reqErr
-			continue
-		}
-		req.Header.Set("User-Agent", "Misetanibox-Updater")
-
-		resp, reqErr := client.Do(req)
-		if reqErr != nil {
-			lastErr = reqErr
-			continue
-		}
-
-		func() {
-			defer resp.Body.Close()
-			if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-				lastErr = fmt.Errorf("GitHub API вернул HTTP %d", resp.StatusCode)
-				return
-			}
-			lastErr = json.NewDecoder(resp.Body).Decode(&release)
-		}()
-
-		if lastErr == nil && release.TagName != "" {
-			break
-		}
-	}
-	if lastErr == nil && release.TagName != "" {
-		break
-	}
-	}
-
-	if lastErr != nil {
-		return nil, lastErr
-	}
-
-	cmp, _ := CompareAppVersion(release.TagName, currentVersion)
-	assetName, downloadURL := selectWindowsAsset(release.Assets)
-
-	return &AppUpdateInfo{
-		HasUpdate:   cmp > 0,
-		Version:     release.TagName,
-		Body:        release.Body,
-		ReleaseURL:  release.HTMLURL,
-		DownloadURL: downloadURL,
-		AssetName:   assetName,
-	}, nil
+	}, BuildOrderedClients(strategy, 10*time.Second))
 }
 
 func selectWindowsAsset(assets []struct {
@@ -157,27 +92,7 @@ func selectWindowsAsset(assets []struct {
 }
 
 func CompareAppVersion(remote, current string) (int, error) {
-	aa := parseVersionParts(remote)
-	bb := parseVersionParts(current)
-	if len(aa) == 0 || len(bb) == 0 {
-		return 0, nil
-	}
-	for i := 0; i < 3; i++ {
-		var a, b int
-		if i < len(aa) {
-			a = aa[i]
-		}
-		if i < len(bb) {
-			b = bb[i]
-		}
-		if a > b {
-			return 1, nil
-		}
-		if a < b {
-			return -1, nil
-		}
-	}
-	return 0, nil
+	return compareReleaseVersions(remote, current)
 }
 
 func parseVersionParts(v string) []int {
