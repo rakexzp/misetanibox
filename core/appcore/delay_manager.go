@@ -44,6 +44,20 @@ const (
 	AutoBatchDelayTimeout   = 8000
 )
 
+// Requested counts input names (or all leaves for an unfiltered test).
+// Other counts describe unique normalized leaf targets, not aliases or countries.
+// Skipped targets have no completed measurement (including cancellation).
+type DelayBatchSummary struct {
+	Requested int
+	Targets   int
+	Completed int
+	Success   int
+	Failed    int
+	Skipped   int
+}
+
+var errNoDelayMeasurements = errors.New("no successful delay measurements")
+
 type DelayResult struct {
 	Name    string
 	Delay   int
@@ -409,7 +423,7 @@ func (m *DelayTestManager) TestAllProxiesWithOptions(
 		cancel()
 		close(done)
 
-		m.finishBatch(opts, "prepare", ErrDelayTestBusy)
+		m.finishBatch(opts, "prepare", ErrDelayTestBusy, DelayBatchSummary{Requested: len(nodeNames)})
 		return
 	}
 
@@ -425,6 +439,7 @@ func (m *DelayTestManager) TestAllProxiesWithOptions(
 	m.mu.Unlock()
 
 	stage := "prepare"
+	summary := DelayBatchSummary{Requested: len(nodeNames)}
 	var finishErr error
 	defer func() {
 		if ctx.Err() != nil {
@@ -441,7 +456,7 @@ func (m *DelayTestManager) TestAllProxiesWithOptions(
 		m.waiters = make(map[string][]chan DelayResult)
 		m.mu.Unlock()
 
-		m.finishBatch(opts, stage, finishErr)
+		m.finishBatch(opts, stage, finishErr, summary)
 		if opts.Source != DelaySourceManual {
 			m.ctrl.setAutoDelayRunning(false)
 		}
@@ -458,41 +473,61 @@ func (m *DelayTestManager) TestAllProxiesWithOptions(
 	}
 	defer cleanup()
 
-	stage, finishErr = m.runPreparedBatch(ctx, nodeNames, opts)
+	stage, summary, finishErr = m.runPreparedBatch(ctx, nodeNames, opts)
 }
 
-// Keep the legacy string first; newer consumers use the explicit status.
-func (m *DelayTestManager) finishBatch(opts DelayTestOptions, stage string, err error) {
+// Keep the legacy string first; newer consumers use status and numeric counters.
+func (m *DelayTestManager) finishBatch(opts DelayTestOptions, stage string, err error, summaries ...DelayBatchSummary) {
+	var summary DelayBatchSummary
+	if len(summaries) > 0 {
+		summary = summaries[0]
+	}
 	status, message := delayDiagnostic(stage, err)
+	if err == nil && summary.Success > 0 && summary.Success < summary.Targets {
+		status, message = "partial", "Тест задержки завершён частично"
+	}
 	if status == "error" || status == "busy" {
 		logger.Warnf("[DelayTest] batch stage=%s status=%s: %s", stage, status, message)
 	}
 	if !opts.SilentUI {
-		m.emit.Emit("proxy-test-finished", message, map[string]string{"status": status, "stage": stage})
+		m.emit.Emit("proxy-test-finished", message, map[string]interface{}{
+			"status": status, "stage": stage, "requested": summary.Requested,
+			"targets": summary.Targets, "completed": summary.Completed,
+			"success": summary.Success, "failed": summary.Failed, "skipped": summary.Skipped,
+		})
 	}
 }
 
-func (m *DelayTestManager) runPreparedBatch(ctx context.Context, nodeNames []string, opts DelayTestOptions) (string, error) {
+func (m *DelayTestManager) runPreparedBatch(ctx context.Context, nodeNames []string, opts DelayTestOptions) (string, DelayBatchSummary, error) {
+	summary := DelayBatchSummary{Requested: len(nodeNames)}
 	topo, err := buildDelayTopology()
 	if err != nil {
-		return "topology", err
+		return "topology", summary, err
 	}
 	var targets []string
 	if len(nodeNames) == 0 {
 		targets = topo.allLeafNodes()
+		summary.Requested = len(targets)
 	} else {
 		targets = topo.normalizeTargets(nodeNames)
 	}
 	if len(targets) == 0 {
-		return "targets", fmt.Errorf("no delay targets")
+		return "targets", summary, fmt.Errorf("no delay targets")
 	}
 	m.mu.Lock()
 	for _, n := range targets {
 		m.batchNodes[n] = struct{}{}
 	}
 	m.mu.Unlock()
-	m.runBatch(ctx, topo, targets, opts)
-	return "probe", ctx.Err()
+	measured := m.runBatch(ctx, topo, targets, opts)
+	measured.Requested = summary.Requested
+	if ctx.Err() != nil {
+		return "probe", measured, ctx.Err()
+	}
+	if measured.Success == 0 {
+		return "probe", measured, errNoDelayMeasurements
+	}
+	return "probe", measured, nil
 }
 
 var delayHTTPStatus = regexp.MustCompile(`\bHTTP [1-5][0-9]{2}\b`)
@@ -505,6 +540,9 @@ func delayDiagnostic(stage string, err error) (string, string) {
 	}
 	if errors.Is(err, context.Canceled) || err.Error() == "Тест задержки отменён" {
 		return "cancelled", "Тест задержки отменён"
+	}
+	if errors.Is(err, errNoDelayMeasurements) {
+		return "error", "Не удалось измерить задержку: нет успешных измерений"
 	}
 	if errors.Is(err, ErrDelayTestBusy) {
 		return "busy", "Тест задержки уже выполняется. Повторите позже."
@@ -551,7 +589,23 @@ func (m *DelayTestManager) runBatch(
 	topo *DelayTopology,
 	nodeNames []string,
 	opts DelayTestOptions,
-) {
+) (summary DelayBatchSummary) {
+	summary.Targets = len(nodeNames)
+	finalResults := make(map[string]DelayResult)
+	defer func() {
+		for _, res := range finalResults {
+			if errors.Is(res.Err, context.Canceled) {
+				continue
+			}
+			summary.Completed++
+			if res.Err == nil && res.Delay > 0 {
+				summary.Success++
+			} else {
+				summary.Failed++
+			}
+		}
+		summary.Skipped = summary.Targets - summary.Completed
+	}()
 	if opts.Concurrency <= 0 {
 		opts.Concurrency = 10
 	}
@@ -623,6 +677,7 @@ func (m *DelayTestManager) runBatch(
 			timeoutCount++
 		}
 		buffered = append(buffered, res)
+		finalResults[res.Name] = res
 	}
 
 	if opts.Source != DelaySourceManual && m.ctrl.isAppUpdateDownloading() && total > 0 {
@@ -658,10 +713,14 @@ func (m *DelayTestManager) runBatch(
 				7*time.Second,
 				2*time.Second,
 			)
+			if !errors.Is(res.Err, context.Canceled) {
+				finalResults[res.Name] = res
+			}
 			m.emitDelayResult(topo, res)
 			m.notifyNodeResult(res)
 		}
 	}
+	return
 }
 
 func (m *DelayTestManager) TestProxy(ctx context.Context, name string) (delay int, resultErr error) {

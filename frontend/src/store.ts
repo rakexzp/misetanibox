@@ -568,14 +568,9 @@ let storeInited = false;
 export async function initStore() {
   if (storeInited) return;
   storeInited = true;
-  try {
-    const initialState = await API.GetAppState();
-    updateStateFromBackend(initialState);
-  } catch (err) {
-    console.error("初始化应用状态失败:", err);
-  }
-
+  let receivedState = false;
   EventsOn("app-state-sync", (newState: any) => {
+    receivedState = true;
     updateStateFromBackend(newState);
   });
 
@@ -648,8 +643,6 @@ export async function initStore() {
     globalState.appUpdateProgress = null;
   });
 
-  refreshOutboundIP();
-  
   EventsOn("core-restarted", () => scheduleOutboundIPRefresh('core-restarted', { force: true, delay: 1500, reason: 'core-restarted' }));
   ['geoip', 'geosite', 'mmdb', 'asn'].forEach(key => {
     EventsOn(`geo-update-${key}-success`, () => scheduleOutboundIPRefresh(`geo-${key}`, { force: true, delay: 1500, reason: `geo-${key}` }));
@@ -689,4 +682,15 @@ export async function initStore() {
       globalState.delayRetention ? globalState.delayRetentionTime : 'long'
     );
   });
+
+  // Subscribe before awaiting the bridge: mounted views can already start tests.
+  // A live state event is newer than the in-flight initial snapshot.
+  try {
+    const initialState = await API.GetAppState();
+    if (!receivedState) updateStateFromBackend(initialState);
+  } catch (err) {
+    // Keep the subscriptions (and guard) alive so later events recover normally.
+    console.error("初始化应用状态失败:", err);
+  }
+  refreshOutboundIP();
 }

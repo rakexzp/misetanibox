@@ -1,29 +1,102 @@
-import { readFileSync } from 'node:fs';
-import vm from 'node:vm';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import ts from 'typescript';
-import { ref, computed } from 'vue';
+import { nextTick } from 'vue';
+import { harness, deferred } from './proxy-delay-harness.mjs';
 
-function harness(api = {}) {
-  const source = readFileSync(new URL('../src/components/Proxies.vue', import.meta.url), 'utf8');
-  const script = source.split('<script setup lang="ts">')[1].split('</script>')[0].replace(/^import .*;$/gm, '');
-  const events = {}, alerts = [], mounted = [];
-  const state = { proxyDelays: {}, mode: 'rule' };
-  const context = vm.createContext({
-    ref, computed, watch: () => () => {}, nextTick: () => {},
-    onMounted: f => mounted.push(f), onUnmounted: () => {}, onActivated: () => {}, onDeactivated: () => {},
-    localStorage: { getItem: () => null }, globalState: state, ICONS: {},
-    API: { GetAppBehavior: async () => ({}), GetInitialData: async () => ({}), ...api },
-    EventsOn: (name, cb) => { events[name] = cb; return () => {}; },
-    showAlert: async (...args) => alerts.push(args), console,
-  });
-  vm.runInContext(ts.transpileModule(script, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText, context);
-  const run = code => vm.runInContext(code, context);
-  run("localGroups.value = [{ name: 'group', proxies: [{name: 'node', testing: false}] }]; currentGroup.value = 'group'");
-  mounted.forEach(f => f());
-  return { run, events, alerts, state };
-}
+const fallbackData = { groupOrder: ['group'], groups: { group: {type: 'Selector', now: 'FALLBACK', all: ['FALLBACK']}, FALLBACK: {type: 'Fallback', now: 'leaf', all: ['leaf']} } };
+
+test('early delay event survives delayed initial state, finish, reload and core stop', async () => {
+  const snapshot = deferred();
+  const h = harness({ GetAppState: () => snapshot.promise, GetInitialData: async () => fallbackData });
+  const init = h.store.initStore();
+  await h.ready;
+  h.events['app-state-sync']({activeConfig: 'new', isRunning: true});
+  h.events['proxy-delay-update']({name: 'FALLBACK', delay: 42, status: 'success'});
+  assert.equal(h.state.proxyDelays.FALLBACK?.delay, 42);
+  assert.equal(h.listeners.get('proxy-delay-update').size, 2);
+  snapshot.resolve({activeConfig: 'old', isRunning: false});
+  await init;
+  assert.equal(h.state.activeConfigId, 'new');
+  h.events['proxy-test-finished']('Тест задержки завершён', {status: 'success', targets: 1, completed: 1, success: 1, failed: 0, skipped: 0, requested: 2});
+  await h.run('loadData()');
+  h.events['app-state-sync']({isRunning: false});
+  await nextTick();
+  assert.equal(h.run("formatDelay(globalState.proxyDelays.FALLBACK)"), '42ms');
+  assert.match(h.run('delaySummary.value'), /1\/1/);
+  h.dispose();
+});
+
+test('single RPC result without event displays 42 and uses retention', async () => {
+  const h = harness({TestProxy: async () => 42});
+  h.state.delayRetentionTime = '30';
+  await h.run('testSingleDelay(localGroups.value[0].proxies[0])');
+  assert.equal(h.run('formatDelay(globalState.proxyDelays.node)'), '42ms');
+  assert.equal([...h.timers.values()].filter(t => t.ms === 30000).length, 1);
+  h.dispose();
+});
+
+test('single RPC cannot replace a newer event or changed profile', async () => {
+  for (const change of ['event', 'profile', 'clear', 'unmount']) {
+    const result = deferred();
+    const h = harness({TestProxy: () => result.promise});
+    await h.store.initStore();
+    const pending = h.run('testSingleDelay(localGroups.value[0].proxies[0])');
+    if (change === 'profile') h.state.activeConfigId = 'other';
+    if (change === 'clear') h.events['delay-cache-clear']();
+    if (change === 'unmount') h.dispose();
+    if (change === 'event') h.events['proxy-delay-update']({name: 'node', delay: 55, status: 'success'});
+    result.resolve(42);
+    await pending;
+    assert.equal(h.state.proxyDelays.node?.delay, change === 'event' ? 55 : undefined, change);
+    h.dispose();
+  }
+});
+
+test('event and RPC duplicate keeps original retention timer', async () => {
+  const result = deferred();
+  const h = harness({TestProxy: () => result.promise});
+  await h.store.initStore();
+  h.state.delayRetentionTime = '30';
+  const pending = h.run('testSingleDelay(localGroups.value[0].proxies[0])');
+  h.events['proxy-delay-update']({name: 'node', delay: 42, status: 'success'});
+  const timer = [...h.timers.entries()].find(([, t]) => t.ms === 30000)?.[0];
+  result.resolve(42);
+  await pending;
+  assert.equal(h.timers.has(timer), true);
+  assert.equal([...h.timers.values()].filter(t => t.ms === 30000).length, 1);
+  h.dispose();
+});
+
+test('failed initial snapshot keeps live subscriptions without duplicate initialization', async () => {
+  const initial = deferred();
+  const h = harness({GetAppState: () => initial.promise});
+  const pending = h.store.initStore();
+  await h.store.initStore();
+  initial.reject(new Error('snapshot unavailable'));
+  await pending;
+  await h.store.initStore();
+  h.events['app-state-sync']({activeConfig: 'recovered'});
+  h.events['proxy-delay-update']({name: 'node', delay: 42, status: 'success'});
+  assert.equal(h.state.activeConfigId, 'recovered');
+  assert.equal(h.state.proxyDelays.node.delay, 42);
+  assert.equal(h.listeners.get('app-state-sync').size, 1);
+  assert.equal(h.listeners.get('proxy-delay-update').size, 2);
+  h.dispose();
+});
+
+test('all-failed batch and partial or cancelled batch have bounded visible summaries', () => {
+  const h = harness();
+  h.events['proxy-test-finished']('Не удалось измерить задержку: нет успешных измерений', {status: 'error', targets: 2, completed: 2, success: 0, failed: 2, skipped: 0});
+  assert.match(h.run('delaySummary.value'), /Узлы: 2\/2, успешно: 0, ошибок: 2/);
+  assert.match(h.alerts[0][0], /нет успешных измерений/);
+  h.events['proxy-test-finished']('private SECRET', {status: 'partial', targets: 2, completed: 2, success: 1, failed: 1, skipped: 0});
+  assert.match(h.run('delaySummary.value'), /частично/);
+  assert.doesNotMatch(h.run('delaySummary.value'), /SECRET/);
+  h.events['proxy-test-finished']('Тест задержки отменён', {status: 'cancelled', targets: 2, completed: 0, success: 0, failed: 0, skipped: 2});
+  assert.match(h.run('delaySummary.value'), /отменён/);
+  assert.equal(h.alerts.length, 1);
+  h.dispose();
+});
 
 test('group finish failure displays explanation, resets all state and permits retry', async () => {
   const h = harness({ TestAllProxies: async () => {} });

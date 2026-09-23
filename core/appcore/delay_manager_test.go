@@ -136,7 +136,7 @@ func TestDelayBatchPreparationFailureFinishesAndUnlocks(t *testing.T) {
 		if len(event.args) != 2 {
 			t.Fatalf("missing completion status: %v", event)
 		}
-		if event.args[1].(map[string]string)["status"] != "error" {
+		if event.args[1].(map[string]interface{})["status"] != "error" {
 			t.Fatalf("incorrect completion status: %v", event)
 		}
 	}
@@ -164,13 +164,14 @@ func TestDelayPreparedBatchCompletion(t *testing.T) {
 		targets             []string
 	}{
 		{"success", "probe", "success", 200, []string{"leaf"}},
+		{"all probes fail", "probe", "error", 503, []string{"leaf"}},
 		{"topology", "topology", "error", 401, []string{"leaf"}},
 		{"empty group", "targets", "error", 200, []string{"empty"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			oldURL := clash.APIURL("")
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if tc.apiStatus != 200 {
+				if tc.apiStatus == 401 || (tc.apiStatus == 503 && strings.HasSuffix(r.URL.Path, "/delay")) {
 					w.WriteHeader(tc.apiStatus)
 					fmt.Fprint(w, "token=SECRET")
 					return
@@ -189,10 +190,10 @@ func TestDelayPreparedBatchCompletion(t *testing.T) {
 			sink := &delayRecordingSink{}
 			manager := NewDelayTestManager(sink, &Controller{})
 			opts := manualDelayOptions()
-			stage, err := manager.runPreparedBatch(context.Background(), tc.targets, opts)
-			manager.finishBatch(opts, stage, err)
+			stage, summary, err := manager.runPreparedBatch(context.Background(), tc.targets, opts)
+			manager.finishBatch(opts, stage, err, summary)
 			event := sink.events[len(sink.events)-1]
-			meta := event.args[1].(map[string]string)
+			meta := event.args[1].(map[string]interface{})
 			if stage != tc.stage || meta["status"] != tc.status || event.name != "proxy-test-finished" {
 				t.Fatalf("completion: %v", event)
 			}
@@ -209,7 +210,7 @@ func TestDelayCancellationCompletionAndRetry(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	manager.TestAllProxies(ctx, []string{"leaf"})
-	if sink.events[0].args[1].(map[string]string)["status"] != "cancelled" || manager.state != DelayIdle {
+	if sink.events[0].args[1].(map[string]interface{})["status"] != "cancelled" || manager.state != DelayIdle {
 		t.Fatal(sink.events)
 	}
 	_, err := manager.TestProxy(ctx, "leaf")
@@ -217,7 +218,7 @@ func TestDelayCancellationCompletionAndRetry(t *testing.T) {
 		t.Fatal(err)
 	}
 	manager.TestAllProxies(context.Background(), []string{"leaf"})
-	if sink.events[1].args[1].(map[string]string)["status"] != "error" {
+	if sink.events[1].args[1].(map[string]interface{})["status"] != "error" {
 		t.Fatal(sink.events)
 	}
 }
