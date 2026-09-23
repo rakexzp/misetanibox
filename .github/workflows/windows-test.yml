@@ -1,0 +1,112 @@
+name: Windows TEST installer
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Exact commit to build (must match selected branch)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  windows-test:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Verify source commit
+        shell: pwsh
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          if ($env:GITHUB_SHA -ne $env:EXPECTED_SHA) { throw "Unexpected source commit" }
+          if ((git rev-parse HEAD) -ne $env:EXPECTED_SHA) { throw "Checkout mismatch" }
+
+      - name: Install Go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Test frontend diagnostics
+        working-directory: frontend
+        shell: pwsh
+        run: |
+          npm ci
+          if ($LASTEXITCODE -ne 0) { throw "npm ci failed" }
+          node --test tests/proxy-delay.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw "Frontend diagnostic tests failed" }
+
+      - name: Install Wails CLI
+        shell: pwsh
+        run: |
+          go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+          if ($LASTEXITCODE -ne 0) { throw "Wails install failed" }
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup -y
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup install failed" }
+          "C:\Program Files (x86)\Inno Setup 6" >> $env:GITHUB_PATH
+
+      - name: Fetch pinned runtime assets
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: .\scripts\fetch_runtime_assets.ps1
+
+      - name: Test core and actual Windows MIPS parser
+        shell: pwsh
+        run: |
+          $env:MISETANIBOX_TEST_CORE = (Resolve-Path "build/runtime-assets/core/bin/clash.exe").Path
+          go test -v -count=1 ./core/...
+          if ($LASTEXITCODE -ne 0) { throw "Core tests failed" }
+
+      - name: Build full Wails app and Helper
+        shell: pwsh
+        run: |
+          wails build -clean -platform windows/amd64
+          if ($LASTEXITCODE -ne 0) { throw "Wails build failed" }
+          go build -ldflags "-s -w" -o build/bin/MisetaniboxHelper.exe ./cmd/goclashz-helper/
+          if ($LASTEXITCODE -ne 0) { throw "Helper build failed" }
+
+      - name: Validate assets and build installer
+        shell: pwsh
+        run: |
+          .\scripts\validate_assets.ps1 -AssetRoot .\build\runtime-assets\core\bin
+          ISCC.exe package.iss
+          if ($LASTEXITCODE -ne 0) { throw "Installer build failed" }
+
+      - name: Label TEST installer and record provenance
+        shell: pwsh
+        run: |
+          $short = $env:GITHUB_SHA.Substring(0, 12)
+          $name = "Misetanibox_win_amd64_Setup_ping-$short.exe"
+          New-Item -ItemType Directory -Force build/test-output | Out-Null
+          Copy-Item build/installer/Misetanibox_win_amd64_Setup.exe "build/test-output/$name"
+          $hash = (Get-FileHash "build/test-output/$name" -Algorithm SHA256).Hash.ToLower()
+          "$hash  $name" | Set-Content build/test-output/SHA256SUMS -Encoding ascii
+          @{ commit = $env:GITHUB_SHA; runId = $env:GITHUB_RUN_ID; channel = "TEST"; version = "1.5.30"; installer = $name; sha256 = $hash } | ConvertTo-Json | Set-Content build/test-output/provenance.json
+          Copy-Item build/runtime-assets/core/asset-manifest.json build/test-output/
+
+      - name: Upload TEST installer only (no release publication)
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-ping-test-${{ github.sha }}
+          path: build/test-output/*
+          if-no-files-found: error
+          retention-days: 14

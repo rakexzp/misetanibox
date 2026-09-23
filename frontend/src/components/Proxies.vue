@@ -349,6 +349,23 @@ const stopModeWatch = watch(
   }
 );
 
+const resetDelayTesting = () => {
+  isTesting.value = false;
+  localGroups.value.forEach(g => g.proxies?.forEach((n: any) => { n.testing = false; }));
+};
+
+// Accept only the backend's bounded diagnostic vocabulary, not raw bridge errors.
+const safeDelayMessage = (error: unknown) => {
+  const message = String(error).replace(/^Error: /, '');
+  const prefix = '(?:Не удалось запустить тест задержки|Не удалось прочитать топологию прокси|Не удалось измерить задержку|Не удалось выполнить тест задержки)';
+  const detail = '(?:Сначала выберите и примените конфигурацию в управлении подписками|API ядра вернул HTTP [1-5][0-9]{2}|превышено время ожидания|ошибка соединения или TLS|подробности скрыты для защиты данных)';
+  if (new RegExp(`^${prefix}: ${detail}$`).test(message) || message === 'Нет узлов, доступных для теста задержки') return message;
+  if (message === 'DELAY_TEST_BUSY' || message === 'Тест задержки уже выполняется. Повторите позже.') return 'Тест задержки уже выполняется. Повторите позже.';
+  return 'Не удалось выполнить тест задержки. Проверьте журнал приложения ([DelayTest]).';
+};
+
+const delayCancelled = (error: unknown) => ['Тест задержки отменён', 'context canceled'].includes(String(error).replace(/^Error: /, ''));
+
 const testAllDelays = async () => {
   if (!activeGroupData.value || isTesting.value) return;
 
@@ -360,32 +377,29 @@ const testAllDelays = async () => {
 
   if (nodesArray.length > 0) {
     try {
+      // This call only dispatches the batch; the finish event resets the UI.
       await API.TestAllProxies(nodesArray);
     } catch (e) {
-      isTesting.value = false;
-      activeGroupData.value.proxies.forEach((n: any) => {
-          n.testing = false;
-      });
+      resetDelayTesting();
+      if (!delayCancelled(e)) void showAlert(safeDelayMessage(e), 'Тест задержки');
     }
   } else {
-    isTesting.value = false;
+    resetDelayTesting();
+    void showAlert('Нет узлов, доступных для теста задержки', 'Тест задержки');
   }
 };
 
 const testSingleDelay = async (node: any) => {
   if (node.testing || isTesting.value) return;
-  
-  node.testing = true;
 
+  node.testing = true;
   try {
     await API.TestProxy(node.name);
   } catch (e) {
-    const msg = String(e);
-    if (msg.includes('DELAY_TEST_BUSY') || msg.includes('busy')) {
-      return;
-    }
-
-    console.error("单点测速失败:", e);
+    if (delayCancelled(e)) return;
+    const message = safeDelayMessage(e);
+    globalState.proxyDelays[node.name] = { delay: 0, status: 'test-error', message };
+    void showAlert(message, 'Тест задержки');
   } finally {
     node.testing = false;
   }
@@ -397,6 +411,7 @@ const formatDelay = (delayInfo: any) => {
   
   if (delay > 0) return `${delay}ms`;
   
+  if (status === 'cancelled') return 'Отменён';
   if (status === 'timeout') return 'Таймаут';
   if (status === 'connect-error') return 'Нет связи';
   return 'Ошибка';
@@ -440,15 +455,13 @@ onMounted(async () => {
       await loadData();
   });
 
-  unsubFinish = (EventsOn as any)("proxy-test-finished", () => {
-    isTesting.value = false;
-    
-    localGroups.value.forEach(g => {
-      if (!g.proxies) return;
-      g.proxies.forEach((n: any) => {
-        n.testing = false;
-      });
-    });
+  unsubFinish = (EventsOn as any)("proxy-test-finished", (message: unknown, result?: { status: string }) => {
+    resetDelayTesting();
+    // Legacy producers send only the string; an empty finish is not a failure.
+    const failed = result
+      ? result.status === 'error' || result.status === 'busy'
+      : !!message && message !== 'Тест задержки завершён' && !delayCancelled(message);
+    if (failed) void showAlert(safeDelayMessage(message), 'Тест задержки');
   });
 
   unsubProxyState = (EventsOn as any)("proxy-state-sync", async (states: any[]) => {

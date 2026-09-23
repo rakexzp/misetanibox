@@ -2,9 +2,11 @@ package appcore
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"goclashz/core/clash"
 	"goclashz/core/logger"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -326,6 +328,15 @@ func (m *DelayTestManager) testOneDurationRaw(
 }
 
 func (m *DelayTestManager) emitDelayResult(topo *DelayTopology, res DelayResult) {
+	if res.Err != nil {
+		status, message := delayDiagnostic("probe", res.Err)
+		res.Message = message
+		if status == "cancelled" {
+			res.Status = "cancelled"
+		} else {
+			logger.Warnf("[DelayTest] probe status=%s: %s", res.Status, message)
+		}
+	}
 	m.emit.Emit("proxy-delay-update", map[string]interface{}{
 		"name":    res.Name,
 		"delay":   res.Delay,
@@ -398,9 +409,7 @@ func (m *DelayTestManager) TestAllProxiesWithOptions(
 		cancel()
 		close(done)
 
-		if !opts.SilentUI {
-			m.emit.Emit("proxy-test-finished", ErrDelayTestBusy.Error())
-		}
+		m.finishBatch(opts, "prepare", ErrDelayTestBusy)
 		return
 	}
 
@@ -415,9 +424,12 @@ func (m *DelayTestManager) TestAllProxiesWithOptions(
 	m.waiters = make(map[string][]chan DelayResult)
 	m.mu.Unlock()
 
-	finishMsg := "Тест задержки завершён"
-
+	stage := "prepare"
+	var finishErr error
 	defer func() {
+		if ctx.Err() != nil {
+			finishErr = ctx.Err()
+		}
 		cancel()
 
 		m.mu.Lock()
@@ -429,49 +441,100 @@ func (m *DelayTestManager) TestAllProxiesWithOptions(
 		m.waiters = make(map[string][]chan DelayResult)
 		m.mu.Unlock()
 
-		if !opts.SilentUI {
-			m.emit.Emit("proxy-test-finished", finishMsg)
-		}
-
+		m.finishBatch(opts, stage, finishErr)
 		if opts.Source != DelaySourceManual {
 			m.ctrl.setAutoDelayRunning(false)
 		}
-
 		close(done)
 	}()
 
+	if ctx.Err() != nil {
+		return
+	}
 	cleanup, _, err := m.ctrl.EnsureDelayCore(ctx)
 	if err != nil {
-		finishMsg = "Не удалось запустить тест задержки: " + err.Error()
+		finishErr = err
 		return
 	}
 	defer cleanup()
 
+	stage, finishErr = m.runPreparedBatch(ctx, nodeNames, opts)
+}
+
+// Keep the legacy string first; newer consumers use the explicit status.
+func (m *DelayTestManager) finishBatch(opts DelayTestOptions, stage string, err error) {
+	status, message := delayDiagnostic(stage, err)
+	if status == "error" || status == "busy" {
+		logger.Warnf("[DelayTest] batch stage=%s status=%s: %s", stage, status, message)
+	}
+	if !opts.SilentUI {
+		m.emit.Emit("proxy-test-finished", message, map[string]string{"status": status, "stage": stage})
+	}
+}
+
+func (m *DelayTestManager) runPreparedBatch(ctx context.Context, nodeNames []string, opts DelayTestOptions) (string, error) {
 	topo, err := buildDelayTopology()
 	if err != nil {
-		finishMsg = "Не удалось прочитать топологию прокси: " + err.Error()
-		return
+		return "topology", err
 	}
-
 	var targets []string
 	if len(nodeNames) == 0 {
 		targets = topo.allLeafNodes()
 	} else {
 		targets = topo.normalizeTargets(nodeNames)
 	}
-
 	if len(targets) == 0 {
-		finishMsg = "Нет узлов, доступных для теста задержки"
-		return
+		return "targets", fmt.Errorf("no delay targets")
 	}
-
 	m.mu.Lock()
 	for _, n := range targets {
 		m.batchNodes[n] = struct{}{}
 	}
 	m.mu.Unlock()
-
 	m.runBatch(ctx, topo, targets, opts)
+	return "probe", ctx.Err()
+}
+
+var delayHTTPStatus = regexp.MustCompile(`\bHTTP [1-5][0-9]{2}\b`)
+
+// Error bodies can contain subscription URLs, tokens or configuration fragments.
+// Only expose fixed categories and HTTP status, never arbitrary error text.
+func delayDiagnostic(stage string, err error) (string, string) {
+	if err == nil {
+		return "success", "Тест задержки завершён"
+	}
+	if errors.Is(err, context.Canceled) || err.Error() == "Тест задержки отменён" {
+		return "cancelled", "Тест задержки отменён"
+	}
+	if errors.Is(err, ErrDelayTestBusy) {
+		return "busy", "Тест задержки уже выполняется. Повторите позже."
+	}
+	prefix := map[string]string{
+		"prepare":  "Не удалось запустить тест задержки",
+		"topology": "Не удалось прочитать топологию прокси",
+		"targets":  "Нет узлов, доступных для теста задержки",
+		"probe":    "Не удалось измерить задержку",
+	}[stage]
+	if prefix == "" {
+		prefix = "Не удалось выполнить тест задержки"
+	}
+	if stage == "targets" {
+		return "error", prefix
+	}
+	message := err.Error()
+	if strings.Contains(message, "Сначала выберите и примените конфигурацию в управлении подписками") {
+		return "error", prefix + ": Сначала выберите и примените конфигурацию в управлении подписками"
+	}
+	if status := delayHTTPStatus.FindString(message); status != "" {
+		return "error", prefix + ": API ядра вернул " + status
+	}
+	if errors.Is(err, context.DeadlineExceeded) || classifyDelayError(err) == "timeout" {
+		return "error", prefix + ": превышено время ожидания"
+	}
+	if classifyDelayError(err) == "connect-error" {
+		return "error", prefix + ": ошибка соединения или TLS"
+	}
+	return "error", prefix + ": подробности скрыты для защиты данных"
 }
 
 func (m *DelayTestManager) getTestURL() string {
@@ -601,8 +664,23 @@ func (m *DelayTestManager) runBatch(
 	}
 }
 
-func (m *DelayTestManager) TestProxy(ctx context.Context, name string) (int, error) {
+func (m *DelayTestManager) TestProxy(ctx context.Context, name string) (delay int, resultErr error) {
+	stage := "prepare"
+	defer func() {
+		if resultErr == nil {
+			return
+		}
+		status, message := delayDiagnostic(stage, resultErr)
+		if status != "cancelled" {
+			logger.Warnf("[DelayTest] single stage=%s status=%s: %s", stage, status, message)
+		}
+		resultErr = errors.New(message)
+	}()
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
 	if name == "" {
+		stage = "targets"
 		return 0, fmt.Errorf("empty proxy name")
 	}
 
@@ -614,11 +692,13 @@ func (m *DelayTestManager) TestProxy(ctx context.Context, name string) (int, err
 	}
 	defer cleanup()
 
+	stage = "topology"
 	topo, err := buildDelayTopology()
 	if err != nil {
 		return 0, err
 	}
 
+	stage = "targets"
 	target := name
 	if node, ok := topo.Nodes[name]; ok && node.IsGroup {
 		leaf := topo.resolveSelectedLeaf(name, map[string]bool{})
@@ -627,6 +707,7 @@ func (m *DelayTestManager) TestProxy(ctx context.Context, name string) (int, err
 		}
 		target = leaf
 	}
+	stage = "probe"
 
 	if !m.beginSingleNode(target) {
 		return 0, ErrDelayTestBusy
