@@ -277,54 +277,77 @@ func FetchLogs(ctx context.Context, level string, onLog func(data interface{})) 
 }
 
 func GetProxyDelay(ctx context.Context, proxyName string, testUrl string, timeoutMs int) (int, error) {
-	encodedName := url.PathEscape(proxyName)
+	delay, status, err := getProxyDelayAt(ctx, "/proxies/"+url.PathEscape(proxyName)+"/delay", testUrl, timeoutMs)
+	if status != http.StatusNotFound {
+		return delay, err
+	}
 
+	// Provider-only leaves appear in group selections, but not in /proxies.
+	// Resolve an exact name only after a 404; never retry network/test failures.
+	providers, lookupErr := doKernelGetWithContext[struct {
+		Providers map[string]struct {
+			Proxies []struct {
+				Name string `json:"name"`
+			} `json:"proxies"`
+		} `json:"providers"`
+	}](ctx, "/providers/proxies")
+	if lookupErr != nil {
+		return delay, err
+	}
+	providerName := ""
+	found := false
+	for name, provider := range providers.Providers {
+		for _, proxy := range provider.Proxies {
+			if proxy.Name == proxyName {
+				if found { // A bare name cannot safely disambiguate providers.
+					return delay, err
+				}
+				providerName, found = name, true
+			}
+		}
+	}
+	if !found {
+		return delay, err
+	}
+	delay, _, err = getProxyDelayAt(ctx, "/providers/proxies/"+url.PathEscape(providerName)+"/"+url.PathEscape(proxyName)+"/healthcheck", testUrl, timeoutMs)
+	return delay, err
+}
+
+func getProxyDelayAt(ctx context.Context, path, testUrl string, timeoutMs int) (int, int, error) {
 	if testUrl == "" {
 		testUrl = DefaultDelayTestURL
 	}
-
 	if timeoutMs <= 0 {
 		timeoutMs = 7000
 	}
-
-	apiURL := fmt.Sprintf("%s?timeout=%d&url=%s",
-		APIURL("/proxies/"+encodedName+"/delay"),
-		timeoutMs,
-		url.QueryEscape(testUrl))
-
+	apiURL := fmt.Sprintf("%s?timeout=%d&url=%s", APIURL(path), timeoutMs, url.QueryEscape(testUrl))
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
 	if err != nil {
-		return -1, err
+		return -1, 0, err
 	}
-
 	resp, err := speedTestClient.Do(req)
 	if err != nil {
-		return -1, err
+		return -1, 0, err
 	}
 	defer resp.Body.Close()
-
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		msg := strings.TrimSpace(string(body))
 		if msg == "" {
 			msg = resp.Status
 		}
-		return -1, fmt.Errorf("mihomo delay failed: HTTP %d: %s", resp.StatusCode, msg)
+		return -1, resp.StatusCode, fmt.Errorf("mihomo delay failed: HTTP %d: %s", resp.StatusCode, msg)
 	}
-
 	var result struct {
 		Delay int `json:"delay"`
 	}
-
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return -1, err
+		return -1, resp.StatusCode, err
 	}
-
 	if result.Delay <= 0 {
-		return -1, fmt.Errorf("invalid delay format")
+		return -1, resp.StatusCode, fmt.Errorf("invalid delay format")
 	}
-
-	return result.Delay, nil
+	return result.Delay, resp.StatusCode, nil
 }
 
 func TestProxy(name string) (int, error) {

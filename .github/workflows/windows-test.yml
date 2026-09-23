@@ -73,6 +73,7 @@ jobs:
         shell: pwsh
         run: |
           $env:MISETANIBOX_TEST_CORE = (Resolve-Path "build/runtime-assets/core/bin/clash.exe").Path
+          $env:MIHOMO_TEST_BINARY = $env:MISETANIBOX_TEST_CORE
           go test -v -count=1 ./core/...
           if ($LASTEXITCODE -ne 0) { throw "Core tests failed" }
 
