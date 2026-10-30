@@ -327,7 +327,7 @@ function delayOf(name: string): number | null {
 function delayLabel(name: string): string {
   const d = delayOf(name);
   if (d == null) return '—';
-  return d > 0 ? d + ' мс' : 'таймаут';
+  return d > 0 ? d + ' мс' : '—';
 }
 function pingClass(d: number | null): string {
   if (d == null || d <= 0) return 'ping-bad';

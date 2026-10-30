@@ -54,7 +54,6 @@
         </div>
         <div class="sub-toolbar-spacer"></div>
       </div>
-      <p v-if="delaySummary" class="delay-summary" role="status">{{ delaySummary }}</p>
     </div>
 
     <div class="scroll-content">
@@ -77,7 +76,6 @@
             <div 
               class="n-latency-box" 
               :class="{ disabled: isTesting }"
-              :title="globalState.proxyDelays[node.name]?.message || ''"
               @click.stop="testSingleDelay(node)"
             >
               <div v-if="node.testing" class="scanner-container">
@@ -118,10 +116,9 @@ import { flagUrl, displayName } from '../utils/flags';
 const localGroups = ref<any[]>([]);
 const currentGroup = ref<string>(localStorage.getItem('goclashz_proxyGroup') || '');
 const isTesting = ref(false);
-const delaySummary = ref('');
 let delayViewSession = 0;
-watch(() => globalState.activeConfigId, () => { delayViewSession++; delaySummary.value = ''; }, { flush: 'sync' });
-watch(currentGroup, () => { delayViewSession++; delaySummary.value = ''; }, { flush: 'sync' });
+watch(() => globalState.activeConfigId, () => { delayViewSession++; }, { flush: 'sync' });
+watch(currentGroup, () => { delayViewSession++; }, { flush: 'sync' });
 onDeactivated(() => { delayViewSession++; });
 onUnmounted(() => { delayViewSession++; });
 
@@ -378,7 +375,6 @@ const testAllDelays = async () => {
   if (!activeGroupData.value || isTesting.value) return;
 
   isTesting.value = true;
-  delaySummary.value = '';
   const nodesArray = activeGroupData.value.proxies.map((n: any) => {
       n.testing = true;
       return n.name;
@@ -390,11 +386,9 @@ const testAllDelays = async () => {
       await API.TestAllProxies(nodesArray);
     } catch (e) {
       resetDelayTesting();
-      if (!delayCancelled(e)) void showAlert(safeDelayMessage(e), 'Тест задержки');
     }
   } else {
     resetDelayTesting();
-    void showAlert('Нет узлов, доступных для теста задержки', 'Тест задержки');
   }
 };
 
@@ -420,7 +414,6 @@ const testSingleDelay = async (node: any) => {
     const message = safeDelayMessage(e);
     updateProxyDelay(node.name, previous?.delay && previous.delay > 0 ? previous.delay : 0,
       'test-error', message, globalState.delayRetention ? globalState.delayRetentionTime : 'long');
-    void showAlert(message, 'Тест задержки');
   } finally {
     node.testing = false;
   }
@@ -428,14 +421,10 @@ const testSingleDelay = async (node: any) => {
 
 const formatDelay = (delayInfo: any) => {
   if (!delayInfo) return '--';
-  const { delay, status } = delayInfo;
-  
+  const { delay } = delayInfo;
   if (delay > 0) return `${delay}ms`;
-  
-  if (status === 'cancelled') return 'Отменён';
-  if (status === 'timeout') return 'Таймаут';
-  if (status === 'connect-error') return 'Нет связи';
-  return 'Ошибка';
+  // Без текстовых ошибок: неудачный замер — нейтральный прочерк, причина в журнале ([DelayTest]).
+  return '—';
 };
 
 const getDelayColorClass = (delayInfo: any) => {
@@ -474,25 +463,12 @@ onMounted(async () => {
 
   unsubChanged = EventsOn("config-changed", async () => {
       delayViewSession++;
-      delaySummary.value = '';
       await loadData();
   });
 
-  unsubFinish = (EventsOn as any)("proxy-test-finished", (message: unknown, result?: { status: string; targets?: number; completed?: number; success?: number; failed?: number; skipped?: number }) => {
+  // Итоги группового теста не показываем: результат виден по каждому узлу.
+  unsubFinish = EventsOn("proxy-test-finished", () => {
     resetDelayTesting();
-    const count = (n: unknown) => typeof n === 'number' && Number.isSafeInteger(n) && n >= 0 ? n : 0;
-    const title = result?.status === 'cancelled' ? 'Тест отменён'
-      : result?.status === 'partial' ? 'Тест завершён частично'
-      : result?.status === 'error' ? 'Тест не дал результата'
-      : result?.status === 'busy' ? 'Тест уже выполняется' : 'Тест завершён';
-    delaySummary.value = result && typeof result.targets === 'number'
-      ? `${title}. Узлы: ${count(result.completed)}/${count(result.targets)}, успешно: ${count(result.success)}, ошибок: ${count(result.failed)}, пропущено: ${count(result.skipped)}.`
-      : delayCancelled(message) ? 'Тест отменён' : message === 'Тест задержки завершён' ? 'Тест завершён' : safeDelayMessage(message);
-    // Legacy producers send only the string; an empty finish is not a failure.
-    const failed = result
-      ? result.status === 'error' || result.status === 'busy'
-      : !!message && message !== 'Тест задержки завершён' && !delayCancelled(message);
-    if (failed) void showAlert(safeDelayMessage(message), 'Тест задержки');
   });
 
   unsubProxyState = (EventsOn as any)("proxy-state-sync", async (states: any[]) => {

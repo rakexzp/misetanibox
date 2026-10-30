@@ -178,7 +178,7 @@ const startMonitor = async () => {
 
     await API.StartConnectionMonitor();
   } catch (e) {
-    console.error("启动连接监控失败:", e); // 保留原文（console.log 类）
+    console.error("Не удалось запустить мониторинг соединений:", e);
   } finally {
     isLoading.value = false;
   }

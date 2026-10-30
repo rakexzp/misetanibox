@@ -101,7 +101,7 @@ jobs:
           Copy-Item build/installer/Misetanibox_win_amd64_Setup.exe "build/test-output/$name"
           $hash = (Get-FileHash "build/test-output/$name" -Algorithm SHA256).Hash.ToLower()
           "$hash  $name" | Set-Content build/test-output/SHA256SUMS -Encoding ascii
-          @{ commit = $env:GITHUB_SHA; runId = $env:GITHUB_RUN_ID; channel = "TEST"; version = "1.5.30"; installer = $name; sha256 = $hash } | ConvertTo-Json | Set-Content build/test-output/provenance.json
+          @{ commit = $env:GITHUB_SHA; runId = $env:GITHUB_RUN_ID; channel = "TEST"; version = "1.5.31"; installer = $name; sha256 = $hash } | ConvertTo-Json | Set-Content build/test-output/provenance.json
           Copy-Item build/runtime-assets/core/asset-manifest.json build/test-output/
 
       - name: Upload TEST installer only (no release publication)
